@@ -21,7 +21,10 @@ jobs:
           version: '6.8.3'
           cache: true
       - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DULTRAVIEW_ENABLE_SANITIZERS=${{ matrix.sanitizers }}
+        run: >-
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+          -DULTRAVIEW_ENABLE_SANITIZERS=${{ matrix.sanitizers }}
+          -DULTRAVIEW_REQUIRE_SECRET_SERVICE=ON
       - name: Build
         run: cmake --build build --parallel 2
       - name: Test (no external endpoints)

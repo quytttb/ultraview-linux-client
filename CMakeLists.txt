@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 project(Ultraview
-    VERSION 0.2.2
+    VERSION 0.2.3
     DESCRIPTION "Native Linux remote desktop client for UltraViewer partners (independent re-implementation)"
     LANGUAGES CXX)
 

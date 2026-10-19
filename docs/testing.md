@@ -185,12 +185,13 @@ native features.
 
 Verified locally on 2026-10-18, re-run on 2026-10-19 after adding the profile
 loader test, again for the 0.2.0 interface refresh, again for the 0.2.1 desktop
-application menu and again for the 0.2.2 live connect probe: **14/14 native CTest
+application menu, again for the 0.2.2 live connect probe and once more for the
+0.2.3 keyring build: **14/14 native CTest
 targets pass** in the RelWithDebInfo build,
 and **14/14 pass** in Debug with ASan/UBSan using the options above. The direct
 40-patch QML self-test reports mirror/consumed/grab/pixel all `ok`, asserts that
 every embedded theme icon is present and reports the global menu as
-`menu=exported`/`unavailable`/`pending`. CPack generated a `.deb`; version 0.2.2 is
+`menu=exported`/`unavailable`/`pending`. CPack generated a `.deb`; version 0.2.3 is
 installed system-wide (`pkexec apt-get install`) and its `/usr/bin/ultraview`
 passed the same smoke test and announced its menu to KWin on this Wayland session.
 The interface was reviewed through offscreen `--screenshot` frames of each surface
@@ -200,8 +201,10 @@ service and read back the reference's status-11 refusal for an unknown partner.
 See [verification record](verification.md).
 
 Local development environment: Linux x86_64 Ubuntu 26.04, GCC 15.2, Qt 6.10.2,
-OpenSSL 3.5.5, libzstd 1.5.7, CMake 4.2.3 and Ninja. No libsecret development
-headers on this host: the no-persistence path is the locally compiled backend.
+OpenSSL 3.5.5, libzstd 1.5.7, CMake 4.2.3 and Ninja. `libsecret-1-dev` was added
+on 2026-10-19, so the locally compiled backend links the platform Secret Service;
+a build without it keeps the no-persistence path, and the packaging workflows
+assert theirs.
 GitHub CI configuration supplies Qt 6.8.3 because stock Ubuntu 24.04 is too old.
 The workflow was executed on GitHub for the first time on 2026-10-19 (repository
 `quytttb/ultraview-linux-client`): both matrix jobs — sanitizers `OFF` and `ON` —
@@ -215,13 +218,17 @@ I/O.
 
 Two further workflows package distribution-Qt artifacts on `ubuntu-26.04`
 (`dev-build.yml` per main push, `build-release.yml` for `v*.*.*` tags with
-checksums on the GitHub Release); both use the documented build and the suite as
-the gate — see [packaging](packaging.md).
+checksums on the GitHub Release); both use the documented build, install
+`libsecret-1-dev` with `-DULTRAVIEW_REQUIRE_SECRET_SERVICE=ON` so the artifact
+must keep password storage, and run the suite as the gate — see
+[packaging](packaging.md).
 
 Not covered: a real Windows partner, live screen decoding with the vendor
 dictionary in a session, a relay/login exchange, sustained external session,
-clean-host package install, hardware/Wayland input shortcut behavior and a real
-keyring service. The registration and partner-request phases are answered by the
-live service (status-11 dry run) and a human confirmed the desktop panel widget
-drawing the exported application menu. Follow `compatibility.md` before claiming
-end-to-end interoperability.
+clean-host package install, hardware/Wayland input shortcut behavior and
+locked-keyring behavior. The registration and partner-request phases are
+answered by the live service (status-11 dry run), a human confirmed the desktop
+panel widget drawing the exported application menu, and the platform Secret
+Service store/read/clear round trip ran against the session's gnome-keyring (see
+`verification.md`). Follow `compatibility.md` before claiming end-to-end
+interoperability.

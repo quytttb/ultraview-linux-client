@@ -20,11 +20,11 @@
   reuse. No proprietary dictionary is used in these tests.
 - CPack `.deb`: 0.1.0 generated and contents inspected; 0.1.1 built after the TLS
   correction; 0.2.0 for the interface refresh; 0.2.1 for the desktop application
-  menu; 0.2.2 for the live connect probe (sections below). Each was installed
-  system-wide with `pkexec apt-get install`; the 0.2.1 build was superseded by the
-  0.2.2 package built from the same sources plus the probe, which is what
-  `dpkg-query` now reports (`0.2.2: install ok installed`), and the installed
-  `/usr/bin/ultraview` passed the
+  menu; 0.2.2 for the live connect probe; 0.2.3 for platform Secret Service
+  password storage (sections below). Each was installed system-wide with
+  `pkexec apt-get install`; the 0.2.1 build was superseded by the 0.2.2 package,
+  which 0.2.3 then superseded, and `dpkg-query` now reports
+  `0.2.3: install ok installed`; the installed `/usr/bin/ultraview` passed the
   40-patch offscreen self-test. Package contents are the native executable,
   desktop/icon, docs and explicit QML runtime modules only.
 - AppImage recipe: shell syntax checked; no deployment tools installed, so
@@ -87,9 +87,11 @@ Neither step proves server acceptance or a working session.
 - BitBlt, audio/microphone, P2P session transport and other out-of-subset features
   remain unsupported; see compatibility rather than inferring completeness from
   unit tests.
-- Real libsecret backend/keyring, hardware accelerated rendering, clean-host
-  install and multi-distribution/Wayland portability remain unverified.
-- GitHub CI workflow supplied but not executed during this task.
+- A locked or absent keyring at runtime, hardware accelerated rendering,
+  clean-host install and multi-distribution/Wayland portability remain unverified
+  (the libsecret round trip itself is verified in the 0.2.3 section below).
+- GitHub CI was supplied during this task and has since been executed (see the CI
+  and workflow sections below).
 - Upstream missing-license/redistribution question unresolved; see NOTICE.
 
 ## Interface refresh — 2026-10-19 (0.2.0)
@@ -291,9 +293,38 @@ Neither step proves server acceptance or a working session.
   `qt6-declarative-private-abi (= 6.10.2)`), and the extracted
   `usr/bin/ultraview --self-test` prints `mirror=ok consumed=ok grab=ok pixel=ok
   menu=unavailable` — the same result the locally installed package gives.
-- Limits: the packages are Ubuntu 26.04 amd64 only (glibc/Qt 6.10), password
-  persistence is compiled out (no libsecret), and the AppImage recipe remains
-  unbuilt. A clean-host install and a real partner session are still open.
+- Limits: the packages are Ubuntu 26.04 amd64 only (glibc/Qt 6.10) and the
+  AppImage recipe remains unbuilt. Password persistence was compiled out of these
+  two runs — superseded from 0.2.3, which links libsecret (section below). A
+  clean-host install and a real partner session are still open.
+
+## Platform Secret Service password storage — 2026-10-19 (0.2.3)
+
+- `libsecret-1-dev` 0.21.7 was installed on the verification host and the project
+  reconfigured: CMake reports
+  `libsecret found: password persistence can use the platform keyring`,
+  `ldd build/ultraview` links `libsecret-1.so.0`, the suite still passes 14/14 and
+  the offscreen 40-patch self-test is unchanged. `0.2.3` is the packaging bump
+  that turns this on by default: the artifact differs (keyring-capable build), so
+  the version differs — the same rule that produced 0.2.1 and 0.2.2.
+- The interface reflects it: offscreen `--screenshot --screenshot-dialog settings
+  --screenshot-tab 1` shows **Remember partner passwords** enabled with the hint
+  "Passwords are stored in the platform secret service."; a build without
+  libsecret shows the disabled variant ("No platform secret service is available
+  in this build…").
+- The real backend was exercised through the project's own `CredentialStore`
+  against the running Secret Service (`org.freedesktop.secrets` is owned by
+  gnome-keyring on this session; the default alias resolves to
+  `/org/freedesktop/secrets/collection/login` with `Locked=false`): a synthetic
+  partner id `__ultraview_selfcheck__` was stored (`store=ok`), read back
+  (`read=found match=yes`), removed (`clear=ok`) and confirmed gone
+  (`after_clear=gone`). No real partner secret was involved and no entry remains.
+- The regenerated `ultraview_0.2.3_amd64.deb` declares `libsecret-1-0 (>= 0.7)`
+  next to the Qt dependencies; it was generated, extracted, installed system-wide
+  with `pkexec` and the extracted and installed binaries passed `--self-test`.
+- The packaging workflows install `libsecret-1-dev` and pass
+  `-DULTRAVIEW_REQUIRE_SECRET_SERVICE=ON` (as does `ci.yml`), so a packaging build
+  fails instead of silently dropping the feature.
 
 This record describes the checked local build, not a vendor-certified release or
 a claim that all recovered/undocumented protocol features were implemented.

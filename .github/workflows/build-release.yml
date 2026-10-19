@@ -73,7 +73,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             build-essential cmake ninja-build pkg-config dpkg-dev \
-            libssl-dev libzstd-dev \
+            libssl-dev libzstd-dev libsecret-1-dev \
             qt6-base-dev qt6-base-private-dev qt6-declarative-dev \
             qt6-declarative-dev-tools qt6-tools-dev-tools \
             qt6-qpa-plugins qt6-image-formats-plugins qt6-wayland \
@@ -86,7 +86,11 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          # Packaging build: platform Secret Service password storage belongs to
+          # the artifact, so a missing libsecret fails here instead of silently
+          # compiling the feature out.
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DULTRAVIEW_REQUIRE_SECRET_SERVICE=ON
           cmake --build build --parallel "$(nproc)"
           ctest --test-dir build --output-on-failure
 
@@ -161,9 +165,10 @@ jobs:
             - Verify the download against `SHA256SUMS` before installing.
             - No vendor dictionary (`8bit.dat`), registration profile or machine
               identity is included; the KDE global menu is built in where the
-              distribution ships the private QtGui headers. Password persistence
-              is disabled in this build (compiled without libsecret, matching the
-              verification record).
+              distribution ships the private QtGui headers. Platform Secret
+              Service password storage is built in as well (the package depends on
+              `libsecret-1-0`); an unlocked keyring service is required at runtime
+              to actually persist passwords.
             - Features, limits and the outstanding manual validation are described
               in `README.md`, `docs/compatibility.md` and `docs/verification.md`.
           files: |

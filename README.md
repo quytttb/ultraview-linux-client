@@ -45,10 +45,12 @@ laptop, default GCC 11 cannot link system Qt 6.10.2. This build was configured
 with `-DCMAKE_CXX_COMPILER=g++-15`; choose that on a **fresh** build directory if
 needed. Typical modern Ubuntu compilers are sufficient for their distribution Qt.
 
-Optional: install `libsecret-1-dev` before configuring for platform Secret
-Service password storage. Without it, remembering passwords is disabled; there
-is no plaintext persistence fallback. A working keyring service is still needed
-at runtime when libsecret is compiled in.
+Install `libsecret-1-dev` before configuring for platform Secret Service password
+storage — the packaged builds and CI do, and they pass
+`-DULTRAVIEW_REQUIRE_SECRET_SERVICE=ON` so a packaging build fails instead of
+silently compiling the feature out. Without libsecret, remembering passwords is
+disabled; there is no plaintext persistence fallback. A working, unlocked keyring
+service is still needed at runtime.
 
 Optional: install `qt6-base-private-dev` (Qt ≥ 6.9) before configuring to publish
 the application menu to the desktop — KDE Plasma's **Global Menu** panel widget
@@ -113,7 +115,7 @@ QMAKE=/usr/bin/qmake6 bash packaging/build-appimage.sh build
 ```
 
 See [packaging](docs/packaging.md) for prerequisites, limits and smoke checks.
-The current `.deb` path is `build/packages/ultraview_0.2.2_amd64.deb`;
+The current `.deb` path is `build/packages/ultraview_0.2.3_amd64.deb`;
 its extracted and installed binary passed the QML self-test on the build host.
 The local `.deb` can target this distribution only; building here does not make
 it compatible with older Ubuntu glibc/Qt. The AppImage recipe is supplied, but an

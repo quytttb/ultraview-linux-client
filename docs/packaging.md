@@ -32,15 +32,15 @@ succeeds unchanged and no such dependency is recorded.
 ```sh
 ctest --test-dir build --output-on-failure
 cpack --config build/CPackConfig.cmake -G DEB -B build/packages
-dpkg-deb --info build/packages/ultraview_0.2.2_amd64.deb
-dpkg-deb --contents build/packages/ultraview_0.2.2_amd64.deb
+dpkg-deb --info build/packages/ultraview_0.2.3_amd64.deb
+dpkg-deb --contents build/packages/ultraview_0.2.3_amd64.deb
 # No root needed to inspect and smoke-test an extracted package:
-dpkg-deb --extract build/packages/ultraview_0.2.2_amd64.deb build/package-check
+dpkg-deb --extract build/packages/ultraview_0.2.3_amd64.deb build/package-check
 QT_QPA_PLATFORM=offscreen build/package-check/usr/bin/ultraview --self-test
 ```
 
 To install after review on a compatible Ubuntu machine:
-`pkexec apt install ./build/packages/ultraview_0.2.2_amd64.deb`.
+`pkexec apt install ./build/packages/ultraview_0.2.3_amd64.deb`.
 This documentation is not authorization for the agent to install it system-wide.
 Architecture/file names vary. A binary built against glibc/Qt from Ubuntu 26.04
 must not be advertised as an Ubuntu 22.04/24.04 package.
@@ -48,9 +48,10 @@ must not be advertised as an Ubuntu 22.04/24.04 package.
 Locally verified: the 0.1.0 package was generated, inspected and extracted; the
 0.2.1 package (desktop application menu) was inspected, extracted and installed;
 the 0.2.2 package (same sources plus the live connect probe) was generated,
-extracted and installed as well; the extracted and the
-installed binaries both passed `--self-test` on the build host. This is not a
-clean-host installation test or a signed release.
+extracted and installed as well; the 0.2.3 package (platform Secret Service
+password storage linked in) was generated, extracted and installed too; the
+extracted and the installed binaries both passed `--self-test` on the build host.
+This is not a clean-host installation test or a signed release.
 
 ## CI packages (dev build / release)
 
@@ -72,15 +73,20 @@ distribution's Qt libraries (`libqt6core6t64 (>= 6.10.2)`,
 `qt6-base-private-abi (= 6.10.2)`, `qt6-declarative-private-abi (= 6.10.2)`) and
 are not advertised for older Ubuntu releases. Building without
 `qt6-base-private-dev` compiles the global menu out; every workflow here installs
-it where the distribution offers it.
+it where the distribution offers it. Both also install `libsecret-1-dev` and pass
+`-DULTRAVIEW_REQUIRE_SECRET_SERVICE=ON`, so a packaging build fails rather than
+silently dropping platform Secret Service password storage; the package then
+depends on `libsecret-1-0`.
 
-The first published release
-([v0.2.2](https://github.com/quytttb/ultraview-linux-client/releases/tag/v0.2.2))
-attaches `ultraview_0.2.2_amd64.deb` and `SHA256SUMS`; the package was downloaded
-again after publication and its checksum, dependency list and extracted
-`--self-test` were verified (see [verification](verification.md)). Install from a
-downloaded file with `sudo apt install ./ultraview_*.deb` — the version in
-`dpkg-query` then matches the release tag.
+Releases attach `ultraview_<version>_amd64.deb` and `SHA256SUMS`; from
+[v0.2.3](https://github.com/quytttb/ultraview-linux-client/releases/tag/v0.2.3)
+the package includes password storage (the earlier
+[v0.2.2](https://github.com/quytttb/ultraview-linux-client/releases/tag/v0.2.2)
+release was built without it). The first published package was downloaded again
+after publication and its checksum, dependency list and extracted `--self-test`
+were verified (see [verification](verification.md)). Install from a downloaded
+file with `sudo apt install ./ultraview_*.deb` — the version in `dpkg-query` then
+matches the release tag.
 
 ## AppImage recipe
 
