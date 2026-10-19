@@ -245,5 +245,28 @@ Neither step proves server acceptance or a working session.
   (`menu=unavailable`) and the live probe result above. The desktop menu path is
   unchanged by this version.
 
+## GitHub CI and publication — 2026-10-19 (0.2.2)
+
+- The repository is published as `quytttb/ultraview-linux-client`. This project's
+  own code is MIT licensed (`LICENSE`); the upstream comparison snapshot is
+  excluded from the published tree and credited in `NOTICE.md`, together with the
+  author (@quytttb).
+- Before publishing, the tracked tree (141 files) was checked for identity
+  material: no MAC address, hostname, personal e-mail, real partner ID,
+  registration profile, `client.ini` or vendor dictionary is present;
+  `reference/`, `fromWindows/` (machine data and `8bit.dat`), build output and
+  local profiles are ignored by git.
+- The supplied workflow ran on GitHub for the first time and **both matrix jobs
+  passed**: `linux (OFF)` and `linux (ON)` (Debug + ASan/UBSan) on `ubuntu-24.04`
+  with the explicit Qt 6.8.3 SDK — runs `39239472103` (main), `39239486151` (tag
+  `v0.2.2`) and `39239515053` (LICENSE commit), all `success`.
+- The uploaded `LastTest.log` confirms the intended Qt 6.8 configuration: all 14
+  targets run; `tst_globalmenu` reports 6 passed + 1 skipped (the runner offers no
+  global menu and the private QPA headers are a ≥6.9 distribution feature, so the
+  feature is compiled out and the class still runs); `app_connect_probe_unconfigured`
+  passes, i.e. the probe refuses before any network I/O on a clean host.
+- Tag `v0.2.2` marks this published state. The `.deb` files above are local build
+  artifacts; no release binaries are attached to the repository.
+
 This record describes the checked local build, not a vendor-certified release or
 a claim that all recovered/undocumented protocol features were implemented.

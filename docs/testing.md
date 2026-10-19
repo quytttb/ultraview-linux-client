@@ -203,7 +203,15 @@ Local development environment: Linux x86_64 Ubuntu 26.04, GCC 15.2, Qt 6.10.2,
 OpenSSL 3.5.5, libzstd 1.5.7, CMake 4.2.3 and Ninja. No libsecret development
 headers on this host: the no-persistence path is the locally compiled backend.
 GitHub CI configuration supplies Qt 6.8.3 because stock Ubuntu 24.04 is too old.
-The workflow has not been executed on GitHub during this task.
+The workflow was executed on GitHub for the first time on 2026-10-19 (repository
+`quytttb/ultraview-linux-client`): both matrix jobs — sanitizers `OFF` and `ON` —
+completed successfully on `ubuntu-24.04` with the explicit Qt 6.8.3 SDK, and the
+uploaded `LastTest.log` shows all 14 targets running. On that SDK the global menu
+compiles out (private QtGui headers are a ≥6.9 distribution feature) and
+`tst_globalmenu` reports 6 passed + 1 skipped (the D-Bus export probe needs a
+session that offers a global menu), which is the intended graceful path; the
+probe test `app_connect_probe_unconfigured` runs and refuses before any network
+I/O.
 
 Not covered: a real Windows partner, live screen decoding with the vendor
 dictionary in a session, a relay/login exchange, sustained external session,

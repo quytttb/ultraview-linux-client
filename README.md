@@ -115,7 +115,9 @@ its extracted and installed binary passed the QML self-test on the build host.
 The local `.deb` can target this distribution only; building here does not make
 it compatible with older Ubuntu glibc/Qt. The AppImage recipe is supplied, but an
 AppImage has not been built/validated on this machine (deployment tools absent).
-CI workflow is supplied, not claimed to have run on GitHub.
+The GitHub Actions workflow runs the two-job matrix (sanitizers on/off) on
+ubuntu-24.04 with an explicit Qt 6.8.3 SDK and passed both jobs on 2026-10-19
+([first green run](https://github.com/quytttb/ultraview-linux-client/actions)).
 
 ## Layout and evidence
 
