@@ -1,0 +1,45 @@
+name: Native build and offline tests
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizers: ['OFF', 'ON']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libssl-dev libzstd-dev libsecret-1-dev libgl1-mesa-dev libxkbcommon-dev libxcb-cursor0
+      # Noble's distribution Qt is older than 6.5; use an explicit SDK.
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          cache: true
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DULTRAVIEW_ENABLE_SANITIZERS=${{ matrix.sanitizers }}
+      - name: Build
+        run: cmake --build build --parallel 2
+      - name: Test (no external endpoints)
+        env:
+          QT_QPA_PLATFORM: offscreen
+          ASAN_OPTIONS: detect_leaks=0
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: ctest --test-dir build --output-on-failure
+      - name: Stage native binary and documentation
+        if: matrix.sanitizers == 'OFF'
+        run: cmake --install build --prefix "$PWD/stage"
+      - uses: actions/upload-artifact@v4
+        if: matrix.sanitizers == 'OFF'
+        with:
+          name: ultraview-qt6.8-linux-sdk-build
+          path: stage/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-logs-${{ matrix.sanitizers }}
+          path: build/Testing/Temporary/LastTest.log

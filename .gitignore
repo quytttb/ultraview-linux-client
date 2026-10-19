@@ -1,0 +1,24 @@
+# Build output and local packaging artifacts
+/build*/
+/dist/
+*.AppImage
+*.deb
+
+# Local Python caches
+__pycache__/
+*.pyc
+
+# Local identity material: never commit a profile, dictionary or settings file.
+# (A real installation identity is machine-specific and private.)
+/profiles/
+8bit.dat
+registration-*.json
+client.ini
+
+# Not part of the published repository:
+#  - reference/  upstream Python comparison snapshot (unlicensed upstream, see
+#                NOTICE.md); keep it locally for comparison only.
+#  - fromWindows/  notes and the vendor dictionary copied from the Windows
+#                machine; machine data/8bit.dat must never be uploaded.
+/reference/
+/fromWindows/
