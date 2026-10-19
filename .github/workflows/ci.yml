@@ -10,7 +10,7 @@ jobs:
       matrix:
         sanitizers: ['OFF', 'ON']
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Native dependencies
         run: |
           sudo apt-get update
@@ -33,12 +33,12 @@ jobs:
       - name: Stage native binary and documentation
         if: matrix.sanitizers == 'OFF'
         run: cmake --install build --prefix "$PWD/stage"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: matrix.sanitizers == 'OFF'
         with:
           name: ultraview-qt6.8-linux-sdk-build
           path: stage/
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-logs-${{ matrix.sanitizers }}

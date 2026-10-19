@@ -213,6 +213,11 @@ session that offers a global menu), which is the intended graceful path; the
 probe test `app_connect_probe_unconfigured` runs and refuses before any network
 I/O.
 
+Two further workflows package distribution-Qt artifacts on `ubuntu-26.04`
+(`dev-build.yml` per main push, `build-release.yml` for `v*.*.*` tags with
+checksums on the GitHub Release); both use the documented build and the suite as
+the gate — see [packaging](packaging.md).
+
 Not covered: a real Windows partner, live screen decoding with the vendor
 dictionary in a session, a relay/login exchange, sustained external session,
 clean-host package install, hardware/Wayland input shortcut behavior and a real

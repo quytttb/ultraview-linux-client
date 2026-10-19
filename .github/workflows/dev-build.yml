@@ -1,0 +1,99 @@
+name: Dev Build
+
+# Development artifacts: on every push to main that can change the binary, build
+# the distribution package the documented way (see docs/testing.md) and publish
+# it as a workflow artifact.  Versions marked "chore(release):" are packaged by
+# build-release.yml instead.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "qml/**"
+      - "tests/**"
+      - "packaging/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+concurrency:
+  group: dev-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-deb:
+    if: "!contains(github.event.head_commit.message, 'chore(release):')"
+    runs-on: ubuntu-26.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Read version
+        id: meta
+        run: |
+          set -euo pipefail
+          VERSION=$(sed -nE 's/^ *VERSION ([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' CMakeLists.txt | head -1)
+          if [[ -z "${VERSION}" ]]; then
+            echo "::error::Cannot read the project version from CMakeLists.txt"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "packaging ultraview ${VERSION}"
+
+      # Distribution Qt, not a private SDK: the .deb must carry the same
+      # dependency shape the local, documented build produces.  The private QtGui
+      # headers enable the KDE global menu; without them the build still succeeds
+      # and only that feature is compiled out.
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake ninja-build pkg-config dpkg-dev \
+            libssl-dev libzstd-dev \
+            qt6-base-dev qt6-base-private-dev qt6-declarative-dev \
+            qt6-declarative-dev-tools qt6-tools-dev-tools \
+            qt6-qpa-plugins qt6-image-formats-plugins qt6-wayland \
+            qml6-module-qtquick qml6-module-qtquick-window qml6-module-qtquick-controls \
+            qml6-module-qtquick-templates qml6-module-qtquick-layouts qml6-module-qtquick-dialogs \
+            qml6-module-qtqml qml6-module-qtqml-models qml6-module-qtqml-workerscript \
+            qml6-module-qt-labs-folderlistmodel
+
+      # The suite is the gate: no artifact from a red tree.  ctest runs offscreen
+      # and touches no external endpoint (the live probe refuses without a
+      # configured profile).
+      - name: Configure, build and test
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          cmake --build build --parallel "$(nproc)"
+          ctest --test-dir build --output-on-failure
+
+      - name: Build .deb
+        run: cpack --config build/CPackConfig.cmake -G DEB -B build/packages
+
+      - name: Smoke-test the extracted package
+        run: |
+          rm -rf build/package-check
+          dpkg-deb --extract "build/packages/ultraview_${{ steps.meta.outputs.version }}_amd64.deb" build/package-check
+          QT_QPA_PLATFORM=offscreen build/package-check/usr/bin/ultraview --self-test --mock-frames 3
+
+      - name: Upload .deb
+        uses: actions/upload-artifact@v7
+        with:
+          name: ultraview-dev-deb-${{ github.sha }}
+          path: build/packages/*.deb
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload test log
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: ultraview-dev-test-log-${{ github.sha }}
+          path: build/Testing/Temporary/LastTest.log
+          if-no-files-found: ignore
+          retention-days: 7

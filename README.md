@@ -122,6 +122,17 @@ The GitHub Actions workflow runs the two-job matrix (sanitizers on/off) on
 ubuntu-24.04 with an explicit Qt 6.8.3 SDK and passed both jobs on 2026-10-19
 ([first green run](https://github.com/quytttb/ultraview-linux-client/actions)).
 
+## Downloads
+
+- [Releases](https://github.com/quytttb/ultraview-linux-client/releases): tagged
+  `.deb` packages for Ubuntu 26.04 amd64 with `SHA256SUMS`, built from the tag
+  against the distribution's Qt 6 after the CTest suite passed.
+- `dev-build.yml`: every push to `main` that can change the binary uploads a
+  `.deb` plus the test log as workflow artifacts (7 days) — the same
+  distribution-Qt build, gated the same way.
+- `ci.yml` keeps the compatibility matrix green (Qt 6.8 SDK, global menu compiled
+  out); `build-release.yml` builds and publishes the release for a `v*.*.*` tag.
+
 ## Layout and evidence
 
 - `src/`: C++ protocol, asynchronous transports/session worker, decoder,

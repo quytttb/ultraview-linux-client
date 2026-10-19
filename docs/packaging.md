@@ -52,6 +52,28 @@ extracted and installed as well; the extracted and the
 installed binaries both passed `--self-test` on the build host. This is not a
 clean-host installation test or a signed release.
 
+## CI packages (dev build / release)
+
+Two workflows package the same way this document does — distribution Qt on
+`ubuntu-26.04`, CMake/Ninja RelWithDebInfo, `ctest` as the gate, then
+`cpack` and an extracted-package `--self-test`:
+
+- `.github/workflows/dev-build.yml` — pushes to `main` that touch `src/`, `qml/`,
+  `tests/`, `packaging/`, `CMakeLists.txt` or the workflows upload
+  `ultraview-dev-deb-<sha>` (7 days) plus `ultraview-dev-test-log-<sha>`; commits
+  whose message contains `chore(release):` are left to the release workflow.
+- `.github/workflows/build-release.yml` — a `vMAJOR.MINOR.PATCH` tag (or a manual
+  run naming an existing tag) checks that the tag equals the `project(... VERSION)`
+  in `CMakeLists.txt`, then publishes a GitHub Release with the `.deb` and
+  `SHA256SUMS`.
+
+Because both build against Ubuntu 26.04's Qt 6, the packages depend on that
+distribution's Qt libraries (`libqt6core6t64 (>= 6.10.2)`,
+`qt6-base-private-abi (= 6.10.2)`, `qt6-declarative-private-abi (= 6.10.2)`) and
+are not advertised for older Ubuntu releases. Building without
+`qt6-base-private-dev` compiles the global menu out; every workflow here installs
+it where the distribution offers it.
+
 ## AppImage recipe
 
 Install/pin/check signatures or hashes for `linuxdeploy`, `linuxdeploy-plugin-qt`

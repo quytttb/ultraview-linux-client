@@ -1,0 +1,174 @@
+name: Build Release
+
+# Tagged releases: build the .deb from the tag, run the suite as the gate and
+# publish the package with checksums as a GitHub Release.  A manual run only
+# accepts an existing tag whose version matches CMakeLists.txt.
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag (e.g. v0.2.2)"
+        required: true
+        type: string
+
+concurrency:
+  group: build-release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Mirrors the documented build (README/docs/packaging.md): distribution Qt on
+  # Ubuntu 26.04, not a private SDK, so dpkg-shlibdeps can map real dependencies.
+  RUNNER: ubuntu-26.04
+
+jobs:
+  prepare:
+    runs-on: ubuntu-26.04
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: Resolve tag and version
+        id: meta
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          if [[ ! "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid tag (need vMAJOR.MINOR.PATCH): ${TAG}"
+            exit 1
+          fi
+          echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
+          echo "version=${TAG#v}" >> "${GITHUB_OUTPUT}"
+          echo "releasing ${TAG}"
+
+  build-deb:
+    needs: prepare
+    runs-on: ubuntu-26.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+
+      - name: Verify the tag matches the project version
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          PROJECT_VERSION=$(sed -nE 's/^ *VERSION ([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' CMakeLists.txt | head -1)
+          if [[ "${PROJECT_VERSION}" != "${VERSION}" ]]; then
+            echo "::error::Tag v${VERSION} does not match project version ${PROJECT_VERSION:-<none>}"
+            exit 1
+          fi
+          echo "tag and project version agree on ${VERSION}"
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake ninja-build pkg-config dpkg-dev \
+            libssl-dev libzstd-dev \
+            qt6-base-dev qt6-base-private-dev qt6-declarative-dev \
+            qt6-declarative-dev-tools qt6-tools-dev-tools \
+            qt6-qpa-plugins qt6-image-formats-plugins qt6-wayland \
+            qml6-module-qtquick qml6-module-qtquick-window qml6-module-qtquick-controls \
+            qml6-module-qtquick-templates qml6-module-qtquick-layouts qml6-module-qtquick-dialogs \
+            qml6-module-qtqml qml6-module-qtqml-models qml6-module-qtqml-workerscript \
+            qml6-module-qt-labs-folderlistmodel
+
+      - name: Configure, build and test
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          cmake --build build --parallel "$(nproc)"
+          ctest --test-dir build --output-on-failure
+
+      - name: Build .deb
+        run: cpack --config build/CPackConfig.cmake -G DEB -B build/packages
+
+      - name: Smoke-test the extracted package and write checksums
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          deb="build/packages/ultraview_${VERSION}_amd64.deb"
+          test -f "${deb}"
+          rm -rf build/package-check
+          dpkg-deb --extract "${deb}" build/package-check
+          QT_QPA_PLATFORM=offscreen build/package-check/usr/bin/ultraview --self-test --mock-frames 3
+          dpkg-deb -f "${deb}" Package Version Depends
+          ( cd build/packages && sha256sum "$(basename "${deb}")" > SHA256SUMS && cat SHA256SUMS )
+
+      - name: Upload the package
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-deb
+          path: |
+            build/packages/ultraview_*.deb
+            build/packages/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    needs: [prepare, build-deb]
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download the package
+        uses: actions/download-artifact@v8
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: List release files
+        run: find release-assets -type f -ls
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: Ultraview ${{ needs.prepare.outputs.version }}
+          generate_release_notes: true
+          make_latest: true
+          overwrite_files: true
+          body: |
+            ## Ultraview ${{ needs.prepare.outputs.version }}
+
+            Native C++20/Qt 6 Quick Linux controller for the recovered UltraViewer
+            protocol — an experimental interoperability client, not affiliated with
+            or endorsed by the UltraViewer vendor. Use it only against a partner
+            who has authorized the connection.
+
+            | Platform | File | Install |
+            |----------|------|---------|
+            | Ubuntu 26.04 amd64 | `ultraview_*_amd64.deb` | `sudo apt install ./ultraview_*_amd64.deb` |
+
+            - Built from tag `${{ needs.prepare.outputs.tag }}` against **Ubuntu
+              26.04's distribution Qt 6** (the package depends on those Qt 6.10
+              libraries and the matching private-ABI packages), so it is not
+              installable on older Ubuntu releases. No private Qt SDK and no
+              bundled libraries are involved.
+            - The 14-target CTest suite and the extracted-package `--self-test`
+              ran before publishing; both had to pass.
+            - Verify the download against `SHA256SUMS` before installing.
+            - No vendor dictionary (`8bit.dat`), registration profile or machine
+              identity is included; the KDE global menu is built in where the
+              distribution ships the private QtGui headers. Password persistence
+              is disabled in this build (compiled without libsecret, matching the
+              verification record).
+            - Features, limits and the outstanding manual validation are described
+              in `README.md`, `docs/compatibility.md` and `docs/verification.md`.
+          files: |
+            release-assets/**/*.deb
+            release-assets/**/SHA256SUMS
