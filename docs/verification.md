@@ -268,5 +268,32 @@ Neither step proves server acceptance or a working session.
 - Tag `v0.2.2` marks this published state. The `.deb` files above are local build
   artifacts; no release binaries are attached to the repository.
 
+## Dev-build and release workflows — 2026-10-19 (0.2.2)
+
+- `dev-build.yml` and `build-release.yml` were added (modelled on the author's
+  other projects): both build the package the documented way on `ubuntu-26.04`
+  with the **distribution** Qt 6.10 (not a private SDK), so `dpkg-shlibdeps` maps
+  real apt dependencies and the KDE global menu is compiled in.
+- `Dev Build` run `39240803702` (push to `main`): **success** in 3m45s — install
+  dependencies, configure `RelWithDebInfo`, build, `ctest` (14/14), `cpack` `.deb`,
+  extract it and run `--self-test` inside the extracted tree, then upload
+  `ultraview-dev-deb-<sha>` (7 days) and the test log.
+- `Build Release` run `39241317487` (manual dispatch on tag `v0.2.2`): **success** —
+  `prepare` validated the tag format, `build-deb` checked that the tag equals
+  `project(Ultraview VERSION)` in `CMakeLists.txt`, rebuilt and re-tested the
+  package from the tag and wrote `SHA256SUMS`, and `release` published
+  [Ultraview 0.2.2](https://github.com/quytttb/ultraview-linux-client/releases/tag/v0.2.2)
+  with `ultraview_0.2.2_amd64.deb` (10,978,320 bytes) and `SHA256SUMS`.
+- The published artifact was downloaded again through the GitHub API and verified
+  **outside the workflow**: `sha256sum -c SHA256SUMS` reports `OK`, the dependency
+  list (`dpkg-deb -f`) is byte-for-byte the same set the locally built 0.2.2
+  package records (including `qt6-base-private-abi (= 6.10.2)` and
+  `qt6-declarative-private-abi (= 6.10.2)`), and the extracted
+  `usr/bin/ultraview --self-test` prints `mirror=ok consumed=ok grab=ok pixel=ok
+  menu=unavailable` — the same result the locally installed package gives.
+- Limits: the packages are Ubuntu 26.04 amd64 only (glibc/Qt 6.10), password
+  persistence is compiled out (no libsecret), and the AppImage recipe remains
+  unbuilt. A clean-host install and a real partner session are still open.
+
 This record describes the checked local build, not a vendor-certified release or
 a claim that all recovered/undocumented protocol features were implemented.

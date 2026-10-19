@@ -74,6 +74,14 @@ are not advertised for older Ubuntu releases. Building without
 `qt6-base-private-dev` compiles the global menu out; every workflow here installs
 it where the distribution offers it.
 
+The first published release
+([v0.2.2](https://github.com/quytttb/ultraview-linux-client/releases/tag/v0.2.2))
+attaches `ultraview_0.2.2_amd64.deb` and `SHA256SUMS`; the package was downloaded
+again after publication and its checksum, dependency list and extracted
+`--self-test` were verified (see [verification](verification.md)). Install from a
+downloaded file with `sudo apt install ./ultraview_*.deb` — the version in
+`dpkg-query` then matches the release tag.
+
 ## AppImage recipe
 
 Install/pin/check signatures or hashes for `linuxdeploy`, `linuxdeploy-plugin-qt`
