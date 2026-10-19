@@ -1,5 +1,8 @@
 # Ultraview — native Linux controller
 
+[![Native build and offline tests](https://github.com/quytttb/ultraview-linux-client/actions/workflows/ci.yml/badge.svg)](https://github.com/quytttb/ultraview-linux-client/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Experimental **C++20 / Qt 6 Quick** reimplementation of the recovered
 UltraViewer controller protocol. It targets Windows UltraViewer partners, not
 VNC, RDP or RustDesk. No Wine, browser engine, Python backend or Qt Widgets.
