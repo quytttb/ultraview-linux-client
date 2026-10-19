@@ -21,11 +21,6 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  # Mirrors the documented build (README/docs/packaging.md): distribution Qt on
-  # Ubuntu 26.04, not a private SDK, so dpkg-shlibdeps can map real dependencies.
-  RUNNER: ubuntu-26.04
-
 jobs:
   prepare:
     runs-on: ubuntu-26.04
@@ -52,6 +47,8 @@ jobs:
 
   build-deb:
     needs: prepare
+    # Distribution Qt on Ubuntu 26.04 (not a private SDK) so dpkg-shlibdeps maps
+    # real dependencies and the KDE global menu is compiled in.
     runs-on: ubuntu-26.04
     timeout-minutes: 90
     steps:
