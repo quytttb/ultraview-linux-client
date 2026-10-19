@@ -128,7 +128,9 @@ ubuntu-24.04 with an explicit Qt 6.8.3 SDK and passed both jobs on 2026-10-19
 
 - [Releases](https://github.com/quytttb/ultraview-linux-client/releases): tagged
   `.deb` packages for Ubuntu 26.04 amd64 with `SHA256SUMS`, built from the tag
-  against the distribution's Qt 6 after the CTest suite passed.
+  against the distribution's Qt 6 after the CTest suite passed. From v0.2.3 the
+  package also includes platform Secret Service password storage (v0.2.2 was
+  built without it).
 - `dev-build.yml`: every push to `main` that can change the binary uploads a
   `.deb` plus the test log as workflow artifacts (7 days) — the same
   distribution-Qt build, gated the same way.

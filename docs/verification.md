@@ -325,6 +325,20 @@ Neither step proves server acceptance or a working session.
 - The packaging workflows install `libsecret-1-dev` and pass
   `-DULTRAVIEW_REQUIRE_SECRET_SERVICE=ON` (as does `ci.yml`), so a packaging build
   fails instead of silently dropping the feature.
+- All three workflows ran with that configuration and are green: `Dev Build`
+  `39244089163` (push to `main`, 3m54s — 14/14 `ctest`, `.deb` built,
+  extracted-package `--self-test`), `Native build and offline tests`
+  `39244089171` (sanitizers OFF/ON, 3m25s) and `Build Release` `39244609905` —
+  the first **tag-push** trigger (`v0.2.3`), which checked the tag against the
+  project version and published
+  [Ultraview 0.2.3](https://github.com/quytttb/ultraview-linux-client/releases/tag/v0.2.3)
+  with `ultraview_0.2.3_amd64.deb` (10,987,594 bytes) and `SHA256SUMS`.
+- The published package was downloaded again outside the workflow:
+  `sha256sum -c SHA256SUMS` → `OK`; its dependency list is identical to the
+  locally built 0.2.3 package; `ldd` on the extracted binary links
+  `libsecret-1.so.0`; the extracted `--self-test` passes; and the extracted
+  binary's offscreen Settings → Security screenshot shows the enabled
+  "Passwords are stored in the platform secret service." hint.
 
 This record describes the checked local build, not a vendor-certified release or
 a claim that all recovered/undocumented protocol features were implemented.
