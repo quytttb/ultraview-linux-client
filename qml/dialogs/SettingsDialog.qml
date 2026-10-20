@@ -485,6 +485,14 @@ Dialog {
                             placeholderText: qsTr("route value")
                             onEditingFinished: controller.settings.relayHttpHostOverride = text
                         }
+
+                        Label { text: qsTr("Relay certificate name"); color: Theme.textMuted; font.pixelSize: Theme.fontSmall }
+                        AppInlineField {
+                            Layout.fillWidth: true
+                            text: controller.settings.relayPeerNameOverride
+                            placeholderText: qsTr("registration certificate name (default)")
+                            onEditingFinished: controller.settings.relayPeerNameOverride = text
+                        }
                     }
 
                     Label {

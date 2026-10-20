@@ -88,16 +88,20 @@ struct SessionRequest {
     /// `Host:` header of the registration preface; empty means "the connect host".
     QString registrationHttpHost;
     /// Registration certificate name to verify; empty means registrationHost.
-    /// Does not affect the independent relay certificate name.
+    /// The relay channel authenticates the same service name unless
+    /// `relayPeerName` below is set.
     QString registrationPeerName;
     /// When set, replaces route.tcp_server_ip for the relay connection.
     QString relayHostOverride;
     /// When non-zero, replaces the relay port (443).
     quint16 relayPortOverride = 0;
     /// When set, overrides route.tcp_server_hostname as the `Host:` header of the
-    /// relay tunnel preface. This HTTP header does not override TLS identity:
-    /// verify the route DNS name, or the explicit relay connect-host override.
+    /// relay tunnel preface. This HTTP header does not influence TLS identity.
     QString relayHttpHostOverride;
+    /// Certificate name for the relay channel; empty means the registration
+    /// certificate name (the reference wraps both channels with one TLS name).
+    /// The route's hostname field is an HTTP `Host:` header, never a TLS name.
+    QString relayPeerName;
 
     /// Structure check the transport layer cannot do.  Returns true when the
     /// request can be attempted; `error` receives a credential-free reason.

@@ -34,6 +34,7 @@ constexpr auto kRegistrationPeerKey = "endpoints/registrationPeerName";
 constexpr auto kRelayHostKey = "endpoints/relayHost";
 constexpr auto kRelayPortKey = "endpoints/relayPort";
 constexpr auto kRelayHttpHostKey = "endpoints/relayHttpHost";
+constexpr auto kRelayPeerKey = "endpoints/relayPeerName";
 
 QSettings settings()
 {
@@ -75,6 +76,7 @@ void SettingsModel::load()
     m_relayHostOverride = store.value(kRelayHostKey).toString();
     m_relayPortOverride = store.value(kRelayPortKey, 0).toInt();
     m_relayHttpHostOverride = store.value(kRelayHttpHostKey).toString();
+    m_relayPeerNameOverride = store.value(kRelayPeerKey).toString();
 }
 
 void SettingsModel::save()
@@ -101,6 +103,7 @@ void SettingsModel::save()
     store.setValue(kRelayHostKey, m_relayHostOverride);
     store.setValue(kRelayPortKey, m_relayPortOverride);
     store.setValue(kRelayHttpHostKey, m_relayHttpHostOverride);
+    store.setValue(kRelayPeerKey, m_relayPeerNameOverride);
     store.sync();
 }
 
@@ -141,6 +144,7 @@ void SettingsModel::resetToDefaults()
     m_relayHostOverride.clear();
     m_relayPortOverride = 0;
     m_relayHttpHostOverride.clear();
+    m_relayPeerNameOverride.clear();
     save();
     reload();
 }
@@ -328,6 +332,14 @@ void SettingsModel::setRelayHostOverride(const QString &value)
     if (m_relayHostOverride == value)
         return;
     m_relayHostOverride = value;
+    emit endpointsChanged();
+}
+
+void SettingsModel::setRelayPeerNameOverride(const QString &value)
+{
+    if (m_relayPeerNameOverride == value)
+        return;
+    m_relayPeerNameOverride = value;
     emit endpointsChanged();
 }
 

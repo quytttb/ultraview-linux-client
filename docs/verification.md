@@ -340,5 +340,51 @@ Neither step proves server acceptance or a working session.
   binary's offscreen Settings → Security screenshot shows the enabled
   "Passwords are stored in the platform secret service." hint.
 
+## Relay certificate identity — 2026-10-20 (0.2.4)
+
+- The first real interface attempt (partner `118925568`, 2026-10-19 23:52 local)
+  reached the service and failed with *"TLS certificate verification failed: The
+  host name did not match any of the valid hosts for this certificate"*. The
+  registration endpoint itself verifies:
+  `openssl s_client -connect functions3.ultraviewer.net:443 -servername
+  functions3.ultraviewer.net -verify_hostname functions3.ultraviewer.net` reports
+  `subject=CN=*.ultraviewer.net`, issuer
+  `Sectigo Public Server Authentication CA DV R36` and
+  `Verify return code: 0 (ok)`.
+- Diagnosis (from the pinned reference, not guesswork): route field 14
+  (`tcp_server_hostname`) is passed only as the HTTP `Host:` header of the relay
+  preface — `SessionTransport.connect(self.route.tcp_server_ip, 443,
+  http_hostname=self.route.tcp_server_hostname)` — while both channels wrap TLS
+  with the same `TLS_TARGET_HOST` literal. The native client had been verifying
+  the relay against the route field, an identity the vendor certificate never
+  carries. This fixes a recovery assumption; it does not relax verification:
+  chain and host-name checks stay on.
+- 0.2.4 authenticates the relay with the service certificate name (the
+  registration certificate name: `registrationPeerName`, else the registration
+  host). A new **Relay certificate name** setting (`endpoints/relayPeerName`)
+  overrides it explicitly; an explicit relay connect-host override still
+  authenticates that host. `route.tcpServerHostname` is used only as the HTTP
+  `Host:` header.
+- TLS failures now report the expected name and the peer certificate's subject
+  alternative names, so a remaining mismatch is diagnosable from the status bar
+  without packet captures.
+- Offline integration replaces the previous (incorrect) expectation in
+  `tst_session`: `relayAuthenticatesTheRegistrationCertificateName` advertises
+  `wrong-relay.invalid` in the route, verifies the relay, and asserts the preface
+  sends `Host: wrong-relay.invalid`;
+  `relayCertificateNameOverrideIsRefusedWhenItDoesNotMatch` proves an explicit
+  mismatching certificate name is refused before `login:`. 14/14 CTest targets
+  pass; the installed 0.2.4 binary passes `--self-test`, and the live probe
+  (`--connect-attempt 999999999`) still reads the reference's status-11 refusal,
+  so the registration path is unchanged.
+- `ultraview_0.2.4_amd64.deb` (11,008,492 bytes,
+  `a542091047d0fc88fa5ea04ce925a8d7f4fa0a02cc8c263a1771b677ed152434`) declares
+  the same dependencies as 0.2.3 (including `libsecret-1-0`), was extracted and
+  installed (`0.2.4: install ok installed`), and the extracted and installed
+  binaries pass `--self-test`.
+- The live retry with the partner password is **pending**; if the vendor relay
+  does not present the wildcard certificate, the reported SANs will record what it
+  presents and this section will be updated.
+
 This record describes the checked local build, not a vendor-certified release or
 a claim that all recovered/undocumented protocol features were implemented.

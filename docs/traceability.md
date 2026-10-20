@@ -63,7 +63,10 @@ TLS defaults intentionally differ: strict verification, explicit insecure option
 Relay TLS+HTTP 200 prefix, framing/body decoding and addressed send →
 `network/RelayTransport`, `HttpTunnelSocket`, `PacketCodec` → `tst_packet_codec`,
 `tst_session` → **offline integration verified**. Endpoint overrides are explicit
-test/deployment policy. P2P is not substituted for this relay path.
+test/deployment policy. The relay reuses the registration certificate name (the
+reference wraps both channels with one TLS name); the route hostname is only the
+HTTP `Host:` header of the relay preface. P2P is not substituted for this relay
+path.
 
 ### `control_session.py`
 

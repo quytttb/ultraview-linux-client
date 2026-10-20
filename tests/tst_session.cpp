@@ -177,7 +177,8 @@ private slots:
     void invalidRequestIsRejectedLocally();
     void certificateNameMismatchIsRefused();
     void defaultTlsNamesUseTheEndpoint();
-    void registrationNameOverrideDoesNotBypassRelayName();
+    void relayAuthenticatesTheRegistrationCertificateName();
+    void relayCertificateNameOverrideIsRefusedWhenItDoesNotMatch();
     void acceptAnyCertificateIsExplicit();
 };
 
@@ -706,17 +707,45 @@ void TestSession::defaultTlsNamesUseTheEndpoint()
     QVERIFY(server.waitFor([&] { return recorder.stopped == 1; }));
 }
 
-void TestSession::registrationNameOverrideDoesNotBypassRelayName()
+void TestSession::relayAuthenticatesTheRegistrationCertificateName()
 {
     uvtest::MockUltraviewServer server;
     auto options = mockOptions();
+    // The route field becomes the HTTP `Host:` header of the relay preface in the
+    // reference; it is not a certificate name.  An unrelated value must neither
+    // be verified against the relay certificate nor break the session.
     options.routeHostname = QStringLiteral("wrong-relay.invalid");
     server.setOptions(options);
     QVERIFY(server.listen());
     auto request = makeRequest(server);
-    // Registration's explicit "ultraviewer" override matches its test cert.
-    // Relay must nevertheless authenticate the different name in the route.
+    // Registration's explicit "ultraviewer" override matches the test certificate;
+    // the relay authenticates that same service name, like the reference does.
     request.relayHostOverride.clear();
+    request.relayHttpHostOverride.clear(); // the route value becomes the Host header
+
+    SessionManager session;
+    SessionRecorder recorder;
+    recorder.attach(&session);
+    session.start(request);
+    QVERIFY(server.waitFor([&] { return server.relayLoginDone(); }, 5000));
+    QVERIFY(server.waitFor([&] { return session.state() == SessionState::Connected; }, 3000));
+    QVERIFY(recorder.failures.isEmpty());
+    QCOMPARE(server.prefaces().size(), 2);
+    QVERIFY(server.prefaces().at(1).contains("Host: wrong-relay.invalid\r\n"));
+    session.stop();
+    QVERIFY(server.waitFor([&] { return recorder.stopped == 1; }));
+}
+
+void TestSession::relayCertificateNameOverrideIsRefusedWhenItDoesNotMatch()
+{
+    uvtest::MockUltraviewServer server;
+    server.setOptions(mockOptions());
+    QVERIFY(server.listen());
+    auto request = makeRequest(server);
+    // An explicit relay certificate name is really verified: a name the test
+    // certificate does not carry must fail before the relay login is sent.
+    request.relayPeerName = QStringLiteral("wrong-relay.invalid");
+
     SessionManager session;
     SessionRecorder recorder;
     recorder.attach(&session);
@@ -724,6 +753,7 @@ void TestSession::registrationNameOverrideDoesNotBypassRelayName()
     QVERIFY(server.waitFor([&] { return !recorder.failures.isEmpty(); }));
     QVERIFY(server.routeSent()); // registration TLS + command 3/8 succeeded
     QVERIFY(recorder.hasFailure(ErrorCode::Tls));
+    QVERIFY(recorder.failures.first().detail.contains(QStringLiteral("wrong-relay.invalid")));
     QVERIFY(!server.relayLoginDone()); // no login sent to a name-mismatched relay
     QVERIFY(!session.isConnected());
 }

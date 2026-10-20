@@ -50,6 +50,7 @@ class SettingsModel : public QObject {
     Q_PROPERTY(QString relayHostOverride READ relayHostOverride WRITE setRelayHostOverride NOTIFY endpointsChanged)
     Q_PROPERTY(int relayPortOverride READ relayPortOverride WRITE setRelayPortOverride NOTIFY endpointsChanged)
     Q_PROPERTY(QString relayHttpHostOverride READ relayHttpHostOverride WRITE setRelayHttpHostOverride NOTIFY endpointsChanged)
+    Q_PROPERTY(QString relayPeerNameOverride READ relayPeerNameOverride WRITE setRelayPeerNameOverride NOTIFY endpointsChanged)
     Q_PROPERTY(bool endpointOverrideActive READ endpointOverrideActive NOTIFY endpointsChanged)
 
 public:
@@ -116,6 +117,10 @@ public:
     void setRelayPortOverride(int value);
     QString relayHttpHostOverride() const { return m_relayHttpHostOverride; }
     void setRelayHttpHostOverride(const QString &value);
+    /// Certificate name for the relay channel; empty means the registration
+    /// certificate name. The route hostname is an HTTP header, not a TLS name.
+    QString relayPeerNameOverride() const { return m_relayPeerNameOverride; }
+    void setRelayPeerNameOverride(const QString &value);
     /// True when at least one endpoint override is set (the UI warns).
     bool endpointOverrideActive() const;
 
@@ -166,6 +171,7 @@ private:
     QString m_relayHostOverride;
     int m_relayPortOverride = 0;
     QString m_relayHttpHostOverride;
+    QString m_relayPeerNameOverride;
 };
 
 } // namespace ultraview::models

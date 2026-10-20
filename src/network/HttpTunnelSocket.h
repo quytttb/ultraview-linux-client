@@ -5,7 +5,8 @@
 // Recovered sequence (`registration_transport.connect` / `session_transport.connect`):
 //
 //   1. TCP connect to host:443,
-//   2. TLS handshake (SNI + verified host name = "ultraviewer" in the reference),
+//   2. TLS handshake (SNI + verified host name; the reference uses the same
+//      "ultraviewer" literal for the registration and relay channels),
 //   3. send `POST /UVService/ HTTP/1.1 ... Host: <host>\r\n\r\n` (the preface),
 //   4. read until CRLFCRLF, cap the header at 16384 bytes,
 //   5. everything after that header is the framed byte stream.
@@ -104,6 +105,8 @@ private:
     QSslSocket *m_socket = nullptr;
     QTimer *m_timer = nullptr;
     TunnelRequest m_request;
+    /// Name set on the socket for certificate verification (diagnostics).
+    QString m_peerName;
     Phase m_phase = Phase::Idle;
     QByteArray m_headerBuffer;
     QByteArray m_buffer;

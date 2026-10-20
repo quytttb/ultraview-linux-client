@@ -438,6 +438,7 @@ bool ConnectionViewModel::buildSessionRequest(network::SessionRequest *request, 
     result.relayHostOverride = m_settings->relayHostOverride();
     result.relayPortOverride = static_cast<quint16>(m_settings->relayPortOverride());
     result.relayHttpHostOverride = m_settings->relayHttpHostOverride();
+    result.relayPeerName = m_settings->relayPeerNameOverride();
 
     QString dictionaryError;
     result.screenDictionary = m_settings->loadDictionary(&dictionaryError);

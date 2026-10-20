@@ -392,12 +392,22 @@ void ConnectionManager::startRelay()
     endpoint.port = m_request.relayPortOverride != 0 ? m_request.relayPortOverride : kRelayPort;
     endpoint.httpHostHeader = m_request.relayHttpHostOverride.isEmpty() ? m_route.tcpServerHostname
                                                                        : m_request.relayHttpHostOverride;
-    // A registration-only name override must never change the relay identity.
-    // Routes may give an IP for connecting and a DNS name for its certificate.
-    // An explicit connect-host override instead authenticates that override.
-    endpoint.peerNameOverride = !m_request.relayHostOverride.isEmpty()
-        ? endpoint.host
-        : (m_route.tcpServerHostname.isEmpty() ? endpoint.host : m_route.tcpServerHostname);
+    // The route's hostname field is the HTTP `Host:` header of the tunnel preface
+    // (the reference passes it only there); it is not a certificate name.  Both
+    // channels are wrapped with the same recovered TLS name, so the relay
+    // authenticates the service name the registration channel verified.  An
+    // explicit relay certificate name wins, then an explicit connect-host
+    // override (which authenticates that host).
+    const QString registrationName = !m_request.registrationPeerName.isEmpty()
+        ? m_request.registrationPeerName
+        : (m_request.registrationHost.isEmpty() ? defaultRegistrationHost()
+                                                : m_request.registrationHost);
+    if (!m_request.relayPeerName.isEmpty())
+        endpoint.peerNameOverride = m_request.relayPeerName;
+    else if (!m_request.relayHostOverride.isEmpty())
+        endpoint.peerNameOverride = endpoint.host;
+    else
+        endpoint.peerNameOverride = registrationName;
     endpoint.targetIpv4 = m_route.publicIp;
     endpoint.targetPort = m_route.tcpPort;
 

@@ -9,10 +9,12 @@ Native defensive bounds are not claims about the Windows implementation.
 - Default registration endpoint: `functions3.ultraviewer.net:443`. The reference's
   TLS name literal is `ultraviewer`; native 0.1.1 instead verifies the actual
   registration hostname, matching the service's `*.ultraviewer.net` certificate.
-  Relay connects to the route address and verifies its DNS hostname, unless an
-  explicit relay connect-host override is configured (then verify that host).
-  Registration-only name overrides never affect relay verification. The HTTP
-  Host header is separate from TLS identity. Relay socket port is
+  The relay channel authenticates that same service certificate name: the
+  reference wraps both sockets with one `TLS_TARGET_HOST`, and the route's
+  `tcp_server_hostname` is only the HTTP `Host:` header of the relay preface,
+  never a certificate name. An explicit relay certificate name overrides the
+  registration name; a relay connect-host override authenticates that host.
+  The HTTP Host header is separate from TLS identity. Relay socket port is
   443 unless explicitly overridden. Route TCP port is the **target** port in the
   relay envelope, not the relay server's socket port.
 - HTTP tunnel request is `POST /UVService/ HTTP/1.1` with the literal

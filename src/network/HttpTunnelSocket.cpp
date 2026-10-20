@@ -96,6 +96,7 @@ void HttpTunnelSocket::start(const TunnelRequest &request)
 
     setPhase(Phase::Connecting);
     const QString peerName = request.peerNameOverride.isEmpty() ? request.host : request.peerNameOverride;
+    m_peerName = peerName;
     try {
         // The configuration must be installed before the handshake starts so that
         // peer verification (and the optional CA bundle) apply to it.
@@ -221,8 +222,29 @@ void HttpTunnelSocket::onSslErrors(const QList<QSslError> &errors)
     descriptions.reserve(errors.size());
     for (const QSslError &error : errors)
         descriptions.append(error.errorString());
-    fail(ErrorCode::Tls, QStringLiteral("TLS certificate verification failed"),
-         descriptions.join(QStringLiteral("; ")));
+    // A host-name mismatch is otherwise undiagnosable: name the expected host and
+    // the names the peer certificate actually carries (no secret material).
+    QString detail = descriptions.join(QStringLiteral("; "));
+    if (!m_peerName.isEmpty())
+        detail += QStringLiteral("; verified name: %1").arg(m_peerName);
+    if (m_socket) {
+        const QSslCertificate certificate = m_socket->peerCertificate();
+        if (!certificate.isNull()) {
+            QStringList names;
+            const auto alternativeNames = certificate.subjectAlternativeNames();
+            for (auto it = alternativeNames.constBegin(); it != alternativeNames.constEnd(); ++it) {
+                const QString kind = it.key() == QSsl::DnsEntry
+                    ? QStringLiteral("DNS")
+                    : (it.key() == QSsl::IpAddressEntry ? QStringLiteral("IP") : QStringLiteral("other"));
+                names.append(QStringLiteral("%1:%2").arg(kind, it.value()));
+            }
+            detail += QStringLiteral("; peer certificate: %1; subject alternative names: %2")
+                          .arg(security::TlsPolicy::describePeerCertificate(certificate),
+                               names.isEmpty() ? QStringLiteral("none")
+                                               : names.join(QStringLiteral(", ")));
+        }
+    }
+    fail(ErrorCode::Tls, QStringLiteral("TLS certificate verification failed"), detail);
 }
 
 void HttpTunnelSocket::onDisconnected()
