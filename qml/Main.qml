@@ -24,6 +24,8 @@ ApplicationWindow {
             settingsDialog.open()
         else if (devDialog === "about")
             aboutDialog.open()
+        else if (devDialog === "log")
+            logDialog.open()
     }
 
     header: AppToolbar {
@@ -78,8 +80,24 @@ ApplicationWindow {
                 Layout.alignment: Qt.AlignVCenter
                 elide: Text.ElideRight
                 text: controller.noticeText.length > 0 ? controller.noticeText : controller.statusText
-                color: controller.noticeText.length > 0 ? Theme.warning : Theme.textMuted
+                color: statusMouse.containsMouse
+                       ? Theme.text
+                       : (controller.noticeText.length > 0 ? Theme.warning : Theme.textMuted)
                 font.pixelSize: Theme.fontSmall
+
+                // The status line elides; clicking it opens the complete log
+                // (full TLS diagnostics included) with a copy button.
+                ToolTip.visible: statusMouse.containsMouse
+                ToolTip.text: qsTr("Click to view and copy the full session log")
+                ToolTip.delay: 700
+
+                MouseArea {
+                    id: statusMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: logDialog.open()
+                }
             }
 
             Label {
@@ -101,6 +119,10 @@ ApplicationWindow {
 
     AboutDialog {
         id: aboutDialog
+    }
+
+    LogDialog {
+        id: logDialog
     }
 
     // The desktop's application menu belongs to the platform layer, but the

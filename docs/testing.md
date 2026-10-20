@@ -186,19 +186,21 @@ native features.
 Verified locally on 2026-10-18, re-run on 2026-10-19 after adding the profile
 loader test, again for the 0.2.0 interface refresh, again for the 0.2.1 desktop
 application menu, again for the 0.2.2 live connect probe, once more for the
-0.2.3 keyring build, and again for the 0.2.4 relay certificate identity fix:
-**14/14 native CTest targets pass** in the RelWithDebInfo build,
+0.2.3 keyring build, again for the 0.2.4 relay certificate identity fix, and once
+more for the 0.2.5 copyable session log: **14/14 native CTest targets pass** in
+the RelWithDebInfo build,
 and **14/14 pass** in Debug with ASan/UBSan using the options above. The direct
 40-patch QML self-test reports mirror/consumed/grab/pixel all `ok`, asserts that
 every embedded theme icon is present and reports the global menu as
-`menu=exported`/`unavailable`/`pending`. CPack generated a `.deb`; version 0.2.4 is
+`menu=exported`/`unavailable`/`pending`. CPack generated a `.deb`; version 0.2.5 is
 installed system-wide (`pkexec apt-get install`) and its `/usr/bin/ultraview`
 passed the same smoke test and announced its menu to KWin on this Wayland session.
 The interface was reviewed through offscreen `--screenshot` frames of each surface
 and the exported menu through `WAYLAND_DEBUG` plus `com.canonical.dbusmenu` calls
 (see `verification.md`). A manual live probe (`--connect-attempt`) reached the
 service and read back the reference's status-11 refusal for an unknown partner;
-it was re-run on 0.2.4 after the relay certificate change.
+it was re-run on 0.2.4 after the relay certificate change and on 0.2.5 after the
+session log was added.
 See [verification record](verification.md).
 
 Local development environment: Linux x86_64 Ubuntu 26.04, GCC 15.2, Qt 6.10.2,

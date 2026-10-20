@@ -4,11 +4,14 @@
 #include "decoder/ZstdDecoder.h"
 #include "models/ProfileLoader.h"
 
+#include <QClipboard>
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QGuiApplication>
 #include <QStandardPaths>
+#include <QStringList>
 #include <QSysInfo>
 #include <QUrl>
 #include <QtGlobal>
@@ -53,6 +56,13 @@ ConnectionViewModel::ConnectionViewModel(QObject *parent)
     connect(m_session, &SessionManager::statisticsChanged, this, &ConnectionViewModel::onStatistics);
     connect(m_input, &input::InputController::commandReady, this, &ConnectionViewModel::onInputCommand);
     connect(m_input, &input::InputController::statusMessage, this, &ConnectionViewModel::onInputStatus);
+
+    // The log starts with the build identity: a report from an older running
+    // binary can then be told apart from the installed package.
+    appendLog(QStringLiteral("info"),
+              QStringLiteral("Ultraview %1 started (Qt %2, %3)")
+                  .arg(QCoreApplication::applicationVersion(), QString::fromLatin1(qVersion()),
+                       QSysInfo::prettyProductName()));
 
     const auto applyAndNotify = [this] {
         applyViewSettings();
@@ -462,6 +472,7 @@ void ConnectionViewModel::connectNow()
     QString error;
     if (!buildSessionRequest(&request, &error)) {
         m_errorText = error;
+        appendLog(QStringLiteral("error"), error);
         emit errorTextChanged();
         emit statusTextChanged();
         emit stateChanged();
@@ -477,6 +488,7 @@ void ConnectionViewModel::connectNow()
         QString credentialsError;
         if (!m_credentials->storePassword(m_partnerId, m_password, &credentialsError)) {
             m_noticeText = credentialsError;
+            appendLog(QStringLiteral("warning"), credentialsError);
             emit noticeTextChanged();
         }
     } else {
@@ -485,10 +497,17 @@ void ConnectionViewModel::connectNow()
     m_input->releaseAll();
     m_settings->save();
 
+    const QString policyWarning = tlsWarning();
+    appendLog(policyWarning.isEmpty() ? QStringLiteral("info") : QStringLiteral("warning"),
+              policyWarning.isEmpty()
+                  ? QStringLiteral("TLS: chain and host name verification enabled")
+                  : policyWarning);
+
     const bool hasDictionary = !request.screenDictionary.isEmpty();
     if (!hasDictionary) {
         m_noticeText = QStringLiteral("No screen dictionary configured: compressed screen updates "
                                       "will be refused. Set 8bit.dat in the settings.");
+        appendLog(QStringLiteral("warning"), m_noticeText);
         emit noticeTextChanged();
     }
     m_dictionaryLoaded = hasDictionary;
@@ -530,13 +549,15 @@ void ConnectionViewModel::onStateChanged(SessionState state)
         emit passwordChanged();
         m_credentials->clearSessionPasswords();
     }
+    appendLog(QStringLiteral("info"), QStringLiteral("State: %1").arg(stateName()));
     emit stateChanged();
     emit statusTextChanged();
 }
 
 void ConnectionViewModel::onConnected(const QSize &size)
 {
-    Q_UNUSED(size);
+    appendLog(QStringLiteral("info"),
+              QStringLiteral("Connected: partner desktop %1x%2").arg(size.width()).arg(size.height()));
     m_errorText.clear();
     emit errorTextChanged();
     emit statusTextChanged();
@@ -546,6 +567,7 @@ void ConnectionViewModel::onConnected(const QSize &size)
 void ConnectionViewModel::onFailed(const ErrorInfo &error)
 {
     m_errorText = error.summary();
+    appendLog(QStringLiteral("error"), error.message, error.detail);
     emit errorTextChanged();
     emit statusTextChanged();
 }
@@ -553,6 +575,7 @@ void ConnectionViewModel::onFailed(const ErrorInfo &error)
 void ConnectionViewModel::onNotice(const ErrorInfo &error)
 {
     m_noticeText = error.summary();
+    appendLog(QStringLiteral("warning"), error.message, error.detail);
     emit noticeTextChanged();
 }
 
@@ -573,7 +596,50 @@ void ConnectionViewModel::onInputCommand(const QByteArray &payload)
 void ConnectionViewModel::onInputStatus(const QString &message)
 {
     m_noticeText = message;
+    appendLog(QStringLiteral("info"), message);
     emit noticeTextChanged();
+}
+
+void ConnectionViewModel::appendLog(const QString &level, const QString &message,
+                                    const QString &detail)
+{
+    LogEntry entry;
+    entry.time = QDateTime::currentDateTime();
+    entry.level = level;
+    entry.message = message;
+    entry.detail = detail;
+    m_log.append(entry);
+    // A session log is a diagnostic aid, not an audit trail; keep it bounded.
+    constexpr int limit = 200;
+    while (m_log.size() > limit)
+        m_log.removeFirst();
+    emit logChanged();
+}
+
+QString ConnectionViewModel::logText() const
+{
+    QStringList lines;
+    lines.reserve(m_log.size() * 2);
+    for (const LogEntry &entry : m_log) {
+        lines.append(QStringLiteral("[%1] %2 %3")
+                         .arg(entry.time.toString(QStringLiteral("yyyy-MM-dd HH:mm:ss")),
+                              entry.level.toUpper().leftJustified(7), entry.message));
+        if (entry.detail.isEmpty())
+            continue;
+        const QStringList detailLines = entry.detail.split(QLatin1Char('\n'));
+        for (const QString &line : detailLines)
+            lines.append(QStringLiteral("    %1").arg(line));
+    }
+    return lines.join(QLatin1Char('\n'));
+}
+
+bool ConnectionViewModel::copyLogToClipboard()
+{
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    if (clipboard == nullptr)
+        return false;
+    clipboard->setText(logText());
+    return true;
 }
 
 } // namespace ultraview::models

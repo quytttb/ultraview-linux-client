@@ -386,5 +386,27 @@ Neither step proves server acceptance or a working session.
   does not present the wildcard certificate, the reported SANs will record what it
   presents and this section will be updated.
 
+## Session log with copyable details — 2026-10-20 (0.2.5)
+
+- The status bar elides its message, so the first live TLS failure could not be
+  read or reported in full. The footer message is now clickable and opens
+  **Session log** (`qml/dialogs/LogDialog.qml`): build identity (application
+  version, Qt, distribution), the state timeline, every notice and the complete
+  `ErrorInfo` detail, including the relay/TLS diagnostics added in 0.2.4
+  (`verified name:` and the peer certificate subject alternative names).
+- The log lives in memory only, keeps the most recent 200 entries and never
+  receives the partner password. **Copy log** puts the same text on the platform
+  clipboard through `ConnectionViewModel::copyLogToClipboard` (C++), with a
+  transient "Copied" confirmation in the dialog.
+- Verified offscreen: `--screenshot --screenshot-dialog log` renders the dialog
+  and the startup entry (`Ultraview 0.2.5 started (Qt 6.10.2, Ubuntu 26.04.1 LTS)`);
+  14/14 CTest targets pass in RelWithDebInfo and under ASan/UBSan.
+  `ultraview_0.2.5_amd64.deb` (11,256,388 bytes,
+  `43d63242e480ab216945bb88af1871b60d125e3c63e0d9e67dfab7d120fe6a6b`) was
+  generated, extracted and installed (`0.2.5: install ok installed`); the
+  extracted and installed binaries pass `--self-test`.
+- The live retry from the previous section (partner `118925568`) is still the
+  open gate; this log is what makes its full TLS answer reportable.
+
 This record describes the checked local build, not a vendor-certified release or
 a claim that all recovered/undocumented protocol features were implemented.

@@ -43,8 +43,14 @@ Singleton; every colour and metric the interface uses lives there.
 | `AppToolbar`, `ViewerToolbar` | application header and viewer session actions |
 | `StatusBadge`, `StatRow`, `EmptyState`, `FilePicker` | status pill, statistics line, introductory block, path chooser |
 
-`qml/pages/` (connect page, viewer page) and `qml/dialogs/` (settings, about) only
-compose these components.
+`qml/pages/` (connect page, viewer page) and `qml/dialogs/` (settings, about,
+session log) only compose these components.
+
+The status bar (window footer) shows the session state and the latest message.
+That message is clickable: the complete session log opens in a dialog with the
+build identity, the state timeline, every notice and the full error detail (TLS
+certificate diagnostics included), plus a **Copy log** button. The log is kept in
+memory only (most recent 200 entries) and never contains the partner password.
 
 ## Icons — `qml/assets/icons/*.svg`
 

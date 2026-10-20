@@ -12,6 +12,8 @@
 // diagnostics text.
 //
 #include <QByteArray>
+#include <QDateTime>
+#include <QList>
 #include <QObject>
 #include <QSize>
 #include <QString>
@@ -39,6 +41,8 @@ class ConnectionViewModel : public QObject {
     Q_PROPERTY(QString statusText READ statusText NOTIFY statusTextChanged)
     Q_PROPERTY(QString errorText READ errorText NOTIFY errorTextChanged)
     Q_PROPERTY(QString noticeText READ noticeText NOTIFY noticeTextChanged)
+    Q_PROPERTY(QString logText READ logText NOTIFY logChanged)
+    Q_PROPERTY(int logCount READ logCount NOTIFY logChanged)
     Q_PROPERTY(QString desktopSizeText READ desktopSizeText NOTIFY statisticsChanged)
     Q_PROPERTY(QString routeText READ routeText NOTIFY statisticsChanged)
     Q_PROPERTY(QString configurationHint READ configurationHint NOTIFY stateChanged)
@@ -68,6 +72,10 @@ public:
     QString statusText() const;
     QString errorText() const { return m_errorText; }
     QString noticeText() const { return m_noticeText; }
+    /// Full diagnostic log (version, state timeline, notices and complete error
+    /// details); shown by the log dialog and copied by `copyLogToClipboard`.
+    QString logText() const;
+    int logCount() const { return int(m_log.size()); }
     QString desktopSizeText() const;
     QString routeText() const;
     QString configurationHint() const;
@@ -97,6 +105,8 @@ public slots:
     QString loadDictionary(const QString &path);
     void clearError();
     void clearNotice();
+    /// Copy the diagnostic log to the platform clipboard.
+    Q_INVOKABLE bool copyLogToClipboard();
     /// Credential-free diagnostics text for the About dialog.
     QString diagnostics() const;
     /// Converts a QML file dialog URL into a local path (identity for plain paths).
@@ -113,6 +123,7 @@ signals:
     void statusTextChanged();
     void errorTextChanged();
     void noticeTextChanged();
+    void logChanged();
     void statisticsChanged();
     void settingsChanged();
     void inputEnabledChanged();
@@ -131,6 +142,15 @@ private:
     void applyViewSettings();
     bool buildSessionRequest(network::SessionRequest *request, QString *error) const;
 
+    void appendLog(const QString &level, const QString &message, const QString &detail = {});
+
+    struct LogEntry {
+        QDateTime time;
+        QString level;
+        QString message;
+        QString detail;
+    };
+
     SessionManager *m_session = nullptr;
     SettingsModel *m_settings = nullptr;
     RecentConnectionsModel *m_recent = nullptr;
@@ -142,6 +162,7 @@ private:
     QString m_password;
     QString m_errorText;
     QString m_noticeText;
+    QList<LogEntry> m_log;
     QString m_statusText;
     network::SessionStatistics m_statistics;
     bool m_dictionaryLoaded = false;
