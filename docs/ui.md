@@ -52,6 +52,14 @@ build identity, the state timeline, every notice and the full error detail (TLS
 certificate diagnostics included), plus a **Copy log** button. The log is kept in
 memory only (most recent 200 entries) and never contains the partner password.
 
+The viewer toolbar carries the session state, **Disable input**, **Statistics**,
+**Full screen** and **Disconnect**. Full screen (also F11 while the viewer is
+shown) hides the application header and status bar so the remote desktop uses the
+whole display; the viewer toolbar stays available and **Exit full screen** or Esc
+restores the window. A drained registration channel closing after the route is
+logged as an INFO diagnostic instead of replacing the *Connected* status with a
+warning.
+
 ## Icons — `qml/assets/icons/*.svg`
 
 Thirteen monochrome SVGs drawn inside this project: no third-party icon set and no

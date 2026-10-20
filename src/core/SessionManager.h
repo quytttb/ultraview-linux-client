@@ -58,6 +58,8 @@ signals:
     void stateChanged(ultraview::SessionState state);
     void failed(const ultraview::ErrorInfo &error);
     void notice(const ultraview::ErrorInfo &notice);
+    /// Log-only message; it never replaces the visible status line.
+    void diagnostic(const QString &message);
     void connected(const QSize &desktopSize);
     void routeResolved(const ultraview::protocol::TargetRoute &route);
     void frameReady(const ultraview::decoder::FrameUpdatePtr &update);

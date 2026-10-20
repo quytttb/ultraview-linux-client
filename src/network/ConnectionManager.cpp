@@ -359,8 +359,9 @@ void ConnectionManager::onRegistrationFailed(const ErrorInfo &error)
     // losing it does not break the session.
     if (m_drainingRegistration) {
         ++m_ignoredRegistrationPayloads;
-        note(ErrorCode::Network, QStringLiteral("the registration channel was lost"),
-             error.summary());
+        emit diagnostic(QStringLiteral("registration channel lost after the route; the relay "
+                                       "session is unaffected (%1)")
+                            .arg(error.summary()));
         return;
     }
     fail(error);
@@ -371,7 +372,8 @@ void ConnectionManager::onRegistrationClosed()
     if (m_terminating)
         return;
     if (m_drainingRegistration) {
-        note(ErrorCode::Network, QStringLiteral("the registration channel was closed by the server"));
+        emit diagnostic(QStringLiteral("registration channel closed by the service after the route; "
+                                       "the relay session is unaffected"));
         return;
     }
     fail(ErrorInfo{ErrorCode::Network, QStringLiteral("the registration channel was closed by the server")});

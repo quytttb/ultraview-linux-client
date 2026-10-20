@@ -53,6 +53,9 @@ ConnectionViewModel::ConnectionViewModel(QObject *parent)
     connect(m_session, &SessionManager::connected, this, &ConnectionViewModel::onConnected);
     connect(m_session, &SessionManager::failed, this, &ConnectionViewModel::onFailed);
     connect(m_session, &SessionManager::notice, this, &ConnectionViewModel::onNotice);
+    connect(m_session, &SessionManager::diagnostic, this, [this](const QString &message) {
+        appendLog(QStringLiteral("info"), message);
+    });
     connect(m_session, &SessionManager::statisticsChanged, this, &ConnectionViewModel::onStatistics);
     connect(m_input, &input::InputController::commandReady, this, &ConnectionViewModel::onInputCommand);
     connect(m_input, &input::InputController::statusMessage, this, &ConnectionViewModel::onInputStatus);

@@ -182,6 +182,9 @@ signals:
     void failed(const ultraview::ErrorInfo &error);
     /// Non-fatal, explicit report (unsupported packet kind, ignored data, ...).
     void notice(const ultraview::ErrorInfo &notice);
+    /// Log-only diagnostic (e.g. the drained registration channel closing after
+    /// the route); it does not replace the visible session status.
+    void diagnostic(const QString &message);
     /// The partner desktop size is known and the canvas is allocated.
     void connected(const QSize &desktopSize);
     /// The command 8 reply carried a status 1 route; emitted before the relay

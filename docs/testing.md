@@ -187,12 +187,13 @@ Verified locally on 2026-10-18, re-run on 2026-10-19 after adding the profile
 loader test, again for the 0.2.0 interface refresh, again for the 0.2.1 desktop
 application menu, again for the 0.2.2 live connect probe, once more for the
 0.2.3 keyring build, again for the 0.2.4 relay certificate identity fix, once more
-for the 0.2.5 copyable session log, and again for the 0.2.6 relay chain
-completion: **14/14 native CTest targets pass** in the RelWithDebInfo build,
+for the 0.2.5 copyable session log, again for the 0.2.6 relay chain
+completion, and once more for the 0.2.7 real-session status cleanup and full
+screen: **14/14 native CTest targets pass** in the RelWithDebInfo build,
 and **14/14 pass** in Debug with ASan/UBSan using the options above. The direct
 40-patch QML self-test reports mirror/consumed/grab/pixel all `ok`, asserts that
 every embedded theme icon is present and reports the global menu as
-`menu=exported`/`unavailable`/`pending`. CPack generated a `.deb`; version 0.2.6 is
+`menu=exported`/`unavailable`/`pending`. CPack generated a `.deb`; version 0.2.7 is
 installed system-wide (`pkexec apt-get install`) and its `/usr/bin/ultraview`
 passed the same smoke test and announced its menu to KWin on this Wayland session.
 The interface was reviewed through offscreen `--screenshot` frames of each surface
@@ -200,7 +201,12 @@ and the exported menu through `WAYLAND_DEBUG` plus `com.canonical.dbusmenu` call
 (see `verification.md`). A manual live probe (`--connect-attempt`) reached the
 service and read back the reference's status-11 refusal for an unknown partner;
 it was re-run on 0.2.4 after the relay certificate change, on 0.2.5 after the
-session log was added and on 0.2.6 after the relay chain completion.
+session log was added and on 0.2.6 after the relay chain completion. The first
+real Windows-partner session (partner `118925568`, 2240x1400 desktop) connected
+and streamed on 0.2.6; 0.2.7 turns the expected post-route registration closure
+into a log-only diagnostic and adds the full-screen viewer. Input direction with
+a real partner is still an open manual check; see
+[verification](verification.md).
 See [verification record](verification.md).
 
 Local development environment: Linux x86_64 Ubuntu 26.04, GCC 15.2, Qt 6.10.2,

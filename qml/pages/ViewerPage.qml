@@ -6,6 +6,9 @@ import Ultraview
 Item {
     id: page
 
+    property bool fullScreen: false
+    signal fullScreenRequested
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
@@ -13,11 +16,13 @@ Item {
         ViewerToolbar {
             id: toolbar
             Layout.fillWidth: true
+            fullScreen: page.fullScreen
             inputEnabled: controller.inputEnabled
             statisticsVisible: page.statisticsVisible
             onDisconnectRequested: controller.disconnectNow()
             onInputToggled: controller.inputEnabled = !controller.inputEnabled
             onStatisticsToggled: globalMenu.statisticsVisible = !globalMenu.statisticsVisible
+            onFullScreenRequested: page.fullScreenRequested()
         }
 
         RowLayout {

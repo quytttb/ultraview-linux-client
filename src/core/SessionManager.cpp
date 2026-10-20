@@ -19,6 +19,7 @@ SessionManager::SessionManager(QObject *parent)
             &SessionManager::onWorkerStateChanged);
     connect(m_worker, &network::ConnectionManager::failed, this, &SessionManager::failed);
     connect(m_worker, &network::ConnectionManager::notice, this, &SessionManager::notice);
+    connect(m_worker, &network::ConnectionManager::diagnostic, this, &SessionManager::diagnostic);
     connect(m_worker, &network::ConnectionManager::connected, this, &SessionManager::onWorkerConnected);
     connect(m_worker, &network::ConnectionManager::routeResolved, this, &SessionManager::routeResolved);
     connect(m_worker, &network::ConnectionManager::frameReady, this, &SessionManager::frameReady);

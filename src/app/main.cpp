@@ -405,6 +405,10 @@ int main(int argc, char *argv[])
         // so the exported menu and the viewer stay in sync.
         if (arguments.contains(QStringLiteral("--screenshot-statistics")))
             globalMenu.setStatisticsVisible(true);
+        // Full screen collapses the application chrome; the window-manager side is
+        // out of scope for an offscreen grab, so only the QML state is exercised.
+        if (arguments.contains(QStringLiteral("--screenshot-fullscreen")))
+            window->setProperty("fullScreen", true);
         return runScreenshot(window, arguments.at(index + 1), view, dialog, dialogTab);
     }
 

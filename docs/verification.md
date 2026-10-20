@@ -437,5 +437,38 @@ Neither step proves server acceptance or a working session.
 - The live retry is pending; this was the last certificate obstacle observed
   before the relay login.
 
+## First real Windows-partner session — 2026-10-20 (0.2.6 → 0.2.7)
+
+- The 0.2.6 retry against partner `118925568` completed the whole path:
+  `Connecting → Registering → RequestingPartner → RelayConnecting → Authenticating
+  → Connected`. The log recorded `Connected: partner desktop 2240x1400` and the
+  Windows desktop rendered in the viewer. This is the first real Windows-partner
+  session in this project. It confirms the relay chain completion (the verified
+  registration chain's `Sectigo Public Server Authentication CA DV R36`
+  intermediate is reused for the relay), the relay login and the first-frame path
+  with a real service; the decoder and scene-graph side were already covered by
+  offline tests.
+- About two minutes later the service closed the drained registration channel
+  (`RemoteHostClosed`). The relay session stayed connected and the screen kept
+  updating, which matches the reference: the registration channel is not used
+  after the route. 0.2.7 stops reporting this expected event as a warning in the
+  visible status line; it is now an INFO entry in the session log through
+  `SessionManager::diagnostic`, so the footer keeps saying *Connected*.
+- The viewer toolbar gained **Full screen**: the button or F11 (while the viewer
+  is shown) hides the application header and footer and gives the remote desktop
+  the display; **Exit full screen** or Esc restores the window. The session
+  actions remain available in the viewer toolbar. The offscreen
+  `--screenshot-fullscreen` check renders the collapsed chrome.
+- 14/14 CTest targets pass in RelWithDebInfo and under ASan/UBSan;
+  `ultraview_0.2.7_amd64.deb` (11,353,684 bytes,
+  `123705f81e78deff086c0ee03ff88ae9159b4e688b30a96cd352b7cac8cd135a`) was
+  generated, extracted and installed
+  (`0.2.7: install ok installed`); the extracted and installed binaries pass
+  `--self-test`.
+- Still not validated: the input direction (mouse/keyboard events reaching the
+  real partner), longer sessions, other Windows/UltraViewer versions, and
+  clipboard/file transfer (not implemented). One real partner is a lab result, not
+  a vendor certification.
+
 This record describes the checked local build, not a vendor-certified release or
 a claim that all recovered/undocumented protocol features were implemented.

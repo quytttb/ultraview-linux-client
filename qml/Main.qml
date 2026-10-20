@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Window
 import Ultraview
 
 ApplicationWindow {
@@ -19,6 +20,31 @@ ApplicationWindow {
     property string devDialog: ""
     property int devDialogTab: 0
 
+    // Full screen hides the application chrome (header and footer) so the remote
+    // desktop uses the whole display; the viewer toolbar keeps the session
+    // actions, including the exit button.  F11 toggles it and Esc leaves it.
+    property bool fullScreen: false
+
+    function setFullScreen(enabled) {
+        if (fullScreen === enabled && visibility === (enabled ? Window.FullScreen : Window.Windowed))
+            return
+        fullScreen = enabled
+        visibility = enabled ? Window.FullScreen : Window.Windowed
+    }
+
+    function toggleFullScreen() {
+        setFullScreen(!fullScreen)
+    }
+
+    // A compositor shortcut (or the window manager) can change the visibility
+    // without going through setFullScreen(); keep the chrome state in sync.
+    onVisibilityChanged: function(windowVisibility) {
+        if (windowVisibility === Window.FullScreen)
+            fullScreen = true
+        else if (windowVisibility === Window.Windowed || windowVisibility === Window.Maximized)
+            fullScreen = false
+    }
+
     onDevDialogChanged: {
         if (devDialog === "settings")
             settingsDialog.open()
@@ -30,6 +56,8 @@ ApplicationWindow {
 
     header: AppToolbar {
         id: appToolbar
+        visible: !app.fullScreen
+        implicitHeight: app.fullScreen ? 0 : Theme.toolbarHeight
         onSettingsRequested: settingsDialog.open()
         onAboutRequested: aboutDialog.open()
     }
@@ -41,6 +69,13 @@ ApplicationWindow {
         anchors.fill: parent
         currentIndex: app.devViewer || controller.connected || controller.busy ? 1 : 0
 
+        // Leaving the viewer while full screen would hide every visible way back
+        // (the viewer toolbar owns the exit button); return to the windowed layout.
+        onCurrentIndexChanged: {
+            if (currentIndex === 0 && app.fullScreen)
+                app.setFullScreen(false)
+        }
+
         ConnectPage {
             id: connectPage
             onConnectRequested: controller.connectNow()
@@ -48,13 +83,16 @@ ApplicationWindow {
 
         ViewerPage {
             id: viewerPage
+            fullScreen: app.fullScreen
+            onFullScreenRequested: app.toggleFullScreen()
             statisticsVisible: globalMenu.statisticsVisible
         }
     }
 
     footer: Rectangle {
         id: statusBar
-        implicitHeight: 30
+        visible: !app.fullScreen
+        implicitHeight: app.fullScreen ? 0 : 30
         color: Theme.windowBackground
 
         Rectangle {
@@ -148,6 +186,21 @@ ApplicationWindow {
         // them (Ctrl+Q, and the dedicated Exit key where the desktop has one).
         sequences: [StandardKey.Quit]
         onActivated: Qt.quit()
+    }
+
+    Shortcut {
+        sequence: "F11"
+        enabled: pages.currentIndex === 1
+        onActivated: app.toggleFullScreen()
+    }
+
+    Shortcut {
+        // Escape leaves full screen unless a dialog owns it; `sequences` binds
+        // every key the platform associates with Cancel.
+        sequences: [StandardKey.Cancel]
+        enabled: app.fullScreen && !settingsDialog.opened && !aboutDialog.opened
+                 && !logDialog.opened
+        onActivated: app.setFullScreen(false)
     }
 
     // Keyboard safety: a key held while the window loses focus must be released on

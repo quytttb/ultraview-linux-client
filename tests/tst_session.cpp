@@ -35,6 +35,7 @@ namespace {
 struct SessionRecorder {
     QList<ErrorInfo> failures;
     QList<ErrorInfo> notices;
+    QList<QString> diagnostics;
     QList<QSize> desktopSizes;
     QList<protocol::TargetRoute> routes;
     QList<decoder::FrameUpdatePtr> frames;
@@ -49,6 +50,9 @@ struct SessionRecorder {
         });
         QObject::connect(session, &SessionManager::notice, [this](const ErrorInfo &note) {
             notices.append(note);
+        });
+        QObject::connect(session, &SessionManager::diagnostic, [this](const QString &message) {
+            diagnostics.append(message);
         });
         QObject::connect(session, &SessionManager::connected, [this](const QSize &size) {
             desktopSizes.append(size);
@@ -596,13 +600,15 @@ void TestSession::registrationChannelLossDoesNotBreakTheSession()
     QVERIFY(server.registrationOpen());
 
     // The reference stops using the registration channel once the route is known;
-    // losing it must not tear a running session down.
+    // losing it must not tear a running session down and must not raise a visible
+    // warning: it belongs in the log as a diagnostic only.
     server.dropRegistration();
     QVERIFY(server.waitFor([&] { return !server.registrationOpen(); }));
-    QVERIFY(server.waitFor([&] { return !recorder.notices.isEmpty(); }, 3000));
+    QVERIFY(server.waitFor([&] { return !recorder.diagnostics.isEmpty(); }, 3000));
     QVERIFY(recorder.failures.isEmpty());
+    QVERIFY(recorder.notices.isEmpty());
     QVERIFY(session.isConnected());
-    QVERIFY(recorder.hasNotice(ErrorCode::Network));
+    QVERIFY(recorder.diagnostics.first().contains(QStringLiteral("registration channel")));
 
     session.stop();
     QVERIFY(server.waitFor([&] { return recorder.stopped == 1; }));

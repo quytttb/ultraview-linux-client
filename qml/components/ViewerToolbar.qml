@@ -13,8 +13,10 @@ Rectangle {
     signal disconnectRequested
     signal statisticsToggled
     signal inputToggled
+    signal fullScreenRequested
     property bool statisticsVisible: false
     property bool inputEnabled: true
+    property bool fullScreen: false
 
     Rectangle {
         anchors.bottom: parent.bottom
@@ -58,6 +60,15 @@ Rectangle {
             ghost: true
             active: bar.statisticsVisible
             onClicked: bar.statisticsToggled()
+        }
+
+        AppButton {
+            Layout.alignment: Qt.AlignVCenter
+            text: bar.fullScreen ? qsTr("Exit full screen") : qsTr("Full screen")
+            iconSource: Icon.monitor
+            ghost: true
+            active: bar.fullScreen
+            onClicked: bar.fullScreenRequested()
         }
 
         AppButton {

@@ -10,9 +10,13 @@ VNC, RDP or RustDesk. No Wine, browser engine, Python backend or Qt Widgets.
 **Status:** native build, byte-level reference fixtures, offline TLS integration
 tests and QML rendering smoke test are implemented. The live service answers this
 client's registration and partner-request exchange (0.2.2 dry run: the reference's
-status-11 refusal for an unknown partner, see [verification](docs/verification.md)).
-**A real Windows-partner session has not been validated with this client. This is
-not a complete or production-certified UltraViewer implementation.** See
+status-11 refusal for an unknown partner). Version 0.2.6 completed the first real
+Windows-partner session in the local lab: the relay certificate chain verified, the
+partner desktop streamed into the viewer, and the session stayed connected after
+the service closed the drained registration channel (see
+[verification](docs/verification.md)). Input direction, longer sessions, more
+partner/Windows versions and clipboard/file transfer still need work; this is
+**not** a complete or production-certified UltraViewer implementation. See
 [compatibility](docs/compatibility.md).
 
 ## Build on Ubuntu
@@ -85,6 +89,8 @@ the distribution's `qt6-base-private-abi`, like Plasma's own packages.
 5. Enter the authorized partner's ID/password and click **Connect**. Input only
    transmits while connected and enabled. Click the viewer for keyboard focus.
    Disconnect or focus loss releases held keys/buttons on a best-effort basis.
+   **Full screen** (or F11) in the viewer hides the application chrome; **Exit full
+   screen** or Esc returns to the window.
 
 Profiles may contain sensitive identity/password material. Keep them private
 (`chmod 600`), never commit them, and never share raw protocol payloads as logs.
@@ -115,8 +121,10 @@ QMAKE=/usr/bin/qmake6 bash packaging/build-appimage.sh build
 ```
 
 See [packaging](docs/packaging.md) for prerequisites, limits and smoke checks.
-The current `.deb` path is `build/packages/ultraview_0.2.3_amd64.deb`;
-its extracted and installed binary passed the QML self-test on the build host.
+The latest published `.deb` is v0.2.3; local builds 0.2.4–0.2.7 were generated,
+extracted and installed on this host, and each extracted/installed binary passed
+the QML self-test. The current local artifact is
+`build/packages/ultraview_0.2.7_amd64.deb`.
 The local `.deb` can target this distribution only; building here does not make
 it compatible with older Ubuntu glibc/Qt. The AppImage recipe is supplied, but an
 AppImage has not been built/validated on this machine (deployment tools absent).
