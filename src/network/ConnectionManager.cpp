@@ -385,6 +385,14 @@ void ConnectionManager::startRelay()
         // but drains it without interpretation.
         m_registration->setDrainPayloads(true);
         m_drainingRegistration = true;
+
+        // The vendor relay presents only its leaf certificate, while the
+        // registration endpoint also sends the intermediate.  That chain was just
+        // verified against the system store, so reuse its issuers (leaf first, so
+        // skip index 0) for the relay instead of weakening verification.
+        const QList<QSslCertificate> registrationChain = m_registration->peerCertificateChain();
+        if (registrationChain.size() > 1)
+            m_request.tlsPolicy.addCaCertificates(registrationChain.mid(1));
     }
 
     RelayTransport::Endpoint endpoint;

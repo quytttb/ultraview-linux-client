@@ -340,6 +340,13 @@ QString HttpTunnelSocket::peerCertificateSummary() const
     return security::TlsPolicy::describePeerCertificate(m_socket->peerCertificate());
 }
 
+QList<QSslCertificate> HttpTunnelSocket::peerCertificateChain() const
+{
+    if (m_socket == nullptr)
+        return {};
+    return m_socket->peerCertificateChain();
+}
+
 bool HttpTunnelSocket::isSecure() const
 {
     return m_socket != nullptr && m_socket->isEncrypted();

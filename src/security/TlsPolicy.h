@@ -51,6 +51,11 @@ public:
     void setAdditionalCaCertificateFile(const QString &path) { m_additionalCaFile = path; }
     QString additionalCaCertificateFile() const { return m_additionalCaFile; }
 
+    /// Certificates the service itself supplied on an already verified channel
+    /// (for example the intermediate that the registration endpoint sends but the
+    /// relay omits).  Added on top of the system store, which is never replaced.
+    void addCaCertificates(const QList<QSslCertificate> &certificates);
+
     /// The SSL configuration to install on the socket *before* connecting.
     /// Peer-name verification is not part of `QSslConfiguration`; callers pass
     /// the expected name to `QSslSocket::setPeerVerifyName()` (see
@@ -77,6 +82,7 @@ public:
 private:
     Mode m_mode = Mode::VerifyPeer;
     QString m_additionalCaFile;
+    QList<QSslCertificate> m_extraCaCertificates;
 };
 
 } // namespace ultraview::security

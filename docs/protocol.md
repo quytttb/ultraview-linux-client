@@ -14,6 +14,10 @@ Native defensive bounds are not claims about the Windows implementation.
   `tcp_server_hostname` is only the HTTP `Host:` header of the relay preface,
   never a certificate name. An explicit relay certificate name overrides the
   registration name; a relay connect-host override authenticates that host.
+  The production relay presents only its leaf certificate; the client adds the
+  issuers of the already verified registration chain as extra trust anchors on
+  top of the system store (never replacing it) so the relay chain verifies
+  without weakening the policy.
   The HTTP Host header is separate from TLS identity. Relay socket port is
   443 unless explicitly overridden. Route TCP port is the **target** port in the
   relay envelope, not the relay server's socket port.

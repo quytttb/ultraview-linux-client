@@ -408,5 +408,34 @@ Neither step proves server acceptance or a working session.
 - The live retry from the previous section (partner `118925568`) is still the
   open gate; this log is what makes its full TLS answer reportable.
 
+## Relay chain completion — 2026-10-20 (0.2.6)
+
+- The retry on 0.2.5 produced the full log: the session reached
+  `RelayConnecting` and failed with *"The issuer certificate of a locally looked
+  up certificate could not be found; No certificates could be verified"*, with
+  `verified name: functions3.ultraviewer.net` and peer certificate
+  `CN=*.ultraviewer.net`, issuer `Sectigo Public Server Authentication CA DV R36`,
+  SAN `DNS:ultraviewer.net, DNS:*.ultraviewer.net`. The identity fix from 0.2.4
+  is therefore correct; the remaining fault is that the vendor relay sends only
+  its leaf certificate.
+- `openssl s_client -showcerts` against `functions3.ultraviewer.net` shows two
+  certificates (leaf and `Sectigo Public Server Authentication CA DV R36`), and
+  the intermediate is not in the system trust store. A standalone Qt probe
+  confirmed `QSslSocket::peerCertificateChain()` returns both certificates after
+  the verified registration handshake.
+- 0.2.6 reuses the verified registration chain's issuers (`chain.mid(1)`) as
+  additional trust anchors for the relay (`TlsPolicy::addCaCertificates`, added on
+  top of the system store). Chain and host-name verification stay on; no
+  certificate is accepted blindly and no vendor certificate is bundled.
+- New test `tlsPolicyAddsServiceChainCertificates` pins that the system store is
+  preserved and duplicate certificates do not accumulate. 14/14 CTest targets
+  pass in RelWithDebInfo and under ASan/UBSan;
+  `ultraview_0.2.6_amd64.deb` (11,320,212 bytes,
+  `de9d03c53590e44ac3d0fe27e0cb13dea94da2af0ad9017df68123deb7f5dfcc`) was
+  generated, extracted and installed (`0.2.6: install ok installed`); the
+  extracted and installed binaries pass `--self-test`.
+- The live retry is pending; this was the last certificate obstacle observed
+  before the relay login.
+
 This record describes the checked local build, not a vendor-certified release or
 a claim that all recovered/undocumented protocol features were implemented.

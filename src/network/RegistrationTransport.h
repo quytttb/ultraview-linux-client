@@ -62,6 +62,7 @@ public:
     bool drainingPayloads() const { return m_drainPayloads; }
 
     bool isReady() const { return m_ready; }
+    QList<QSslCertificate> peerCertificateChain() const { return m_channel.peerCertificateChain(); }
     QString peerDescription() const { return m_channel.peerDescription(); }
     QString peerCertificateSummary() const { return m_channel.peerCertificateSummary(); }
     QString negotiatedProtocol() const { return m_channel.negotiatedProtocol(); }

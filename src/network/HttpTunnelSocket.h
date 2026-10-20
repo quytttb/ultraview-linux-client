@@ -77,6 +77,9 @@ public:
     QString peerDescription() const;
     QString negotiatedProtocol() const;
     QString peerCertificateSummary() const;
+    /// Certificate chain the peer presented (leaf first).  Used to carry the
+    /// registration endpoint's verified intermediate to the relay channel.
+    QList<QSslCertificate> peerCertificateChain() const;
 
     bool isSecure() const;
 

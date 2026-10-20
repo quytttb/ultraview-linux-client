@@ -177,6 +177,7 @@ private slots:
     void invalidRequestIsRejectedLocally();
     void certificateNameMismatchIsRefused();
     void defaultTlsNamesUseTheEndpoint();
+    void tlsPolicyAddsServiceChainCertificates();
     void relayAuthenticatesTheRegistrationCertificateName();
     void relayCertificateNameOverrideIsRefusedWhenItDoesNotMatch();
     void acceptAnyCertificateIsExplicit();
@@ -705,6 +706,28 @@ void TestSession::defaultTlsNamesUseTheEndpoint()
     QVERIFY(session.statistics().tlsWarning.isEmpty());
     session.stop();
     QVERIFY(server.waitFor([&] { return recorder.stopped == 1; }));
+}
+
+void TestSession::tlsPolicyAddsServiceChainCertificates()
+{
+    // The production relay sends only its leaf while the registration endpoint
+    // also sends the intermediate.  The verified registration chain is reused as
+    // an additional trust anchor; the system store stays in place and duplicates
+    // do not accumulate.
+    security::TlsPolicy policy;
+    const QList<QSslCertificate> systemStore = policy.configurationFor().caCertificates();
+    const QList<QSslCertificate> serviceChain =
+        QSslCertificate::fromPath(uvtest::Fixtures::instance().tlsCertificatePath());
+    QVERIFY(!serviceChain.isEmpty());
+
+    policy.addCaCertificates(serviceChain);
+    const QList<QSslCertificate> extendedStore = policy.configurationFor().caCertificates();
+    QCOMPARE(extendedStore.size(), systemStore.size() + serviceChain.size());
+    for (const QSslCertificate &certificate : serviceChain)
+        QVERIFY(extendedStore.contains(certificate));
+
+    policy.addCaCertificates(serviceChain);
+    QCOMPARE(policy.configurationFor().caCertificates().size(), extendedStore.size());
 }
 
 void TestSession::relayAuthenticatesTheRegistrationCertificateName()

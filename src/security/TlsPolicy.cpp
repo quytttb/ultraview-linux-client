@@ -12,8 +12,20 @@ QSslConfiguration TlsPolicy::configurationFor() const
 {
     QSslConfiguration configuration = QSslConfiguration::defaultConfiguration();
 
-    // Extra CAs (private deployment or test endpoint) are added on top of the
-    // system store; the system store is never replaced.
+    // Extra CAs (private deployment, test endpoint or the service's own
+    // intermediate certificate) are added on top of the system store; the system
+    // store is never replaced.
+    QList<QSslCertificate> authorities = configuration.caCertificates();
+    bool extended = false;
+    const auto append = [&authorities, &extended](const QList<QSslCertificate> &certificates) {
+        for (const QSslCertificate &certificate : certificates) {
+            if (certificate.isNull() || authorities.contains(certificate))
+                continue;
+            authorities.append(certificate);
+            extended = true;
+        }
+    };
+
     if (!m_additionalCaFile.isEmpty()) {
         QFile file(m_additionalCaFile);
         if (!file.open(QIODevice::ReadOnly)) {
@@ -24,10 +36,11 @@ QSslConfiguration TlsPolicy::configurationFor() const
         if (extra.isEmpty())
             throwError(ErrorCode::Tls, QStringLiteral("the additional CA bundle contains no certificate"),
                        m_additionalCaFile);
-        QList<QSslCertificate> authorities = configuration.caCertificates();
-        authorities.append(extra);
-        configuration.setCaCertificates(authorities);
+        append(extra);
     }
+    append(m_extraCaCertificates);
+    if (extended)
+        configuration.setCaCertificates(authorities);
 
     if (m_mode == Mode::AcceptAnyCertificate) {
         // The original program's callback accepts everything.  Verification is
@@ -38,6 +51,14 @@ QSslConfiguration TlsPolicy::configurationFor() const
         configuration.setPeerVerifyMode(QSslSocket::VerifyPeer);
     }
     return configuration;
+}
+
+void TlsPolicy::addCaCertificates(const QList<QSslCertificate> &certificates)
+{
+    for (const QSslCertificate &certificate : certificates) {
+        if (!certificate.isNull() && !m_extraCaCertificates.contains(certificate))
+            m_extraCaCertificates.append(certificate);
+    }
 }
 
 QList<QSslError> TlsPolicy::ignorableErrors(const QList<QSslError> &errors) const
