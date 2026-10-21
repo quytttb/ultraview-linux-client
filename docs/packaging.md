@@ -29,18 +29,25 @@ libraries themselves, exactly as Plasma's own packages declare it. Where the
 headers are missing, CMake reports `KDE global menu support: disabled`, the build
 succeeds unchanged and no such dependency is recorded.
 
+The package build also installs `libwayland-dev`. Together with QtGui private
+headers it compiles the KDE Wayland keyboard-shortcut inhibitor; `dpkg-shlibdeps`
+records its `libwayland-client0` runtime dependency. This lets an active remote
+control session forward Super/Meta and compositor shortcuts to the partner rather
+than invoking them on the controller. A source build without these optional
+development dependencies remains usable, but has no compositor-shortcut block.
+
 ```sh
 ctest --test-dir build --output-on-failure
 cpack --config build/CPackConfig.cmake -G DEB -B build/packages
-dpkg-deb --info build/packages/ultraview_0.2.7_amd64.deb
-dpkg-deb --contents build/packages/ultraview_0.2.7_amd64.deb
+dpkg-deb --info build/packages/ultraview_0.2.8_amd64.deb
+dpkg-deb --contents build/packages/ultraview_0.2.8_amd64.deb
 # No root needed to inspect and smoke-test an extracted package:
-dpkg-deb --extract build/packages/ultraview_0.2.7_amd64.deb build/package-check
+dpkg-deb --extract build/packages/ultraview_0.2.8_amd64.deb build/package-check
 QT_QPA_PLATFORM=offscreen build/package-check/usr/bin/ultraview --self-test
 ```
 
 To install after review on a compatible Ubuntu machine:
-`pkexec apt install ./build/packages/ultraview_0.2.7_amd64.deb`.
+`pkexec apt install ./build/packages/ultraview_0.2.8_amd64.deb`.
 This documentation is not authorization for the agent to install it system-wide.
 Architecture/file names vary. A binary built against glibc/Qt from Ubuntu 26.04
 must not be advertised as an Ubuntu 22.04/24.04 package.
@@ -56,7 +63,9 @@ details) was generated, extracted and installed too; the 0.2.6 package (relay
 chain completed from the verified registration chain) was generated, extracted
 and installed as well; the 0.2.7 package (expected post-route registration
 closure logged instead of warned, full-screen viewer) was generated, extracted
-and installed too; the extracted and the installed binaries both passed
+and installed too; the 0.2.8 package (true full screen/floating toolbar, simpler
+settings and KDE Wayland shortcut inhibition) was generated, extracted and
+installed as well; the extracted and the installed binaries both passed
 `--self-test` on the build host.
 This is not a clean-host installation test or a signed release.
 

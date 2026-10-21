@@ -53,12 +53,21 @@ certificate diagnostics included), plus a **Copy log** button. The log is kept i
 memory only (most recent 200 entries) and never contains the partner password.
 
 The viewer toolbar carries the session state, **Disable input**, **Statistics**,
-**Full screen** and **Disconnect**. Full screen (also F11 while the viewer is
-shown) hides the application header and status bar so the remote desktop uses the
-whole display; the viewer toolbar stays available and **Exit full screen** or Esc
-restores the window. A drained registration channel closing after the route is
-logged as an INFO diagnostic instead of replacing the *Connected* status with a
-warning.
+**Full screen** and **Disconnect**. Opening a session maximizes the window. Full
+screen sends a real `QWindow::showFullScreen()` request to the compositor, hides
+the application chrome, and leaves the remote screen unobstructed. The viewer
+toolbar is then an auto-hiding floating overlay: move the pointer to the top edge
+to reveal it, then choose **Exit full screen**; the previous maximized/windowed
+state is restored rather than shrinking the window.
+
+While remote input is on, application shortcuts such as Ctrl+Q, F11 and Esc are
+not reserved locally; they go to the partner. On KDE Wayland, the standard
+`keyboard-shortcuts-inhibit` protocol also prevents the compositor from consuming
+Super/Meta and desktop shortcuts while this app has focus, so those keys can be
+forwarded too. The toolbar is the deliberate local escape route. Other desktops
+that do not offer this protocol cannot guarantee suppression of compositor-level
+shortcuts. A drained registration channel closing after the route is logged as an
+INFO diagnostic instead of replacing the *Connected* status with a warning.
 
 ## Icons — `qml/assets/icons/*.svg`
 

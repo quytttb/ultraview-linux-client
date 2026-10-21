@@ -31,7 +31,7 @@ On this laptop, privileged commands use `pkexec`; on other Ubuntu systems use
 your normal privilege mechanism:
 
 ```sh
-pkexec apt install build-essential cmake ninja-build pkg-config libssl-dev libzstd-dev \
+pkexec apt install build-essential cmake ninja-build pkg-config libssl-dev libzstd-dev libwayland-dev \
   qt6-base-dev qt6-declarative-dev qt6-declarative-dev-tools qt6-tools-dev-tools \
   qt6-qpa-plugins qt6-image-formats-plugins qt6-wayland \
   qml6-module-qtquick qml6-module-qtquick-window qml6-module-qtquick-controls \
@@ -63,6 +63,13 @@ this window. Without those headers the client builds and runs unchanged and simp
 has no global menu; see [interface](docs/ui.md). The resulting package depends on
 the distribution's `qt6-base-private-abi`, like Plasma's own packages.
 
+On a KDE Wayland desktop, `qt6-base-private-dev` plus `libwayland-dev` also enables
+the standard keyboard-shortcuts-inhibit protocol. During active remote input it
+delivers Super/Meta and desktop shortcut keys to the client for forwarding to the
+Windows partner, rather than opening menus on the Linux controller. The packaged
+build requires this support; a source build without the optional development
+dependencies still works, but cannot suppress compositor shortcuts.
+
 ## Configure and connect
 
 1. Open **Settings → Profiles**. Supply your own registration JSON: `terms`
@@ -78,19 +85,19 @@ the distribution's `qt6-base-private-abi`, like Plasma's own packages.
    application. The client fills the ID and authentication fields. Leave request
    term 16 empty: P2P is not supported. Without this file the reference-derived
    relay template is used.
-4. Leave **Security → Verify chain and host name** selected. Registration verifies
-   its connect hostname; relay verifies its route DNS name (or explicit connect-host
-   override). The reference's literal `ultraviewer` does not match current service
-   certificates and is not the native default. Verification failure is a real failure, not an
-   invitation to silently bypass TLS. Host-mismatch-only and accept-any modes
-   require an explicit settings selection and show persistent warnings. Accept-any
-   removes server authentication and exposes credentials, input and screen data
-   to interception. Do not use it on untrusted networks.
+4. Leave **Security → Verify the server (recommended)** selected. Registration and
+   relay both authenticate UltraViewer's service certificate name (or an explicit
+   controlled override); the route hostname is an HTTP tunnel field, not a
+   certificate name. Verification failure is a real failure, not an invitation to
+   bypass TLS. The two unsafe modes require an explicit settings selection and
+   show persistent warnings. Do not use them on untrusted networks.
 5. Enter the authorized partner's ID/password and click **Connect**. Input only
    transmits while connected and enabled. Click the viewer for keyboard focus.
    Disconnect or focus loss releases held keys/buttons on a best-effort basis.
-   **Full screen** (or F11) in the viewer hides the application chrome; **Exit full
-   screen** or Esc returns to the window.
+   **Full screen** in the viewer hides the application chrome; move the pointer to
+   the top edge to reveal the floating toolbar and choose **Exit full screen**.
+   While remote input is enabled, normal keys (including Super/Meta, Ctrl+Q, F11
+   and Esc) are reserved for the Windows partner.
 
 Profiles may contain sensitive identity/password material. Keep them private
 (`chmod 600`), never commit them, and never share raw protocol payloads as logs.
@@ -121,10 +128,10 @@ QMAKE=/usr/bin/qmake6 bash packaging/build-appimage.sh build
 ```
 
 See [packaging](docs/packaging.md) for prerequisites, limits and smoke checks.
-The latest published `.deb` is v0.2.3; local builds 0.2.4–0.2.7 were generated,
+The latest published `.deb` is v0.2.3; local builds 0.2.4–0.2.8 were generated,
 extracted and installed on this host, and each extracted/installed binary passed
 the QML self-test. The current local artifact is
-`build/packages/ultraview_0.2.7_amd64.deb`.
+`build/packages/ultraview_0.2.8_amd64.deb`.
 The local `.deb` can target this distribution only; building here does not make
 it compatible with older Ubuntu glibc/Qt. The AppImage recipe is supplied, but an
 AppImage has not been built/validated on this machine (deployment tools absent).

@@ -87,13 +87,12 @@ QString TlsPolicy::warningText() const
         return {};
     case Mode::VerifyPeerAllowHostMismatch:
         return QStringLiteral(
-            "Certificate chain verification is active, but the certificate host name is not "
-            "checked. Only use this when the deployment really serves a different name.");
+            "The server certificate is checked, but its host name is not. Only use this for "
+            "troubleshooting: someone who intercepts the connection may not be detected.");
     case Mode::AcceptAnyCertificate:
         return QStringLiteral(
-            "TLS certificate verification is DISABLED (the original program's behaviour). "
-            "The server identity is not authenticated; anyone able to intercept the connection "
-            "can read or modify the session, including keystrokes and screen contents.");
+            "Server verification is DISABLED. Someone who intercepts the connection can read or "
+            "change your screen, keystrokes and password. Only use this for troubleshooting.");
     }
     return {};
 }

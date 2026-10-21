@@ -145,6 +145,8 @@ void TestKeyboardMapper::namedKeys()
     QVERIFY(expect(Qt::Key_Pause, 0x13));
     QVERIFY(expect(Qt::Key_Menu, 0x5D));
     QVERIFY(expect(Qt::Key_Meta, 0x5B));
+    QVERIFY(expect(Qt::Key_Super_L, 0x5B));
+    QVERIFY(expect(Qt::Key_Super_R, 0x5C));
 }
 
 void TestKeyboardMapper::lettersDigitsAndFunctionKeys()

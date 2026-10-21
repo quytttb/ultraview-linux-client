@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 project(Ultraview
-    VERSION 0.2.7
+    VERSION 0.2.8
     DESCRIPTION "Native Linux remote desktop client for UltraViewer partners (independent re-implementation)"
     LANGUAGES CXX)
 
@@ -20,6 +20,8 @@ option(ULTRAVIEW_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 option(ULTRAVIEW_ENABLE_SANITIZERS "Build with AddressSanitizer/UBSan (GCC/Clang only)" OFF)
 option(ULTRAVIEW_REQUIRE_SECRET_SERVICE
     "Fail the build when a platform secret service (libsecret) is unavailable" OFF)
+option(ULTRAVIEW_REQUIRE_WAYLAND_SHORTCUT_INHIBIT
+    "Fail the build when Wayland keyboard-shortcut inhibition is unavailable" OFF)
 
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Network Test)
 find_package(OpenSSL 3.0 REQUIRED)
@@ -48,6 +50,26 @@ else()
 endif()
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(ZSTD REQUIRED IMPORTED_TARGET libzstd)
+pkg_check_modules(WAYLAND_CLIENT QUIET IMPORTED_TARGET wayland-client)
+
+# Wayland's keyboard-shortcuts-inhibit protocol lets an active remote-control
+# session receive Super/Meta and other compositor shortcuts instead of triggering
+# actions on the controller machine. It relies on QtGui's private Wayland window
+# surface API (already used for KDE global-menu support) and on libwayland-client.
+# The generated protocol bindings are kept in source, so wayland-scanner is not a
+# build dependency.
+set(ULTRAVIEW_WAYLAND_SHORTCUT_INHIBIT OFF)
+if(ULTRAVIEW_GLOBAL_MENU AND WAYLAND_CLIENT_FOUND)
+    set(ULTRAVIEW_WAYLAND_SHORTCUT_INHIBIT ON)
+endif()
+if(ULTRAVIEW_WAYLAND_SHORTCUT_INHIBIT)
+    message(STATUS "Wayland shortcut inhibition: enabled")
+else()
+    message(STATUS "Wayland shortcut inhibition: disabled (needs QtGui private API and libwayland-client)")
+    if(ULTRAVIEW_REQUIRE_WAYLAND_SHORTCUT_INHIBIT)
+        message(FATAL_ERROR "ULTRAVIEW_REQUIRE_WAYLAND_SHORTCUT_INHIBIT is ON but the feature is unavailable")
+    endif()
+endif()
 
 qt_standard_project_setup(REQUIRES 6.5)
 if(Qt6_VERSION VERSION_GREATER_EQUAL 6.8)
@@ -132,6 +154,18 @@ if(ULTRAVIEW_GLOBAL_MENU)
     target_link_libraries(ultraview_core PRIVATE Qt6::GuiPrivate)
     target_compile_definitions(ultraview_core PRIVATE ULTRAVIEW_HAVE_GLOBAL_MENU=1)
 endif()
+if(ULTRAVIEW_WAYLAND_SHORTCUT_INHIBIT)
+    target_sources(ultraview_core PRIVATE
+        src/platform/WaylandShortcutInhibitor.cpp
+        src/platform/wayland/KeyboardShortcutsInhibitProtocol.cpp
+    )
+    # wayland-scanner emits an ELF visibility attribute on protocol interface
+    # constants. GCC ignores it when this generated C source is compiled as C++.
+    set_source_files_properties(src/platform/wayland/KeyboardShortcutsInhibitProtocol.cpp
+        PROPERTIES COMPILE_OPTIONS "-Wno-attributes")
+    target_link_libraries(ultraview_core PRIVATE PkgConfig::WAYLAND_CLIENT)
+    target_compile_definitions(ultraview_core PRIVATE ULTRAVIEW_HAVE_WAYLAND_SHORTCUT_INHIBIT=1)
+endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(ultraview_core PRIVATE -Wall -Wextra -Wpedantic -Wshadow
@@ -204,6 +238,11 @@ qt_add_qml_module(ultraview
 )
 
 target_link_libraries(ultraview PRIVATE Ultraview::Core Qt6::Quick Qt6::QuickControls2 Qt6::Qml)
+if(ULTRAVIEW_WAYLAND_SHORTCUT_INHIBIT)
+    # main.cpp owns the window-bound inhibitor, so it needs the same feature
+    # definition as the core object that implements it.
+    target_compile_definitions(ultraview PRIVATE ULTRAVIEW_HAVE_WAYLAND_SHORTCUT_INHIBIT=1)
+endif()
 
 set_target_properties(ultraview PROPERTIES
     WIN32_EXECUTABLE FALSE

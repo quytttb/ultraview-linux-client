@@ -21,15 +21,33 @@ ApplicationWindow {
     property int devDialogTab: 0
 
     // Full screen hides the application chrome (header and footer) so the remote
-    // desktop uses the whole display; the viewer toolbar keeps the session
-    // actions, including the exit button.  F11 toggles it and Esc leaves it.
+    // desktop uses the whole display; the viewer toolbar floats over the screen
+    // and only appears when the pointer reaches the top edge. During remote input
+    // its buttons (not a keyboard shortcut) change this state so F11/Esc still
+    // reach the Windows partner.
     property bool fullScreen: false
+    // Returning from full screen restores the window state the user had, normally
+    // maximized (a session maximizes the window when the viewer opens).
+    property int visibilityBeforeFullScreen: Window.Maximized
 
     function setFullScreen(enabled) {
-        if (fullScreen === enabled && visibility === (enabled ? Window.FullScreen : Window.Windowed))
+        if (fullScreen === enabled)
             return
-        fullScreen = enabled
-        visibility = enabled ? Window.FullScreen : Window.Windowed
+        if (enabled) {
+            if (visibility === Window.Windowed || visibility === Window.Maximized)
+                visibilityBeforeFullScreen = visibility
+            fullScreen = true
+            // Call the QWindow slot instead of merely changing the declarative
+            // visibility enum: KWin then receives an explicit full-screen
+            // request and removes its server-side decoration as well.
+            app.showFullScreen()
+        } else {
+            fullScreen = false
+            if (visibilityBeforeFullScreen === Window.Maximized)
+                app.showMaximized()
+            else
+                app.showNormal()
+        }
     }
 
     function toggleFullScreen() {
@@ -69,9 +87,15 @@ ApplicationWindow {
         anchors.fill: parent
         currentIndex: app.devViewer || controller.connected || controller.busy ? 1 : 0
 
-        // Leaving the viewer while full screen would hide every visible way back
-        // (the viewer toolbar owns the exit button); return to the windowed layout.
+        // A session opens maximized so the partner desktop has the display; leaving
+        // the viewer while full screen would hide every visible way back (the
+        // floating toolbar owns the exit button), so restore the windowed layout.
         onCurrentIndexChanged: {
+            if (currentIndex === 1 && !app.fullScreen
+                    && app.visibility !== Window.Maximized
+                    && app.visibility !== Window.FullScreen
+                    && app.visibility !== Window.Minimized)
+                app.showMaximized()
             if (currentIndex === 0 && app.fullScreen)
                 app.setFullScreen(false)
         }
@@ -184,21 +208,27 @@ ApplicationWindow {
     Shortcut {
         // The menu advertises the platform's quit keys; `sequences` binds all of
         // them (Ctrl+Q, and the dedicated Exit key where the desktop has one).
+        // While remote input is on, Ctrl+Q belongs to the Windows partner like
+        // every other normal key; disconnect or disable input to quit locally.
         sequences: [StandardKey.Quit]
+        enabled: !controller.connected || !controller.inputEnabled
         onActivated: Qt.quit()
     }
 
     Shortcut {
         sequence: "F11"
-        enabled: pages.currentIndex === 1
+        // Do not reserve a normal Windows function key while remote input is
+        // enabled. The toolbar provides the local full-screen control instead.
+        enabled: pages.currentIndex === 1 && (!controller.connected || !controller.inputEnabled)
         onActivated: app.toggleFullScreen()
     }
 
     Shortcut {
-        // Escape leaves full screen unless a dialog owns it; `sequences` binds
-        // every key the platform associates with Cancel.
+        // Escape belongs to the partner while its input is enabled. When input is
+        // disabled, it can still leave full screen unless a dialog owns it.
         sequences: [StandardKey.Cancel]
-        enabled: app.fullScreen && !settingsDialog.opened && !aboutDialog.opened
+        enabled: app.fullScreen && (!controller.connected || !controller.inputEnabled)
+                 && !settingsDialog.opened && !aboutDialog.opened
                  && !logDialog.opened
         onActivated: app.setFullScreen(false)
     }

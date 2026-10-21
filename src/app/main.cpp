@@ -33,6 +33,7 @@
 #include "models/RecentConnectionsModel.h"
 #include "models/SettingsModel.h"
 #include "platform/GlobalMenu.h"
+#include "platform/WaylandShortcutInhibitor.h"
 #include "render/RemoteScreenItem.h"
 
 namespace {
@@ -196,9 +197,15 @@ int runSelfTest(QQuickWindow *window, ultraview::platform::GlobalMenu *menu, int
 // `--screenshot-statistics` goes through the global menu (the viewer panel and
 // the menu entry stay one state).  No network or profile access is involved.
 int runScreenshot(QQuickWindow *window, const QString &path, const QString &view,
-                  const QString &dialog, int dialogTab)
+                  const QString &dialog, int dialogTab, bool fullScreen)
 {
     window->show();
+    // Show first so the QPA plugin creates the platform surface, then request
+    // full screen; calling show() after showFullScreen() would restore Windowed.
+    if (fullScreen) {
+        window->setProperty("fullScreen", true);
+        window->showFullScreen();
+    }
     {
         // Give the scene graph a few frames to render before grabbing.
         QEventLoop loop;
@@ -373,6 +380,14 @@ int main(int argc, char *argv[])
     // window is on screen; the menu is announced again whenever it is shown.
     globalMenu.attach(window);
 
+#if defined(ULTRAVIEW_HAVE_WAYLAND_SHORTCUT_INHIBIT)
+    // On Wayland/KWin, an active remote-control session asks the compositor to
+    // deliver Super/Meta and other desktop shortcut keys to this window. The QML
+    // viewer then forwards them to the partner instead of opening local menus.
+    ultraview::platform::WaylandShortcutInhibitor shortcutInhibitor(&controller);
+    shortcutInhibitor.attach(window);
+#endif
+
     if (arguments.contains(QStringLiteral("--self-test"))) {
         int mockFrames = 4;
         if (const int index = arguments.indexOf(QStringLiteral("--mock-frames"));
@@ -405,11 +420,8 @@ int main(int argc, char *argv[])
         // so the exported menu and the viewer stay in sync.
         if (arguments.contains(QStringLiteral("--screenshot-statistics")))
             globalMenu.setStatisticsVisible(true);
-        // Full screen collapses the application chrome; the window-manager side is
-        // out of scope for an offscreen grab, so only the QML state is exercised.
-        if (arguments.contains(QStringLiteral("--screenshot-fullscreen")))
-            window->setProperty("fullScreen", true);
-        return runScreenshot(window, arguments.at(index + 1), view, dialog, dialogTab);
+        return runScreenshot(window, arguments.at(index + 1), view, dialog, dialogTab,
+                             arguments.contains(QStringLiteral("--screenshot-fullscreen")));
     }
 
     return application.exec();

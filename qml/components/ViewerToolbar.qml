@@ -25,6 +25,16 @@ Rectangle {
         color: Theme.border
     }
 
+    // In full screen this bar floats over the remote desktop. Consume pointer
+    // events in its empty regions so merely revealing it never moves or clicks
+    // the partner's top row; the action buttons above it remain interactive.
+    MouseArea {
+        anchors.fill: parent
+        hoverEnabled: true
+        acceptedButtons: Qt.AllButtons
+        onWheel: (wheel) => wheel.accepted = true
+    }
+
     RowLayout {
         anchors.fill: parent
         anchors.leftMargin: Theme.spacing

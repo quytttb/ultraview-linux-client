@@ -113,11 +113,11 @@ Dialog {
 
                 background: Item { }
 
-                AppTabButton { text: qsTr("Profiles") }
+                AppTabButton { text: qsTr("Account") }
                 AppTabButton { text: qsTr("Security") }
-                AppTabButton { text: qsTr("Decoder") }
-                AppTabButton { text: qsTr("View") }
-                AppTabButton { text: qsTr("Endpoints") }
+                AppTabButton { text: qsTr("Performance") }
+                AppTabButton { text: qsTr("Display") }
+                AppTabButton { text: qsTr("Advanced") }
             }
 
             Rectangle {
@@ -143,26 +143,28 @@ Dialog {
                     spacing: Theme.spacing + 2
 
                     FilePicker {
-                        label: qsTr("Registration profile (26 terms)")
+                        label: qsTr("Account file")
                         value: controller.settings.registrationProfilePath
-                        hint: qsTr("The identity of this controller. The project never ships one: "
-                                   + "it contains per-installation values.")
+                        hint: qsTr("The private file that identifies your UltraViewer account on "
+                                   + "this computer. Use your own installation; the project never "
+                                   + "ships one.")
                         onPicked: (path) => controller.settings.registrationProfilePath = path
                     }
 
                     FilePicker {
-                        label: qsTr("Partner template (17 request terms)")
+                        label: qsTr("Connection template (optional)")
                         value: controller.settings.partnerTemplatePath
-                        hint: qsTr("Shared template of the connection request; the partner ID, the "
-                                   + "password value and the digests are filled in per connection.")
+                        hint: qsTr("A prepared connection request. The partner ID and password are "
+                                   + "filled in for each session.")
                         onPicked: (path) => controller.settings.partnerTemplatePath = path
                     }
 
                     FilePicker {
-                        label: qsTr("Screen dictionary (8bit.dat)")
+                        label: qsTr("Screen dictionary")
                         value: controller.settings.dictionaryPath
-                        hint: qsTr("Required for compressed RGB555 screen updates. "
-                                   + "Status: %1").arg(controller.settings.dictionaryStatus())
+                        hint: qsTr("Required to decode the partner's screen. Choose 8bit.dat from "
+                                   + "your UltraViewer installation. Status: %1")
+                                 .arg(controller.settings.dictionaryStatus())
                         onPicked: (path) => controller.loadDictionary(path)
                     }
 
@@ -171,7 +173,7 @@ Dialog {
                         spacing: Theme.spacingSmall
 
                         AppButton {
-                            text: qsTr("Create scaffold templates")
+                            text: qsTr("Create example files")
                             iconSource: Icon.folder
                             onClicked: controller.ensureProfileTemplates()
                         }
@@ -184,9 +186,8 @@ Dialog {
                         wrapMode: Text.WordWrap
                         color: Theme.textFaint
                         font.pixelSize: Theme.fontSmall
-                        text: qsTr("This client works without the original program, but it cannot "
-                                   + "invent your registration identity: without a valid profile the "
-                                   + "registration server will refuse the session.")
+                        text: qsTr("Without a valid account file the UltraViewer service refuses the "
+                                   + "connection. This project cannot create an account for you.")
                     }
                     Item { Layout.fillHeight: true }
                 }
@@ -201,7 +202,7 @@ Dialog {
                     spacing: Theme.spacing
 
                     Label {
-                        text: qsTr("Certificate handling")
+                        text: qsTr("Server certificate")
                         color: Theme.text
                         font.pixelSize: Theme.fontHeading
                         font.weight: Font.DemiBold
@@ -210,9 +211,9 @@ Dialog {
                     AppComboBox {
                         Layout.fillWidth: true
                         model: [
-                            qsTr("Verify chain and host name (default)"),
-                            qsTr("Verify chain, do not check the host name"),
-                            qsTr("Accept any certificate (insecure, matches the original program)")
+                            qsTr("Verify the server (recommended)"),
+                            qsTr("Check the certificate but not the server name (unsafe)"),
+                            qsTr("Accept any server (unsafe)")
                         ]
                         currentIndex: controller.settings.tlsMode
                         onActivated: (index) => controller.settings.tlsMode = index
@@ -232,15 +233,15 @@ Dialog {
                         wrapMode: Text.WordWrap
                         color: Theme.textMuted
                         font.pixelSize: Theme.fontSmall
-                        text: qsTr("The recovered endpoints present certificates; the original Windows "
-                                   + "client accepts every certificate. This client verifies by default "
-                                   + "and warns whenever verification is relaxed. Relaxing it is only "
-                                   + "recommended when the deployment's certificate legitimately cannot "
-                                   + "match.")
+                        text: qsTr("UltraViewer's servers present certificates. The recommended "
+                                   + "setting checks that the app is really talking to UltraViewer. "
+                                   + "The unsafe modes are only for troubleshooting: they make it "
+                                   + "easier for someone to intercept your connection, screen and "
+                                   + "password.")
                     }
 
                     Label {
-                        text: qsTr("Passwords")
+                        text: qsTr("Saved passwords")
                         color: Theme.text
                         font.pixelSize: Theme.fontHeading
                         font.weight: Font.DemiBold
@@ -260,9 +261,9 @@ Dialog {
                         color: Theme.textMuted
                         font.pixelSize: Theme.fontSmall
                         text: controller.settings.passwordPersistenceAvailable
-                              ? qsTr("Passwords are stored in the platform secret service.")
-                              : qsTr("No platform secret service is available in this build: "
-                                     + "passwords are kept in memory only and are never written to disk.")
+                              ? qsTr("Passwords are stored in your system keyring.")
+                              : qsTr("This build has no system keyring: passwords are kept only "
+                                     + "until the app closes and are never written to disk.")
                     }
                     Item { Layout.fillHeight: true }
                 }
@@ -284,7 +285,7 @@ Dialog {
                         editable: true
                         value: controller.settings.timeoutMs
                         onValueModified: controller.settings.timeoutMs = value
-                        textFromValue: (value) => qsTr("Transport timeout: %1 ms").arg(value)
+                        textFromValue: (value) => qsTr("Connection timeout: %1 ms").arg(value)
                     }
 
                     AppSpinBox {
@@ -295,7 +296,7 @@ Dialog {
                         editable: true
                         value: controller.settings.maxFrameBytes
                         onValueModified: controller.settings.maxFrameBytes = value
-                        textFromValue: (value) => qsTr("Maximum frame size: %1 bytes").arg(value)
+                        textFromValue: (value) => qsTr("Largest screen update: %1 bytes").arg(value)
                     }
 
                     AppSpinBox {
@@ -305,7 +306,7 @@ Dialog {
                         editable: true
                         value: controller.settings.jpegBlockSize
                         onValueModified: controller.settings.jpegBlockSize = value
-                        textFromValue: (value) => qsTr("JPEG atlas block size: %1 px").arg(value)
+                        textFromValue: (value) => qsTr("Image block size: %1 px").arg(value)
                     }
 
                     AppSpinBox {
@@ -316,7 +317,7 @@ Dialog {
                         editable: true
                         value: controller.settings.cacheLimit
                         onValueModified: controller.settings.cacheLimit = value
-                        textFromValue: (value) => qsTr("Tile cache entries: %1").arg(value)
+                        textFromValue: (value) => qsTr("Cached screen tiles: %1").arg(value)
                     }
 
                     Label {
@@ -324,10 +325,8 @@ Dialog {
                         wrapMode: Text.WordWrap
                         color: Theme.textFaint
                         font.pixelSize: Theme.fontSmall
-                        text: qsTr("The defaults are the values recovered from the original client "
-                                   + "(8 s timeout, 1 MiB frames, 32 px blocks, 1000 cached tiles). "
-                                   + "The frame limit is also an absolute safety bound against a "
-                                   + "hostile peer.")
+                        text: qsTr("These defaults match the original UltraViewer client. Change them "
+                                   + "only if a connection is unstable.")
                     }
                     Item { Layout.fillHeight: true }
                 }
@@ -344,9 +343,9 @@ Dialog {
                     AppComboBox {
                         Layout.fillWidth: true
                         model: [
-                            qsTr("Fit the desktop (letter-boxed)"),
-                            qsTr("Fill and crop"),
-                            qsTr("Stretch")
+                            qsTr("Fit the screen (black bars)"),
+                            qsTr("Fill the window (crop the edges)"),
+                            qsTr("Stretch to the window")
                         ]
                         currentIndex: controller.settings.fillMode
                         onActivated: (index) => controller.settings.fillMode = index
@@ -359,7 +358,7 @@ Dialog {
                     }
 
                     AppCheckBox {
-                        text: qsTr("Hide the local pointer while controlling the partner")
+                        text: qsTr("Hide my pointer while controlling the partner")
                         checked: controller.settings.hideLocalPointer
                         onToggled: controller.settings.hideLocalPointer = checked
                     }
@@ -375,7 +374,7 @@ Dialog {
                             editable: true
                             value: controller.settings.viewportWidth
                             onValueModified: controller.settings.viewportWidth = value
-                            textFromValue: (value) => qsTr("Viewport hint width: %1").arg(value)
+                            textFromValue: (value) => qsTr("Login screen width: %1").arg(value)
                         }
 
                         AppSpinBox {
@@ -385,7 +384,7 @@ Dialog {
                             editable: true
                             value: controller.settings.viewportHeight
                             onValueModified: controller.settings.viewportHeight = value
-                            textFromValue: (value) => qsTr("height: %1").arg(value)
+                            textFromValue: (value) => qsTr("Login screen height: %1").arg(value)
                         }
                     }
 
@@ -394,9 +393,8 @@ Dialog {
                         wrapMode: Text.WordWrap
                         color: Theme.textFaint
                         font.pixelSize: Theme.fontSmall
-                        text: qsTr("The viewport hint is part of the login schema (the reference "
-                                   + "sends 1280×720). The partner's real desktop size is read from "
-                                   + "the login acknowledgement.")
+                        text: qsTr("The original client sends 1280×720 at login; the partner's real "
+                                   + "screen size is read from its answer.")
                     }
                     Item { Layout.fillHeight: true }
                 }
@@ -416,9 +414,9 @@ Dialog {
                         color: Theme.warning
                         font.pixelSize: Theme.fontSmall
                         text: controller.settings.endpointOverrideActive
-                              ? qsTr("Endpoint overrides are active. The session does not talk to the "
-                                     + "recovered production endpoints.")
-                              : qsTr("Empty values mean the recovered production endpoints are used.")
+                              ? qsTr("These overrides are active: the app is not using UltraViewer's "
+                                     + "normal servers.")
+                              : qsTr("Leave all fields empty to use UltraViewer's normal servers.")
                     }
 
                     GridLayout {
@@ -427,7 +425,7 @@ Dialog {
                         columnSpacing: Theme.spacing
                         rowSpacing: Theme.spacingSmall + 2
 
-                        Label { text: qsTr("Registration host"); color: Theme.textMuted; font.pixelSize: Theme.fontSmall }
+                        Label { text: qsTr("Login server"); color: Theme.textMuted; font.pixelSize: Theme.fontSmall }
                         AppInlineField {
                             Layout.fillWidth: true
                             text: controller.settings.registrationHostOverride
@@ -435,7 +433,7 @@ Dialog {
                             onEditingFinished: controller.settings.registrationHostOverride = text
                         }
 
-                        Label { text: qsTr("Registration port"); color: Theme.textMuted; font.pixelSize: Theme.fontSmall }
+                        Label { text: qsTr("Login port"); color: Theme.textMuted; font.pixelSize: Theme.fontSmall }
                         AppInlineField {
                             Layout.fillWidth: true
                             text: controller.settings.registrationPortOverride
@@ -445,14 +443,14 @@ Dialog {
                                 parseInt(text.length > 0 ? text : "0")
                         }
 
-                        Label { text: qsTr("Registration Host header"); color: Theme.textMuted; font.pixelSize: Theme.fontSmall }
+                        Label { text: qsTr("Login host header"); color: Theme.textMuted; font.pixelSize: Theme.fontSmall }
                         AppInlineField {
                             Layout.fillWidth: true
                             text: controller.settings.registrationHttpHostOverride
                             onEditingFinished: controller.settings.registrationHttpHostOverride = text
                         }
 
-                        Label { text: qsTr("Registration certificate name"); color: Theme.textMuted; font.pixelSize: Theme.fontSmall }
+                        Label { text: qsTr("Login certificate name"); color: Theme.textMuted; font.pixelSize: Theme.fontSmall }
                         AppInlineField {
                             Layout.fillWidth: true
                             text: controller.settings.registrationPeerNameOverride
@@ -460,7 +458,7 @@ Dialog {
                             onEditingFinished: controller.settings.registrationPeerNameOverride = text
                         }
 
-                        Label { text: qsTr("Relay host override"); color: Theme.textMuted; font.pixelSize: Theme.fontSmall }
+                        Label { text: qsTr("Screen server"); color: Theme.textMuted; font.pixelSize: Theme.fontSmall }
                         AppInlineField {
                             Layout.fillWidth: true
                             text: controller.settings.relayHostOverride
@@ -468,7 +466,7 @@ Dialog {
                             onEditingFinished: controller.settings.relayHostOverride = text
                         }
 
-                        Label { text: qsTr("Relay port override"); color: Theme.textMuted; font.pixelSize: Theme.fontSmall }
+                        Label { text: qsTr("Screen server port"); color: Theme.textMuted; font.pixelSize: Theme.fontSmall }
                         AppInlineField {
                             Layout.fillWidth: true
                             text: controller.settings.relayPortOverride
@@ -478,7 +476,7 @@ Dialog {
                                 parseInt(text.length > 0 ? text : "0")
                         }
 
-                        Label { text: qsTr("Relay Host header override"); color: Theme.textMuted; font.pixelSize: Theme.fontSmall }
+                        Label { text: qsTr("Screen host header"); color: Theme.textMuted; font.pixelSize: Theme.fontSmall }
                         AppInlineField {
                             Layout.fillWidth: true
                             text: controller.settings.relayHttpHostOverride
@@ -486,7 +484,7 @@ Dialog {
                             onEditingFinished: controller.settings.relayHttpHostOverride = text
                         }
 
-                        Label { text: qsTr("Relay certificate name"); color: Theme.textMuted; font.pixelSize: Theme.fontSmall }
+                        Label { text: qsTr("Screen certificate name"); color: Theme.textMuted; font.pixelSize: Theme.fontSmall }
                         AppInlineField {
                             Layout.fillWidth: true
                             text: controller.settings.relayPeerNameOverride
@@ -500,8 +498,8 @@ Dialog {
                         wrapMode: Text.WordWrap
                         color: Theme.textFaint
                         font.pixelSize: Theme.fontSmall
-                        text: qsTr("Overrides exist for private deployments and for the offline test "
-                                   + "suite; they are stored in the settings file and shown here.")
+                        text: qsTr("Only for private test servers or offline testing. Leave empty "
+                                   + "for normal use.")
                     }
                     Item { Layout.fillHeight: true }
                 }

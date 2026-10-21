@@ -131,6 +131,7 @@ private:
         QPlatformMenu *menu = nullptr; ///< the menu the item lives in
         bool enabled = true;
         bool checked = false;
+        QKeySequence shortcut;
     };
 
     void createMenuBar();

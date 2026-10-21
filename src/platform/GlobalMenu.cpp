@@ -66,12 +66,16 @@ QVector<MenuItemDescription> describeMenu(const MenuState &state)
     entries.append({.id = QStringLiteral("session.separator"),
                     .parentId = QStringLiteral("session"),
                     .separator = true});
-    // The shortcut is advertised in the menu; the QML window handles it.
+    // During active remote input Ctrl+Q must reach the Windows partner instead
+    // of closing the controller. The toolbar/menu action remains available; its
+    // accelerator returns as soon as input is disabled or the session ends.
     entries.append({.id = QStringLiteral("session.quit"),
                     .parentId = QStringLiteral("session"),
                     .text = translate("Quit"),
                     .iconName = QStringLiteral("application-exit"),
-                    .shortcut = QKeySequence(QKeySequence::Quit),
+                    .shortcut = (state.connected && state.inputEnabled)
+                        ? QKeySequence{}
+                        : QKeySequence(QKeySequence::Quit),
                     .action = MenuAction::Quit});
 
     // ----------------------------------------------------------------- View
@@ -298,7 +302,8 @@ void GlobalMenu::buildMenu()
         connect(item, &QPlatformMenuItem::activated, this,
                 [this, action = entry.action] { activate(action); });
         parent->insertMenuItem(item, nullptr);
-        m_bindings.insert(entry.id, Binding{item, parent, entry.enabled, entry.checked});
+        m_bindings.insert(entry.id,
+                          Binding{item, parent, entry.enabled, entry.checked, entry.shortcut});
     }
 #endif
 }
@@ -317,13 +322,17 @@ void GlobalMenu::refreshMenu()
         if (found == m_bindings.end())
             continue;
         Binding &binding = found.value();
-        if (binding.enabled == entry.enabled && binding.checked == entry.checked)
+        if (binding.enabled == entry.enabled && binding.checked == entry.checked
+            && binding.shortcut == entry.shortcut) {
             continue;
+        }
         binding.enabled = entry.enabled;
         binding.checked = entry.checked;
+        binding.shortcut = entry.shortcut;
         binding.item->setEnabled(entry.enabled);
         if (entry.checkable)
             binding.item->setChecked(entry.checked);
+        binding.item->setShortcut(entry.shortcut);
         binding.menu->syncMenuItem(binding.item);
     }
 #endif

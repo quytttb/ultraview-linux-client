@@ -276,6 +276,19 @@ void TestGlobalMenu::menuLayout()
     checkEnabled(live, QStringLiteral("view.statistics"), true);
     checkChecked(live, QStringLiteral("view.statistics"), true);
 
+    // While remote input is enabled, Ctrl+Q belongs to the Windows partner;
+    // the menu still offers Quit but must not reserve the accelerator locally.
+    connected.inputEnabled = true;
+    const QVector<MenuItemDescription> inputLive = describeMenu(connected);
+    const MenuItemDescription *inputLiveQuit =
+        findEntry(inputLive, QStringLiteral("session.quit"));
+    QVERIFY(inputLiveQuit != nullptr);
+    QVERIFY(inputLiveQuit->shortcut.isEmpty());
+    const MenuItemDescription *inputDisabledQuit =
+        findEntry(live, QStringLiteral("session.quit"));
+    QVERIFY(inputDisabledQuit != nullptr);
+    QCOMPARE(inputDisabledQuit->shortcut, QKeySequence(QKeySequence::Quit));
+
     // With a partner id and a profile, Connect becomes the only way in.
     MenuState ready;
     ready.canConnect = true;

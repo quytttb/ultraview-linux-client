@@ -470,5 +470,51 @@ Neither step proves server acceptance or a working session.
   clipboard/file transfer (not implemented). One real partner is a lab result, not
   a vendor certification.
 
+## Full screen, clearer settings and Wayland shortcut routing — 2026-10-20 (0.2.8)
+
+- A full-screen exit had restored `Windowed`, making the partner desktop appear
+  smaller. Opening the viewer now maximizes the window; full screen uses the
+  explicit `QWindow::showFullScreen()` compositor request and restores the prior
+  maximized/windowed state with `showMaximized()`/`showNormal()`. The in-app
+  header and footer are hidden. The viewer toolbar no longer occupies fixed screen
+  height: it is a floating overlay revealed by moving the pointer to the top edge
+  and hides after 1.8 seconds away from it. Its blank area consumes pointer events
+  so revealing it cannot click the partner desktop.
+- While connected with remote input enabled, the app no longer reserves Ctrl+Q,
+  F11 or Esc: the input mapper sends them to Windows (as it already does
+  `Meta`/`Super_L`/`Super_R` to VK `0x5B`/`0x5B`/`0x5C`). The local toolbar is the
+  deliberate full-screen/Disconnect escape route. The global-menu Quit
+  accelerator is also removed during active remote input and restored afterwards.
+- The local desktop also used to see Super/Meta because that key was captured by
+  the compositor before Qt received it. On this KDE Wayland session, `wayland-info`
+  reports `zwp_keyboard_shortcuts_inhibit_manager_v1` and a direct Qt/Wayland
+  probe bound it and received its `active` callback from KWin 6.6.6. The app now
+  requests that standard protocol only while the window is active, remote input
+  is enabled and a session is connected; it releases it otherwise. Thus KWin
+  forwards desktop shortcuts to the viewer for relay to the partner. The feature
+  is compiled only with QtGui private headers and `libwayland-client`; release and
+  dev package builds require both. Desktops without this protocol cannot promise
+  suppression of compositor-level shortcuts.
+- Settings labels/tabs were simplified to **Account**, **Security**,
+  **Performance**, **Display** and **Advanced**. The normal security choice is now
+  *Verify the server (recommended)*; tunnel/server override vocabulary remains in
+  Advanced only. Offscreen screenshots reviewed the Account, Security and
+  Advanced surfaces plus the chrome-free full-screen viewer.
+- `ultraview_0.2.8_amd64.deb` (11,618,434 bytes,
+  `65e0cb385fae06d7ae623213852345d92cea9eecb4d10b7f4914c741a229dd9f`) was
+  generated, extracted and installed; its generated dependencies include
+  `libwayland-client0 (>= 1.20.0)`. 14/14 CTest targets pass in RelWithDebInfo
+  and under ASan/UBSan, and both extracted and installed binaries pass
+  `--self-test`.
+- A Linux **host** mode (show an ID/password for a Windows controller) is still
+  not implemented. It requires the unimplemented sender-side registration/relay
+  role, inbound-login verification/approval, screen capture/encoding and safe
+  input injection. The independently MIT-licensed MacViewer/LinuxViewer project
+  (reviewed at commit `4dcf8713106045be5fb2cf2d1d2f0e4bd7690002`) is a useful
+  design reference for a future separately reviewed port; no Rust/Swift source is
+  included or copied here. Its host design also confirms that Wayland hosting
+  needs the ScreenCast + RemoteDesktop portals/PipeWire, not just this client's
+  shortcut-inhibition protocol.
+
 This record describes the checked local build, not a vendor-certified release or
 a claim that all recovered/undocumented protocol features were implemented.

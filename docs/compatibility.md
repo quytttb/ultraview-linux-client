@@ -1,13 +1,12 @@
 # Compatibility / release gate
 
-**This native client has not been tested against a real Windows UltraViewer
-partner.** Local passing tests establish correspondence with a specific recovered
-Python implementation plus synthetic TLS peers. As of 0.2.2 the registration and
-partner-request phases *have* been answered by the live service (a dry run with
-the local experimental profile and an unknown partner ID returned the reference's
-status-11 refusal, see `verification.md`); that is not vendor support, and real
-partner authentication, relay/login behaviour and reliable remote control remain
-unproven.
+Local passing tests establish correspondence with a specific recovered Python
+implementation plus synthetic TLS peers. Version 0.2.6 also completed one real
+Windows-partner session in the local lab: registration, route, verified relay
+TLS, login and a 2240×1400 desktop stream were observed. That is **not** vendor
+support or a general compatibility claim: real mouse/keyboard control, longer
+sessions, other partner versions and all sender-side features still need manual
+validation. See `verification.md`.
 
 ## Implemented and locally tested
 
@@ -31,9 +30,11 @@ unproven.
   generation or forwarding. Unknown kinds: unsupported notices, not invented replies.
 - P2P handshake/discovery/NAT traversal/transport selection. AES wire helpers are
   fixture-tested but not a working P2P feature. Nonempty request term 16 is refused.
-- Clipboard, file transfer, chat, remote cursor shapes, remote host/server mode,
-  unattended access, multi-monitor selection, other pixel codecs/colour depths,
-  and arbitrary Windows secure-desktop/privileged key sequences.
+- Clipboard, file transfer, chat, remote cursor shapes, **remote host/server
+  mode** (this Linux computer has no partner ID/password and cannot yet be
+  controlled from Windows), unattended access, multi-monitor selection, other
+  pixel codecs/colour depths, and arbitrary Windows secure-desktop/privileged
+  key sequences.
 - Automatic Linux registration fingerprint/installation provisioning inside the
   product. Scaffolds deliberately leave unresolved values blank and cannot connect
   by themselves; the dev-only `tools/make_experimental_profile.py` can draft an
@@ -57,7 +58,10 @@ unproven.
   A missing CA, expired certificate or wrong name is not silently bypassed.
   Version 0.1.1 fixes the initial native default: authenticate endpoint hostnames,
   not the reference's literal `ultraviewer`. The registration override is scoped
-  to registration; a relay authenticates its own DNS identity.
+  to registration; the relay authenticates the same recovered service certificate
+  name while the route hostname remains the HTTP tunnel host field. If the relay
+  omits its intermediate certificate, the client completes that chain from the
+  already verified registration channel rather than weakening verification.
 - Stronger limits: checked framing, header, canvas, JPEG and decompression budgets;
   a 256 MiB tile-cache budget; bounded channel buffers. Resource exhaustion is
   refused instead of following unchecked allocations. The memory budget can
