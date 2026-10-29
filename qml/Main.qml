@@ -19,6 +19,10 @@ ApplicationWindow {
     property bool devViewer: false
     property string devDialog: ""
     property int devDialogTab: 0
+    // The header switch selects the controller form or the host page.  A live
+    // controller session always takes over the window; hosting keeps the host
+    // page selected so its approval prompt and stop control stay reachable.
+    property string mode: "control"
 
     // Full screen hides the application chrome (header and footer) so the remote
     // desktop uses the whole display; the viewer toolbar floats over the screen
@@ -76,16 +80,25 @@ ApplicationWindow {
         id: appToolbar
         visible: !app.fullScreen
         implicitHeight: app.fullScreen ? 0 : Theme.toolbarHeight
+        mode: app.mode
+        modeSwitchEnabled: !controller.busy && !controller.connected && !host.hosting
         onSettingsRequested: settingsDialog.open()
         onAboutRequested: aboutDialog.open()
+        onModeRequested: function(mode) {
+            if (mode === "host")
+                host.prepare()
+            app.mode = mode
+        }
     }
 
     // The viewer replaces the connect page while a session exists (busy or
-    // connected); the pages keep their own state so nothing is lost on resize.
+    // connected); the host page is a third surface selected from the header.
     StackLayout {
         id: pages
         anchors.fill: parent
-        currentIndex: app.devViewer || controller.connected || controller.busy ? 1 : 0
+        currentIndex: app.devViewer || controller.connected || controller.busy
+                      ? 1
+                      : (app.mode === "host" ? 2 : 0)
 
         // A session opens maximized so the partner desktop has the display; leaving
         // the viewer while full screen would hide every visible way back (the
@@ -96,7 +109,7 @@ ApplicationWindow {
                     && app.visibility !== Window.FullScreen
                     && app.visibility !== Window.Minimized)
                 app.showMaximized()
-            if (currentIndex === 0 && app.fullScreen)
+            if (currentIndex !== 1 && app.fullScreen)
                 app.setFullScreen(false)
         }
 
@@ -110,6 +123,12 @@ ApplicationWindow {
             fullScreen: app.fullScreen
             onFullScreenRequested: app.toggleFullScreen()
             statisticsVisible: globalMenu.statisticsVisible
+        }
+
+        HostPage {
+            id: hostPage
+            onStartRequested: host.startHosting()
+            onStopRequested: host.stopHosting()
         }
     }
 
@@ -134,28 +153,37 @@ ApplicationWindow {
 
             StatusBadge {
                 Layout.alignment: Qt.AlignVCenter
-                stateName: controller.stateName
+                stateName: app.mode === "host" ? host.stateName : controller.stateName
             }
 
             Label {
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignVCenter
                 elide: Text.ElideRight
-                text: controller.noticeText.length > 0 ? controller.noticeText : controller.statusText
-                color: statusMouse.containsMouse
-                       ? Theme.text
-                       : (controller.noticeText.length > 0 ? Theme.warning : Theme.textMuted)
+                text: app.mode === "host"
+                      ? host.statusText
+                      : (controller.noticeText.length > 0
+                         ? controller.noticeText : controller.statusText)
+                color: {
+                    if (app.mode === "host")
+                        return host.errorText.length > 0 ? Theme.dangerText : Theme.textMuted
+                    return statusMouse.containsMouse
+                           ? Theme.text
+                           : (controller.noticeText.length > 0 ? Theme.warning
+                                                               : Theme.textMuted)
+                }
                 font.pixelSize: Theme.fontSmall
 
                 // The status line elides; clicking it opens the complete log
                 // (full TLS diagnostics included) with a copy button.
-                ToolTip.visible: statusMouse.containsMouse
+                ToolTip.visible: app.mode === "control" && statusMouse.containsMouse
                 ToolTip.text: qsTr("Click to view and copy the full session log")
                 ToolTip.delay: 700
 
                 MouseArea {
                     id: statusMouse
                     anchors.fill: parent
+                    enabled: app.mode === "control"
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: logDialog.open()
@@ -164,8 +192,10 @@ ApplicationWindow {
 
             Label {
                 Layout.alignment: Qt.AlignVCenter
-                visible: controller.tlsWarning.length > 0
-                text: qsTr("TLS: %1").arg(controller.tlsWarning)
+                visible: app.mode === "host" ? host.tlsWarning.length > 0
+                                             : controller.tlsWarning.length > 0
+                text: qsTr("TLS: %1").arg(app.mode === "host" ? host.tlsWarning
+                                                              : controller.tlsWarning)
                 color: Theme.dangerText
                 font.pixelSize: Theme.fontSmall
                 elide: Text.ElideRight
@@ -185,6 +215,27 @@ ApplicationWindow {
 
     LogDialog {
         id: logDialog
+    }
+
+    HostApprovalDialog {
+        id: hostApprovalDialog
+        viewerId: host.approvalViewerId
+        viewerName: host.approvalViewerName
+        secondsRemaining: host.approvalSecondsRemaining
+        onAllowControlRequested: host.approveControl()
+        onViewOnlyRequested: host.approveViewOnly()
+        onRefuseRequested: host.refuse()
+    }
+
+    Connections {
+        target: host
+
+        function onApprovalRequested() {
+            hostApprovalDialog.open()
+        }
+        function onApprovalCleared() {
+            hostApprovalDialog.close()
+        }
     }
 
     // The desktop's application menu belongs to the platform layer, but the
@@ -229,7 +280,7 @@ ApplicationWindow {
         sequences: [StandardKey.Cancel]
         enabled: app.fullScreen && (!controller.connected || !controller.inputEnabled)
                  && !settingsDialog.opened && !aboutDialog.opened
-                 && !logDialog.opened
+                 && !logDialog.opened && !hostApprovalDialog.opened
         onActivated: app.setFullScreen(false)
     }
 

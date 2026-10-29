@@ -59,6 +59,13 @@ public synthetic test credentials, never installed or trusted in production.
   TLS regressions additionally use `endpoint.crt` (localhost/127.0.0.1, without
   `ultraviewer`) to prove default endpoint-name authentication, and reject a
   mismatched relay route even when the registration override is valid.
+- `tst_host`: the sender wire format (28-field registration, relay request and
+  availability, 23-field login proof), login throttle, 45-second approval, frame
+  encoding/pacing, host layout scaling/monitor mapping and Windows VK/scan-code to
+  portal keysym/keycode/pointer mapping. It does not open a portal or a network
+  connection, so portal capture and a real Windows viewer remain manual checks.
+  The sender protocol and its security rules are documented in
+  [host mode](host-mode.md).
 - `app_self_test`: actual QML loading/viewer visibility, deterministic patch
   submission, byte-exact mirror and orange-patch window-pixel verification.
   If Qt cannot grab a window, pixel presentation is reported unchecked, not
@@ -73,8 +80,10 @@ public synthetic test credentials, never installed or trusted in production.
   registering it; the run must stay clean and simply report no global menu. On
   hosts without such a theme the test is a plain pass-through.
 
-The current native suite has **13 CTest targets** and eight image sequences.
-Tests are deliberately not a proof of every vendor feature.
+The current native suite has **15 CTest targets** — 12 unit suites plus the
+offscreen app self-test, its themed variant and the unconfigured connect probe —
+and eight image sequences. Tests are deliberately not a proof of every vendor
+feature.
 
 ## Regenerate fixtures (development only)
 
@@ -190,10 +199,10 @@ application menu, again for the 0.2.2 live connect probe, once more for the
 for the 0.2.5 copyable session log, again for the 0.2.6 relay chain
 completion, once more for the 0.2.7 real-session status cleanup and full
 screen, and again for 0.2.8 floating full screen, simplified settings and Wayland
-shortcut inhibition: **14/14 native CTest targets pass** in the RelWithDebInfo
-build,
-and **14/14 pass** in Debug with ASan/UBSan using the options above. The direct
-40-patch QML self-test reports mirror/consumed/grab/pixel all `ok`, asserts that
+shortcut inhibition, and again for host (sender) mode: **15/15 native CTest
+targets pass** in the RelWithDebInfo build. The 0.2.8 run passed 14/14 in Debug
+with ASan/UBSan using the options above; the host suite raises the RelWithDebInfo
+count to 15/15. The direct 40-patch QML self-test reports mirror/consumed/grab/pixel all `ok`, asserts that
 every embedded theme icon is present and reports the global menu as
 `menu=exported`/`unavailable`/`pending`. CPack generated a `.deb`; version 0.2.8 is
 installed system-wide (`pkexec apt-get install`) and its `/usr/bin/ultraview`
@@ -241,8 +250,9 @@ must keep password storage, and run the suite as the gate — see
 
 Not covered: a real Windows partner, live screen decoding with the vendor
 dictionary in a session, a relay/login exchange, sustained external session,
-clean-host package install, hardware/Wayland input shortcut behavior and
-locked-keyring behavior. The registration and partner-request phases are
+host mode against a real Windows viewer or a live portal prompt, clean-host
+package install, hardware/Wayland input shortcut behavior and locked-keyring
+behavior. The registration and partner-request phases are
 answered by the live service (status-11 dry run), a human confirmed the desktop
 panel widget drawing the exported application menu, and the platform Secret
 Service store/read/clear round trip ran against the session's gnome-keyring (see

@@ -30,6 +30,7 @@
 #include "core/SessionManager.h"
 #include "core/SessionState.h"
 #include "models/ConnectionViewModel.h"
+#include "models/HostViewModel.h"
 #include "models/RecentConnectionsModel.h"
 #include "models/SettingsModel.h"
 #include "platform/GlobalMenu.h"
@@ -45,6 +46,8 @@ void registerQmlTypes()
     qmlRegisterType<input::InputController>("Ultraview", 1, 0, "InputController");
     qmlRegisterUncreatableType<models::ConnectionViewModel>(
         "Ultraview", 1, 0, "ConnectionViewModel", QStringLiteral("provided by the application"));
+    qmlRegisterUncreatableType<models::HostViewModel>(
+        "Ultraview", 1, 0, "HostViewModel", QStringLiteral("provided by the application"));
     qmlRegisterUncreatableType<models::SettingsModel>("Ultraview", 1, 0, "Settings",
                                                       QStringLiteral("provided by the application"));
     qmlRegisterUncreatableType<models::RecentConnectionsModel>(
@@ -215,6 +218,8 @@ int runScreenshot(QQuickWindow *window, const QString &path, const QString &view
 
     if (view == QLatin1String("viewer"))
         window->setProperty("devViewer", true);
+    else if (view == QLatin1String("host"))
+        window->setProperty("mode", QStringLiteral("host"));
     if (dialogTab > 0)
         window->setProperty("devDialogTab", dialogTab);
     if (!dialog.isEmpty())
@@ -351,6 +356,9 @@ int main(int argc, char *argv[])
     registerQmlTypes();
 
     ultraview::models::ConnectionViewModel controller;
+    // Host mode is a separate identity and a separate worker thread.  Creating
+    // the view model does not load the profile or start hosting.
+    ultraview::models::HostViewModel host(controller.settingsObject());
     // The desktop's application menu (KDE global menu) mirrors the session
     // actions; on desktops without one it stays inert.
     ultraview::platform::GlobalMenu globalMenu(&controller);
@@ -364,6 +372,7 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("controller"), &controller);
+    engine.rootContext()->setContextProperty(QStringLiteral("host"), &host);
     engine.rootContext()->setContextProperty(QStringLiteral("globalMenu"), &globalMenu);
     engine.loadFromModule("Ultraview", "Main");
     if (engine.rootObjects().isEmpty()) {

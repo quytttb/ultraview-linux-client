@@ -55,6 +55,12 @@ credentials. Responses are direct `01 || plaintext` bodies, not assumed to be
 encrypted. Identity response subset: `3:<source port>:<controller ID>:<IP>`;
 extra fields are tolerated, numeric ranges checked.
 
+The sender (host) role has its own registration: a 28-field command `3` carrying
+a separate stable identity, 8-digit login password, display name and MAC. It uses
+the same encryption and framing, and its `3:` reply has 11 or more fields. The
+sender role, its relay/login flow and its screen/input messages are documented in
+[host (sender) mode](host-mode.md); the controller flow above is unchanged.
+
 Fingerprint digest is uppercase MD5 of the provided preimage. The fallback
 helper concatenates MAC plus supplied Windows creation-tick values with no
 separator. It is fixture-tested as a helper, **not wired into automatic Linux

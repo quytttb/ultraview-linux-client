@@ -22,16 +22,21 @@ partner/Windows versions and clipboard/file transfer still need work; this is
 ## Build on Ubuntu
 
 Requirements: CMake ≥3.24, C++20 compiler, Qt ≥6.5 (Core, Gui, Network, Qml,
-Quick, QuickControls2, Test), OpenSSL ≥3 and libzstd. Ubuntu 26.04's distribution
-Qt meets the requirement. Ubuntu 24.04's stock Qt 6.4 does **not**: install a
-separate Qt ≥6.5 SDK and set `CMAKE_PREFIX_PATH` to its `gcc_64` directory. Do not
-mix SDK headers, plugins or libraries with distribution Qt.
+Quick, QuickControls2, Test), OpenSSL ≥3 and libzstd. Host (sender) mode needs
+QtDBus, the PipeWire development headers (`libpipewire-0.3-dev`) and, at runtime,
+`xdg-desktop-portal` with a backend such as `xdg-desktop-portal-kde` and a
+PipeWire server. Without those headers the client still builds as a controller
+and the Host page reports that screen sharing is unavailable. Ubuntu 26.04's
+distribution Qt meets the requirement. Ubuntu 24.04's stock Qt 6.4 does **not**:
+install a separate Qt ≥6.5 SDK and set `CMAKE_PREFIX_PATH` to its `gcc_64`
+directory. Do not mix SDK headers, plugins or libraries with distribution Qt.
 
 On this laptop, privileged commands use `pkexec`; on other Ubuntu systems use
 your normal privilege mechanism:
 
 ```sh
 pkexec apt install build-essential cmake ninja-build pkg-config libssl-dev libzstd-dev libwayland-dev \
+  libpipewire-0.3-dev \
   qt6-base-dev qt6-declarative-dev qt6-declarative-dev-tools qt6-tools-dev-tools \
   qt6-qpa-plugins qt6-image-formats-plugins qt6-wayland \
   qml6-module-qtquick qml6-module-qtquick-window qml6-module-qtquick-controls \
@@ -98,6 +103,17 @@ dependencies still works, but cannot suppress compositor shortcuts.
    the top edge to reveal the floating toolbar and choose **Exit full screen**.
    While remote input is enabled, normal keys (including Super/Meta, Ctrl+Q, F11
    and Esc) are reserved for the Windows partner.
+6. Host (sender) mode is the header's **Host** surface and never starts
+   automatically. Choose **Start hosting**, approve the desktop portal's
+   screen-sharing prompt, then give the assigned ID and the 8-digit password to
+   the Windows UltraViewer user. Every incoming connection still requires a local
+   **Allow control**, **View only** or **Refuse** decision; a request expires
+   after 45 seconds, and five wrong passwords lock new attempts for five minutes.
+   Host mode shares screen and input only: chat, clipboard, file transfer and
+   audio are refused rather than guessed. The identity lives in
+   `~/.config/ultraview/host-profile.json` (directory 0700, file 0600) and is
+   separate from the controller profile. Wayland portal capture is implemented;
+   there is no X11 fallback yet. See [host (sender) mode](docs/host-mode.md).
 
 Profiles may contain sensitive identity/password material. Keep them private
 (`chmod 600`), never commit them, and never share raw protocol payloads as logs.
@@ -166,8 +182,8 @@ ubuntu-24.04 with an explicit Qt 6.8.3 SDK and passed both jobs on 2026-10-19
 - `tools/make_experimental_profile.py`: development-only registration profile
   drafter; its output is an unproven experiment and it is never installed.
 - [Architecture](docs/architecture.md), [protocol](docs/protocol.md),
-  [porting plan](docs/porting-plan.md), [interface](docs/ui.md),
-  [traceability matrix](docs/traceability.md).
+  [host (sender) mode](docs/host-mode.md), [porting plan](docs/porting-plan.md),
+  [interface](docs/ui.md), [traceability matrix](docs/traceability.md).
 - [Local verification record](docs/verification.md) lists actual checks and blockers.
 
 ## Credits

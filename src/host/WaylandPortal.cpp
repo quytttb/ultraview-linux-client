@@ -330,6 +330,7 @@ private:
     QString m_sessionPath;
     bool m_ready = false;
     bool m_pointerGranted = true;
+    bool m_keyboardGranted = true;
     quint64 m_tokenCounter = 0;
     QEventLoop *m_waitLoop = nullptr;
     bool m_responseReady = false;
@@ -576,8 +577,10 @@ bool WaylandPortalBackend::startScreenCast(QString *error)
     }
 
     const QVariant devices = results.value(QStringLiteral("devices"));
-    if (devices.isValid())
+    if (devices.isValid()) {
+        m_keyboardGranted = (devices.toUInt() & 1u) != 0;
         m_pointerGranted = (devices.toUInt() & 2u) != 0;
+    }
 
     const QVariant streamsValue = results.value(QStringLiteral("streams"));
     if (!streamsValue.canConvert<QDBusArgument>()) {
@@ -904,10 +907,10 @@ void WaylandPortalBackend::inject(const HostInputEvent &event, const HostLayout 
 {
     if (!m_ready)
         return;
-    if (!m_pointerGranted)
-        return;
 
     if (event.type == HostInputType::Mouse) {
+        if (!m_pointerGranted)
+            return;
         const PointerAction action = pointerAction(event, &m_wheelRemainder);
         switch (action.kind) {
         case PointerAction::Kind::Move: {
@@ -957,6 +960,8 @@ void WaylandPortalBackend::inject(const HostInputEvent &event, const HostLayout 
     }
 
     const bool down = event.kind == 1 || event.kind == 3;
+    if (event.type == HostInputType::Keyboard && !m_keyboardGranted)
+        return;
     const auto key = mapKey(event.kind, event.virtualKey, event.scanCode, event.character);
     if (!key.has_value())
         return;

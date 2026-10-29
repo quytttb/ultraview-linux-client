@@ -36,6 +36,16 @@ control session forward Super/Meta and compositor shortcuts to the partner rathe
 than invoking them on the controller. A source build without these optional
 development dependencies remains usable, but has no compositor-shortcut block.
 
+Host mode uses QtDBus and the same PipeWire client library for the
+xdg-desktop-portal ScreenCast/RemoteDesktop APIs. The package recommends
+`xdg-desktop-portal`, a backend (`xdg-desktop-portal-kde` is used on this host;
+GNOME/wlroots alternatives are accepted) and the `pipewire` server. Configure
+packaging builds with `-DULTRAVIEW_REQUIRE_WAYLAND_HOST=ON` to fail instead of
+silently compiling host capture out. Without the development headers the client
+still builds as a controller and the Host page reports that screen sharing is
+unavailable. X11 capture is not implemented, so a packaged host needs a Wayland
+session and a working portal backend.
+
 ```sh
 ctest --test-dir build --output-on-failure
 cpack --config build/CPackConfig.cmake -G DEB -B build/packages

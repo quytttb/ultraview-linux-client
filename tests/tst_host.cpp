@@ -5,9 +5,11 @@
 // (MIT) rather than the controller fixtures; these tests exercise the security
 // boundaries around login, approval, pacing and input as well.
 //
+#include "host/HostBackend.h"
 #include "host/HostProfile.h"
 #include "host/HostProtocol.h"
 #include "host/HostSession.h"
+#include "host/InputMapping.h"
 
 #include "core/ErrorTypes.h"
 #include "protocol/Digest.h"
@@ -97,6 +99,8 @@ private slots:
     void sessionWrongPassword();
     void sessionTimeoutAndDisconnect();
     void profileHelpers();
+    void layoutScaling();
+    void inputMapping();
 };
 
 void TestHost::registrationTerms()
@@ -422,6 +426,90 @@ void TestHost::profileHelpers()
     QVERIFY(HostProfile::isAcceptablePassword(QStringLiteral("12345678")));
     QVERIFY(!HostProfile::isAcceptablePassword(QStringLiteral("1234")));
     QVERIFY(!HostProfile::isAcceptablePassword(QStringLiteral("1234\t567")));
+}
+
+void TestHost::layoutScaling()
+{
+    QString error;
+    const auto single = HostLayout::build({HostRect{0, 0, 1920, 1080}}, &error);
+    QVERIFY2(single.has_value(), qPrintable(error));
+    QCOMPARE(single->width, 1920);
+    QCOMPARE(single->height, 1080);
+    QCOMPARE(single->mapToSource(0, 0), QPoint(0, 0));
+    QCOMPARE(single->mapToSource(1919, 1079), QPoint(1919, 1079));
+    QCOMPARE(single->mapToSource(-5, 99999), QPoint(0, 1079));
+
+    const auto scaled = HostLayout::build({HostRect{0, 0, 3840, 2160}}, &error);
+    QVERIFY2(scaled.has_value(), qPrintable(error));
+    QCOMPARE(scaled->width, 1920);
+    QCOMPARE(scaled->height, 1080);
+    QCOMPARE(scaled->mapToSource(1919, 1079), QPoint(3838, 2158));
+
+    const auto dual = HostLayout::build(
+        {HostRect{0, 0, 1920, 1080}, HostRect{1920, 0, 1280, 1024}}, &error);
+    QVERIFY2(dual.has_value(), qPrintable(error));
+    QCOMPARE(dual->width, 3200);
+    QCOMPARE(dual->height, 1080);
+    QCOMPARE(dual->monitors.size(), 2);
+    QCOMPARE(dual->mapToSource(1920, 0), QPoint(1920, 0));
+
+    QVERIFY(!HostLayout::build({}, &error).has_value());
+    QVERIFY(!HostLayout::build({HostRect{0, 0, 0, 1080}}, &error).has_value());
+}
+
+void TestHost::inputMapping()
+{
+    const auto letter = mapKey(1, 0x41, 0x1e, 0);
+    QVERIFY(letter.has_value());
+    QVERIFY(letter->kind == PortalKey::Kind::Keysym);
+    QCOMPARE(letter->value, 0x61);
+
+    const auto function = mapKey(1, 0x74, 0x3f, 0);
+    QVERIFY(function.has_value());
+    QCOMPARE(function->value, 0xffc2);
+
+    const auto unicode = mapKey(1, kVirtualKeyPacket, 0, 0x20ac);
+    QVERIFY(unicode.has_value());
+    QCOMPARE(unicode->value, 0x010020ac);
+    QVERIFY(!mapKey(1, kVirtualKeyPacket, 0, 0x01).has_value());
+
+    const auto extendedEnter = mapKey(1, 0x0d, 0xe01c, 0);
+    QVERIFY(extendedEnter.has_value());
+    QCOMPARE(extendedEnter->value, 0xff8d);
+
+    // Unknown virtual key, known extended scan code: fall back to evdev.
+    const auto evdev = mapKey(1, 0xff, 0xe048, 0);
+    QVERIFY(evdev.has_value());
+    QVERIFY(evdev->kind == PortalKey::Kind::Keycode);
+    QCOMPARE(evdev->value, 103);
+    QVERIFY(!mapKey(1, 0xff, 0x7f, 0).has_value());
+
+    qint32 remainder = 0;
+    HostInputEvent move;
+    move.message = kMouseMoveMessage;
+    move.x = 10;
+    move.y = 20;
+    const PointerAction pointer = pointerAction(move, &remainder);
+    QVERIFY(pointer.kind == PointerAction::Kind::Move);
+    QCOMPARE(pointer.x, 10);
+    QCOMPARE(pointer.y, 20);
+
+    HostInputEvent wheel;
+    wheel.message = kMouseWheelMessage;
+    wheel.wheel = 60;
+    QVERIFY(pointerAction(wheel, &remainder).kind == PointerAction::Kind::None);
+    wheel.wheel = 60;
+    const PointerAction notch = pointerAction(wheel, &remainder);
+    QVERIFY(notch.kind == PointerAction::Kind::Wheel);
+    QCOMPARE(notch.steps, 1);
+    QCOMPARE(remainder, 0);
+
+    HostInputEvent leftDown;
+    leftDown.message = 0x201;
+    const PointerAction button = pointerAction(leftDown, &remainder);
+    QVERIFY(button.kind == PointerAction::Kind::Button);
+    QCOMPARE(button.button, static_cast<quint8>(1));
+    QVERIFY(button.pressed);
 }
 
 QTEST_GUILESS_MAIN(TestHost)

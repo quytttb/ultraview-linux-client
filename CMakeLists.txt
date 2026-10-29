@@ -22,6 +22,8 @@ option(ULTRAVIEW_REQUIRE_SECRET_SERVICE
     "Fail the build when a platform secret service (libsecret) is unavailable" OFF)
 option(ULTRAVIEW_REQUIRE_WAYLAND_SHORTCUT_INHIBIT
     "Fail the build when Wayland keyboard-shortcut inhibition is unavailable" OFF)
+option(ULTRAVIEW_REQUIRE_WAYLAND_HOST
+    "Fail the build when host-mode Wayland portal capture is unavailable" OFF)
 
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Network Test)
 find_package(Qt6 QUIET COMPONENTS DBus)
@@ -82,6 +84,9 @@ if(TARGET Qt6::DBus AND PIPEWIRE_FOUND)
     message(STATUS "Wayland host capture: enabled (QtDBus + libpipewire-0.3)")
 else()
     message(STATUS "Wayland host capture: disabled (needs Qt6::DBus and libpipewire-0.3)")
+    if(ULTRAVIEW_REQUIRE_WAYLAND_HOST)
+        message(FATAL_ERROR "ULTRAVIEW_REQUIRE_WAYLAND_HOST is ON but Wayland host capture is unavailable")
+    endif()
 endif()
 
 qt_standard_project_setup(REQUIRES 6.5)
@@ -149,6 +154,7 @@ add_library(ultraview_core STATIC
 
     src/models/ProfileLoader.cpp
     src/models/ConnectionViewModel.cpp
+    src/models/HostViewModel.cpp
     src/models/SettingsModel.cpp
     src/models/RecentConnectionsModel.cpp
 
@@ -243,8 +249,10 @@ qt_add_qml_module(ultraview
         qml/components/StatusBadge.qml
         qml/components/ViewerToolbar.qml
         qml/pages/ConnectPage.qml
+        qml/pages/HostPage.qml
         qml/pages/ViewerPage.qml
         qml/dialogs/AboutDialog.qml
+        qml/dialogs/HostApprovalDialog.qml
         qml/dialogs/LogDialog.qml
         qml/dialogs/SettingsDialog.qml
         qml/themes/Icon.qml

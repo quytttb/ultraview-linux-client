@@ -23,6 +23,19 @@ browser canvas or alternate remote desktop protocol in the application.
   `ProfileLoader` loads user-supplied schema values. `SettingsModel` writes
   ordinary preferences, never partner passwords. `CredentialStore` optionally
   uses libsecret; unavailable builds explicitly refuse password persistence.
+- `models/HostViewModel` is the GUI-thread facade for host mode. It owns a
+  separate `QThread` with `host/HostManager`, loads the private host identity only
+  when the Host page is opened or hosting starts, and mirrors state/approval
+  signals. `host/HostProfile` writes the stable identity/password to
+  `<AppConfig>/host-profile.json` (0700 directory, 0600 file);
+  `host/HostProtocol` and `host/HostSession` implement registration, relay
+  negotiation, viewer login/throttle, 45-second approval, RGB555/zstd frame
+  pacing and input gating. `host/HostBackend`/`host/WaylandPortal` capture the
+  desktop through the xdg-desktop-portal ScreenCast + RemoteDesktop APIs over
+  QtDBus/PipeWire and inject mapped keys/pointer events. The host page and
+  approval dialog are QML only; hosting starts only from the explicit **Start
+  hosting** action. The wire format and security rules are in
+  [host mode](host-mode.md).
 - `platform/GlobalMenu` is the only desktop-integration piece. It describes the
   application menu (Session/View/Settings/Help) and mirrors the session state; the
   platform theme of Qt turns that into the desktop's application menu (KDE's

@@ -43,14 +43,29 @@ Singleton; every colour and metric the interface uses lives there.
 | `AppToolbar`, `ViewerToolbar` | application header and viewer session actions |
 | `StatusBadge`, `StatRow`, `EmptyState`, `FilePicker` | status pill, statistics line, introductory block, path chooser |
 
-`qml/pages/` (connect page, viewer page) and `qml/dialogs/` (settings, about,
-session log) only compose these components.
+`qml/pages/` (connect page, host page, viewer page) and `qml/dialogs/`
+(settings, about, session log, host approval) only compose these components.
 
 The status bar (window footer) shows the session state and the latest message.
 That message is clickable: the complete session log opens in a dialog with the
 build identity, the state timeline, every notice and the full error detail (TLS
 certificate diagnostics included), plus a **Copy log** button. The log is kept in
 memory only (most recent 200 entries) and never contains the partner password.
+The footer follows the selected mode: controller states and the copyable session
+log on **Control**, host state and status on **Host** (host status is not written
+into the controller's log).
+
+The header carries a **Control / Host** switch. It is disabled while a controller
+session is live and while hosting, so a running role cannot be left running
+invisibly. **Host** shows the local identity page; opening it loads (or creates)
+the private host identity but never starts sharing. Only **Start hosting** starts
+the registration, relay and screen-capture backend. The page shows the assigned
+ID, the 8-digit password, local address, backend/layout diagnostics, the current
+status, and a **Allow keyboard and mouse** switch once a viewer is connected.
+Chat, clipboard, file transfer and audio are explicitly described as unsupported
+on the host side. The approval dialog is modal, cannot be dismissed by clicking
+outside, offers **Allow control**, **View only** and **Refuse**, and counts down
+the 45-second request deadline; Escape refuses rather than approves.
 
 The viewer toolbar carries the session state, **Disable input**, **Statistics**,
 **Full screen** and **Disconnect**. Opening a session maximizes the window. Full
@@ -129,6 +144,8 @@ QT_QPA_PLATFORM=offscreen ./build/ultraview --screenshot /tmp/connect.png
 # other surfaces: viewer page, statistics panel, settings tab, about dialog
 QT_QPA_PLATFORM=offscreen ./build/ultraview \
     --screenshot /tmp/viewer.png --screenshot-view viewer --screenshot-statistics
+QT_QPA_PLATFORM=offscreen ./build/ultraview \
+    --screenshot /tmp/host.png --screenshot-view host
 QT_QPA_PLATFORM=offscreen ./build/ultraview \
     --screenshot /tmp/settings.png --screenshot-dialog settings --screenshot-tab 1
 ```

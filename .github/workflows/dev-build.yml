@@ -52,7 +52,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             build-essential cmake ninja-build pkg-config dpkg-dev \
-            libssl-dev libzstd-dev libsecret-1-dev libwayland-dev \
+            libssl-dev libzstd-dev libsecret-1-dev libwayland-dev libpipewire-0.3-dev \
             qt6-base-dev qt6-base-private-dev qt6-declarative-dev \
             qt6-declarative-dev-tools qt6-tools-dev-tools \
             qt6-qpa-plugins qt6-image-formats-plugins qt6-wayland \
@@ -73,7 +73,8 @@ jobs:
           # must fail here instead of silently compiling either feature out.
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DULTRAVIEW_REQUIRE_SECRET_SERVICE=ON \
-            -DULTRAVIEW_REQUIRE_WAYLAND_SHORTCUT_INHIBIT=ON
+            -DULTRAVIEW_REQUIRE_WAYLAND_SHORTCUT_INHIBIT=ON \
+            -DULTRAVIEW_REQUIRE_WAYLAND_HOST=ON
           cmake --build build --parallel "$(nproc)"
           ctest --test-dir build --output-on-failure
 

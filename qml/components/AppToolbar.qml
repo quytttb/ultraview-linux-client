@@ -9,8 +9,12 @@ Rectangle {
     implicitHeight: Theme.toolbarHeight
     color: Theme.surface
 
+    property string mode: "control"
+    property bool modeSwitchEnabled: true
+
     signal settingsRequested
     signal aboutRequested
+    signal modeRequested(string mode)
 
     Rectangle {
         anchors.bottom: parent.bottom
@@ -56,9 +60,29 @@ Rectangle {
             }
 
             Label {
-                text: qsTr("native Linux controller")
+                text: qsTr("native Linux remote desktop")
                 color: Theme.textFaint
                 font.pixelSize: Theme.fontTiny
+            }
+        }
+
+        RowLayout {
+            Layout.alignment: Qt.AlignVCenter
+            Layout.leftMargin: Theme.spacingSmall
+            spacing: Theme.spacingXSmall
+
+            AppButton {
+                text: qsTr("Control")
+                active: bar.mode !== "host"
+                enabled: bar.modeSwitchEnabled || bar.mode !== "host"
+                onClicked: bar.modeRequested("control")
+            }
+
+            AppButton {
+                text: qsTr("Host")
+                active: bar.mode === "host"
+                enabled: bar.modeSwitchEnabled || bar.mode === "host"
+                onClicked: bar.modeRequested("host")
             }
         }
 

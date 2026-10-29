@@ -506,15 +506,45 @@ Neither step proves server acceptance or a working session.
   `libwayland-client0 (>= 1.20.0)`. 14/14 CTest targets pass in RelWithDebInfo
   and under ASan/UBSan, and both extracted and installed binaries pass
   `--self-test`.
-- A Linux **host** mode (show an ID/password for a Windows controller) is still
-  not implemented. It requires the unimplemented sender-side registration/relay
-  role, inbound-login verification/approval, screen capture/encoding and safe
-  input injection. The independently MIT-licensed MacViewer/LinuxViewer project
-  (reviewed at commit `4dcf8713106045be5fb2cf2d1d2f0e4bd7690002`) is a useful
-  design reference for a future separately reviewed port; no Rust/Swift source is
-  included or copied here. Its host design also confirms that Wayland hosting
-  needs the ScreenCast + RemoteDesktop portals/PipeWire, not just this client's
-  shortcut-inhibition protocol.
+- A Linux **host** mode (show an ID/password for a Windows controller) was still
+  not implemented in 0.2.8. It is now implemented by the host-mode work recorded
+  below: sender registration/relay, inbound-login verification and approval,
+  screen capture/encoding, input injection and QML Host/approval surfaces. The
+  independently MIT-licensed MacViewer/LinuxViewer project (reviewed at commit
+  `4dcf8713106045be5fb2cf2d1d2f0e4bd7690002`) was the design reference; no
+  Rust/Swift source is included or copied here. Wayland hosting uses the
+  ScreenCast + RemoteDesktop portals/PipeWire; there is no X11 fallback.
+
+## Host (sender) mode and UI — 2026-10-29
+
+- Commit `0a95b08` added the host core: `HostProfile` (private 32-hex identity and
+  8-digit password at `<AppConfig>/host-profile.json`), `HostProtocol`
+  (28-field registration, relay negotiation, 23-field viewer login, RGB555/zstd
+  frames, control permission), `HostSession` (login proof, 5-failure/5-minute
+  throttle, 45-second approval, frame pacing, input gating), `HostManager`
+  (worker-thread registration/relay orchestration), `HostBackend`,
+  `InputMapping` and `WaylandPortal` (ScreenCast + RemoteDesktop over
+  QtDBus/PipeWire).
+- `HostViewModel`, the Host page and the approval dialog wire that core into the
+  application. The header switches between Control and Host; opening Host only
+  loads the identity, and only **Start hosting** starts registration and the
+  portal. The approval dialog requires **Allow control**, **View only** or
+  **Refuse**, and Escape refuses. Hosted sessions can switch control/view-only
+  through command 49. The host page states that chat, clipboard, transfer and
+  audio are not implemented.
+- `tst_host` now has 18 protocol/session/profile/layout/input-mapping tests
+  covering registration terms, relay parsing, login proofs, throttle, frame
+  encoding and pacing, approval timeout, host layout scaling and pointer/key
+  mapping. The full suite is **15/15** in RelWithDebInfo. The offscreen Host page
+  was reviewed with `--screenshot-view host`; the layout fits 1024×720 and the
+  identity/backend diagnostics render correctly.
+- Packaging/CI builds request `-DULTRAVIEW_REQUIRE_WAYLAND_HOST=ON`; the package
+  recommends `xdg-desktop-portal`, a portal backend and PipeWire. Runtime host
+  dependencies are otherwise the same PipeWire client library as audio.
+- Not validated: a real Windows UltraViewer viewer controlling this host, the
+  portal permission/capture path on a live KDE Wayland session, pointer/key
+  injection through the portal, and shutdown during an unanswered portal prompt.
+  No host password or profile is written by the test suite or the package.
 
 This record describes the checked local build, not a vendor-certified release or
 a claim that all recovered/undocumented protocol features were implemented.
