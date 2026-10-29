@@ -106,11 +106,27 @@ must contain a discriminator byte:
 - Kind 1: exactly 11 fields. Apply in this order: scroll copy (6), cache
   references (9), JPEG atlas (7/8), RGB555 rectangles (1/2), cache additions (10),
   LRU eviction. Send ASCII `18` after a successfully decoded/retained update.
-- Kind 3: a four-byte field 1 is signed Int32 LE; respond with ASCII
-  `|||4` followed immediately by its decimal representation, no extra delimiter.
-  Without that field, report unsupported; do not invent a reply.
-- Kinds 42/43/50/51: audio, explicitly refused with notices. Unknown kinds are
-  reported as unsupported. Malformed framing and BitBlt are fatal.
+- Kind 3: remote cursor selection (see
+  [Remote cursor](#remote-cursor-commands-3-4-and-28)). A
+  four-byte field 1 is signed Int32 LE; a shape that is not cached is requested
+  with ASCII `|||4` followed immediately by its decimal representation, no extra
+  delimiter. Without that field, report unsupported; do not invent a reply.
+- Kind 4: remote cursor shape transfer, a four-field payload
+  `[4][hash Int32][declared length Int32][zstd(.cur)]`.
+- Kind 5: legacy text clipboard as a field array; field 1 is the UTF-16LE text.
+- Kind 12: chat message; the text is field 1 (UTF-16LE).
+- Kinds 13/14/15/16/21: file transfer offer/accept/chunk/cancel/ack.
+- Kinds 27/41: the partner closed / terminated the session; the session stops.
+- Kind 28: pointer position `[28][x Int16][y Int16]`.
+- Kinds 29/30: the partner started / stopped typing.
+- Kind 33: modern compressed clipboard (three fields, see below).
+- Kind 42: audio silence; field 1 is a little-endian byte count.
+- Kind 43: G.722 computer-sound payload in field 1.
+- Kind 48: the host changed its tile size to 8, 16 or 32 pixels.
+- Kind 49: view-only state; field 1 is one byte, 0 = full control, 1 = view only.
+- Kinds 50/51: partner microphone audio, explicitly refused with a notice.
+  Unknown kinds are reported as unsupported. Malformed framing and BitBlt are
+  fatal.
 
 Field 1 contains UInt16 LE x/y/width/height records; field 2 is one zstd frame
 with exactly `sum(width*height*2)` decompressed bytes, using the supplied dictionary.
@@ -131,6 +147,138 @@ Only the listed contained subrectangles are restored. Field 9 consists of
 `<Int16 x,y><Int32 key>` records. References move keys to the LRU end. Field 10 is
 `<Int16 x,y,w,h><Int32 key>`; only absent keys are captured from the final canvas.
 Missing references fail atomically. Default eviction limit is 1000 entries.
+
+## Peer application messages
+
+The commands below travel inside relay frames exactly like screen packets. Their
+relay flag is part of each command definition — text commands use UTF-16LE
+flag 1, numeric/byte commands ASCII flag 0 — so `ControlCommands` returns the
+payload and flag together. Code lives in `src/protocol/ControlCommands.cpp`.
+The semantics follow the GPL `remmina-plugin-ultraviewer` protocol reference; the
+native state machines and tests are separate implementations (see
+[NOTICE.md](../NOTICE.md)).
+
+### Text clipboard (commands 5 and 33)
+
+- **Modern upload (33):** ASCII header `33|||<UTF-16LE byte count>|||` followed by
+  a dictionary-free Zstandard frame of the UTF-16LE text, relay flag 0.
+- **Modern download (33):** a three-field packet `[33][uint32 LE uncompressed
+  byte count][zstd frame]`. The declared count is checked against the decoder
+  budget before decompression.
+- **Legacy (5):** UTF-16LE `5|||<text>`, relay flag 1. It is used for the empty
+  string, which the host rejects in the modern form, and accepted on input both
+  as a delimited text payload and as a field array.
+- Only text is synchronized; images, rich text and the X11 primary selection are
+  out of scope because the protocol carries UTF-16 text only.
+- `|||` inside the text is harmless in the modern form (it sits inside a
+  length-prefixed frame); the delimited legacy form refuses it instead of sending
+  a message the host would split.
+- Local echo is suppressed for 1000 ms after a remote update, and the last remote
+  text is remembered, because X11/Wayland report a programmatic clipboard write
+  as a normal change. `ClipboardBridge` owns this guard in the GUI thread.
+- Budget: 1 MiB per message in either direction.
+
+### Remote cursor (commands 3, 4 and 28)
+
+- `28|||1` / `28|||0` (ASCII, flag 0) enables/disables pointer tracking. It is
+  sent after the login acknowledgement only when the preference is enabled; a
+  preference set before connecting is recorded and sent during the handshake.
+- Command 3 carries a signed Int32 shape hash. The all-zero/hidden selection hash
+  `0xb84d1a70` clears the overlay. A cached shape is applied immediately, a miss
+  is requested once and remembered, so a burst of selections cannot become a
+  request storm.
+- The request bytes are the reference's `|||4<hash>` form
+  (`InputCodec::sizeFollowUp`), the spelling the live service has been observed
+  answering. `ControlCommands::cursorShapeRequest` builds the documentation's
+  `4|||<hash>` alternative and is kept for tests, not used by the session.
+- Command 4 carries `[4][hash Int32][declared .cur length Int32][zstd]`. The
+  declared length must be positive and at most 1 MiB; the decompressed resource
+  is decoded completely or rejected, never partially applied.
+- `.cur` decoding (`decoder/CursorDecoder`): `ICONDIR` (type must be 2) +
+  `ICONDIRENTRY` (hotspot, byte count, offset) + DIB. `biHeight` is twice the
+  cursor height because the XOR and AND bitmaps are stacked; the DIB is read
+  bottom-up. 1, 4, 8, 16, 24 and 32 bpp are supported, up to 256×256, and the
+  hotspot is clamped into the image. Mask rule: AND 0 = opaque XOR pixel,
+  AND 1 + XOR black = transparent, AND 1 + XOR white = inverted, drawn as opaque
+  black (the frame cannot invert what is behind it).
+- Command 28 carries the partner pointer as two signed Int16 values. The overlay
+  is drawn by `RemoteScreenItem` at the remote coordinates, scaled with the
+  desktop, and hidden when no shape is known.
+- `decoder/CursorCache` is a bounded LRU (32 shapes) shared with the pending
+  request set; it is cleared on reconnect.
+
+### File transfer (commands 13, 14, 15, 16 and 21)
+
+| Command | Meaning | Delimited form (viewer → host) | Multipart form (host → viewer) |
+|---|---|---|---|
+| 13 | offer | `13|||id|||name|||size` | `[13][id][name][size double]` |
+| 14 | accept | `14|||id|||1` | `[14][id][int32]` |
+| 15 | chunk | `15|||id|||offset|||bytes` | `[15][id][offset double][bytes]` |
+| 16 | cancel | `16|||id` | `[16][id]` |
+| 21 | ack | `21|||id` | `[21][id]` |
+
+- Numeric fields in the multipart direction are IEEE-754 doubles in little-endian
+  byte order (not integers); the delimited direction uses ASCII decimals.
+- One chunk is acknowledged before the next is sent: a 32,000-byte window. The
+  file-size ceiling is `999999999999999` bytes, at most 8 transfers exist at once,
+  and an inbound chunk is capped at 65,536 bytes for a host that rounded up.
+- Transfer IDs are generated locally and echoed by the host.
+- Incoming offers are only written after an explicit accept (the default);
+  `transferAutoAccept` skips the question. Received files go to
+  `<Downloads>/Ultraview` under a sanitized, non-overwriting name. A name with a
+  directory separator, `..`, a control character or `|||` is refused.
+- A chunk whose offset does not continue the stream, an oversized file or a
+  failed write cancels the transfer and removes the partial file. Both sides are
+  always answered with an ack or a cancel, so no partner waits for a window that
+  will not advance.
+- The host may send the delimited ASCII form instead of a field array; the
+  session falls back to it rather than failing the session.
+
+### Computer sound (commands 42, 43 and 46)
+
+- `46|||-1` starts the host's WASAPI loopback stream, `46|||0` stops it (UTF-16LE,
+  flag 1). The connect path sends the start command explicitly when the
+  preference is already enabled, because `AudioPlayer::setEnabled` is idempotent.
+- Command 43 field 1 is a G.722 64 kbit/s stream; one byte decodes to two 16-bit
+  samples at 16 kHz. The decoder keeps its state across packets, so a dropped or
+  reordered packet is audible but never desynchronizes the stream permanently.
+- Command 42 asks for a number of silent PCM bytes; the count is bounded to 1 MiB
+  before allocation.
+- Output is native PipeWire (`ULTRAVIEW_HAVE_PIPEWIRE_AUDIO`) when the
+  development headers are present: the graph converts 16 kHz mono S16LE to the
+  device rate, so the client never resamples by hand. Without PipeWire a null
+  sink keeps the protocol path working and the UI says that no output is
+  available. A stalled device drops audio instead of stalling the session worker.
+- The G.722 decoder is a C++ port of the GPL plugin's decoder and is golden-vector
+  tested against it (see [NOTICE.md](../NOTICE.md)).
+
+### Chat and typing (commands 12, 29 and 30)
+
+- Outbound chat is UTF-16LE `12|||<text>` (flag 1). Text longer than 32,768
+  UTF-16 bytes or containing `|||` is refused before sending, because the host
+  would split or truncate it.
+- Inbound chat is a multipart command 12 whose field 1 is the text.
+- `29` / `30` (bare codes, and also accepted as one-byte fields) mean the partner
+  started / stopped typing. The local typing indicator is sent when the input text
+  changes and cleared after 1.8 s of inactivity.
+
+### Session actions and display (commands 22, 23, 27, 31, 32, 40, 41, 48, 49 and 53)
+
+- `22` Ctrl+Alt+Del, `40` reboot and `53` lock are bare UTF-16LE action codes
+  (flag 1). They are single commands with no reply; the host applies them on its
+  own secure desktop.
+- `23|||-1` shows the partner wallpaper, `23|||0` blanks it (UTF-16LE).
+- `31|||<30|45|70>` selects speed / balanced / quality (ASCII, flag 0). Other
+  values are refused by the command builder.
+- `32|||2` forces the RGB555 colour mode. The builder exists and is tested, but
+  this client already requests RGB555 in the login viewport hint and does not send
+  it during a session.
+- Kind 49 reports the partner's view-only state; while it is set the client warns
+  that input is ignored there and can disable local input.
+- Kind 48 accepts a tile-size change to 8, 16 or 32; other values are reported
+  and the current size is kept.
+- Kinds 27/41 mean the partner closed / terminated the session; the session stops
+  with a notice rather than waiting for a timeout.
 
 ## Input and helper-only P2P
 

@@ -11,6 +11,7 @@ Rectangle {
     property string iconSource: ""
     property string tooltip: ""
     property bool danger: false
+    property bool active: false
     property int iconSize: 18
     property int size: Theme.controlHeight - 4
     signal clicked
@@ -22,6 +23,8 @@ Rectangle {
     color: {
         if (!button.enabled)
             return "transparent"
+        if (button.active)
+            return mouse.containsMouse ? Theme.tinted(Theme.accent, 0.26) : Theme.accentSoft
         if (button.danger) {
             if (mouse.pressed)
                 return Theme.tinted(Theme.danger, 0.24)

@@ -24,6 +24,8 @@
 #include <QEventLoop>
 #include <QFile>
 #include <QTimer>
+#include <QTranslator>
+#include <QLocale>
 
 #include <cstdio>
 #include <memory>
@@ -199,9 +201,11 @@ int runSelfTest(QQuickWindow *window, ultraview::platform::GlobalMenu *menu, int
 // save the frame as an image.  `view`, `dialog` and `tab` select one of the
 // application surfaces so a documentation screenshot can be taken of it.
 // `--screenshot-statistics` goes through the global menu (the viewer panel and
-// the menu entry stay one state).  No network or profile access is involved.
+// the menu entry stay one state).  `panel` opens a viewer side panel or the tools
+// popup.  No network or profile access is involved.
 int runScreenshot(QQuickWindow *window, const QString &path, const QString &view,
-                  const QString &dialog, int dialogTab, bool fullScreen)
+                  const QString &dialog, int dialogTab, bool fullScreen,
+                  const QString &panel)
 {
     window->show();
     // Show first so the QPA plugin creates the platform surface, then request
@@ -225,6 +229,8 @@ int runScreenshot(QQuickWindow *window, const QString &path, const QString &view
         window->setProperty("devDialogTab", dialogTab);
     if (!dialog.isEmpty())
         window->setProperty("devDialog", dialog);
+    if (!panel.isEmpty())
+        window->setProperty("devPanel", panel);
 
     {
         // Let the pages lay out and the dialog/panel animations settle.
@@ -345,6 +351,10 @@ int runConnectAttempt(ultraview::models::ConnectionViewModel *controller, const 
 int main(int argc, char *argv[])
 {
     QGuiApplication application(argc, argv);
+    QTranslator translator;
+    if (translator.load(QLocale(), QStringLiteral("ultraview"), QStringLiteral("_"),
+                        QStringLiteral(":/i18n")))
+        application.installTranslator(&translator);
     QCoreApplication::setOrganizationName(QStringLiteral("ultraview"));
     QCoreApplication::setApplicationName(QStringLiteral("ultraview"));
     QCoreApplication::setApplicationVersion(QStringLiteral(ULTRAVIEW_VERSION));
@@ -431,8 +441,14 @@ int main(int argc, char *argv[])
         // so the exported menu and the viewer stay in sync.
         if (arguments.contains(QStringLiteral("--screenshot-statistics")))
             globalMenu.setStatisticsVisible(true);
+        QString panel;
+        if (const int panelIndex = arguments.indexOf(QStringLiteral("--screenshot-panel"));
+            panelIndex >= 0 && panelIndex + 1 < arguments.size()) {
+            panel = arguments.at(panelIndex + 1);
+        }
         return runScreenshot(window, arguments.at(index + 1), view, dialog, dialogTab,
-                             arguments.contains(QStringLiteral("--screenshot-fullscreen")));
+                             arguments.contains(QStringLiteral("--screenshot-fullscreen")),
+                             panel);
     }
 
     return application.exec();

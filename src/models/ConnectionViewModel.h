@@ -13,8 +13,10 @@
 //
 #include <QByteArray>
 #include <QDateTime>
+#include <QImage>
 #include <QList>
 #include <QObject>
+#include <QPoint>
 #include <QSize>
 #include <QString>
 #include <QVariantList>
@@ -23,6 +25,7 @@
 #include "input/InputController.h"
 #include "models/RecentConnectionsModel.h"
 #include "models/SettingsModel.h"
+#include "platform/ClipboardBridge.h"
 #include "render/RemoteScreenItem.h"
 #include "security/CredentialStore.h"
 
@@ -53,6 +56,20 @@ class ConnectionViewModel : public QObject {
     Q_PROPERTY(ultraview::models::RecentConnectionsModel *recent READ recentObject CONSTANT)
     Q_PROPERTY(ultraview::render::RemoteScreenItem *screen READ screenObject NOTIFY screenChanged)
     Q_PROPERTY(bool dictionaryLoaded READ dictionaryLoaded NOTIFY statisticsChanged)
+    // --- session tools (peer application messages) -------------------------
+    Q_PROPERTY(QVariantList chatLog READ chatLog NOTIFY chatChanged)
+    Q_PROPERTY(int chatUnread READ chatUnread NOTIFY chatChanged)
+    Q_PROPERTY(bool partnerTyping READ partnerTyping NOTIFY typingChanged)
+    Q_PROPERTY(QVariantList transfers READ transfers NOTIFY transfersChanged)
+    Q_PROPERTY(int transferActiveCount READ transferActiveCount NOTIFY transfersChanged)
+    Q_PROPERTY(bool transferPending READ transferPending NOTIFY transfersChanged)
+    Q_PROPERTY(QString downloadDirectory READ downloadDirectory CONSTANT)
+    Q_PROPERTY(bool audioEnabled READ audioEnabled NOTIFY audioChanged)
+    Q_PROPERTY(bool audioAvailable READ audioAvailable NOTIFY audioChanged)
+    Q_PROPERTY(QString audioDescription READ audioDescription NOTIFY audioChanged)
+    Q_PROPERTY(bool viewOnly READ viewOnly NOTIFY viewOnlyChanged)
+    Q_PROPERTY(bool wallpaperShown READ wallpaperShown NOTIFY wallpaperShownChanged)
+    Q_PROPERTY(int quality READ quality NOTIFY qualityChanged)
 
 public:
     explicit ConnectionViewModel(QObject *parent = nullptr);
@@ -88,6 +105,23 @@ public:
     render::RemoteScreenItem *screenObject() { return m_screen; }
     bool dictionaryLoaded() const { return m_dictionaryLoaded; }
 
+    // --- session tools ------------------------------------------------------
+    /// Chat transcript, oldest first: {text, outgoing, system, time}.
+    QVariantList chatLog() const { return m_chatLog; }
+    int chatUnread() const { return m_chatUnread; }
+    bool partnerTyping() const { return m_partnerTyping; }
+    /// File transfer rows (see transfer::FileTransferService::rows()).
+    QVariantList transfers() const { return m_transfers; }
+    int transferActiveCount() const { return m_transferActiveCount; }
+    bool transferPending() const { return m_transferPending; }
+    QString downloadDirectory() const;
+    bool audioEnabled() const { return m_audioEnabled; }
+    bool audioAvailable() const { return m_audioAvailable; }
+    QString audioDescription() const { return m_audioDescription; }
+    bool viewOnly() const { return m_viewOnly; }
+    bool wallpaperShown() const { return m_wallpaperShown; }
+    int quality() const { return m_quality; }
+
     SettingsModel *settings() { return m_settings; }
     RecentConnectionsModel *recent() { return m_recent; }
     SessionManager *session() { return m_session; }
@@ -116,6 +150,32 @@ public slots:
     /// Re-read the settings (the settings dialog calls this after editing).
     void settingsApplied();
 
+    // --- session tools ------------------------------------------------------
+    /// Append an outgoing chat line and send command 12.
+    Q_INVOKABLE bool sendChatMessage(const QString &text);
+    /// Mark the chat as read (the chat panel became visible).
+    Q_INVOKABLE void markChatRead();
+    Q_INVOKABLE void clearChat();
+    /// Commands 29 / 30: tell the partner this user is typing.
+    Q_INVOKABLE void notifyTyping(bool typing);
+    /// Command 46 and the persisted preference.
+    Q_INVOKABLE void setAudioEnabled(bool enabled);
+    Q_INVOKABLE void toggleAudio();
+    /// Command 13: offer a local file.  Takes a QML file-dialog URL or a path.
+    Q_INVOKABLE bool offerFile(const QString &url, QString *error = nullptr);
+    Q_INVOKABLE void acceptTransfer(const QString &transferId);
+    Q_INVOKABLE void declineTransfer(const QString &transferId);
+    Q_INVOKABLE void cancelTransfer(const QString &transferId);
+    Q_INVOKABLE void cancelAllTransfers();
+    /// Commands 22 / 40 / 53.
+    Q_INVOKABLE void requestCtrlAltDel();
+    Q_INVOKABLE void requestReboot();
+    Q_INVOKABLE void requestLock();
+    /// Command 23.
+    Q_INVOKABLE void setWallpaperShown(bool shown);
+    /// Command 31 (30 = speed, 45 = balanced, 70 = quality).
+    Q_INVOKABLE void setQuality(int value);
+
 signals:
     void partnerIdChanged();
     void passwordChanged();
@@ -128,6 +188,13 @@ signals:
     void settingsChanged();
     void inputEnabledChanged();
     void screenChanged();
+    void chatChanged();
+    void typingChanged();
+    void transfersChanged();
+    void audioChanged();
+    void viewOnlyChanged();
+    void wallpaperShownChanged();
+    void qualityChanged();
     /// Raised when a request cannot even be assembled (missing profile, ...).
     void errorRaised(const QString &message);
 
@@ -143,6 +210,8 @@ private:
     bool buildSessionRequest(network::SessionRequest *request, QString *error) const;
 
     void appendLog(const QString &level, const QString &message, const QString &detail = {});
+    void applyFeatureSettings();
+    void appendChat(const QString &text, bool outgoing, bool system = false);
 
     struct LogEntry {
         QDateTime time;
@@ -167,6 +236,38 @@ private:
     network::SessionStatistics m_statistics;
     bool m_dictionaryLoaded = false;
     bool m_inputEnabled = true;
+
+    // Session tools.  The worker owns the authoritative state; these are the last
+    // values it reported, cached so the UI can bind to plain properties.
+    QVariantList m_chatLog;
+    int m_chatUnread = 0;
+    bool m_partnerTyping = false;
+    bool m_localTyping = false;
+    QVariantList m_transfers;
+    int m_transferActiveCount = 0;
+    bool m_transferPending = false;
+    bool m_audioEnabled = false;
+    bool m_audioAvailable = false;
+    QString m_audioDescription;
+    bool m_viewOnly = false;
+    bool m_wallpaperShown = true;
+    int m_quality = 45;
+
+    // Remote cursor state is cached so a screen item attached after the first
+    // selection still starts with the right shape and position.
+    QImage m_cursorImage;
+    QPoint m_cursorHotspot;
+    QPoint m_cursorPosition;
+    bool m_cursorPositionValid = false;
+
+    // Feature preferences are forwarded to the worker when they change.  The
+    // flags avoid re-sending a command that did not change, and force one full
+    // send at the start of each session.
+    bool m_featureSettingsApplied = false;
+    bool m_appliedCursorTracking = false;
+    bool m_appliedTransferAutoAccept = false;
+
+    platform::ClipboardBridge *m_clipboard = nullptr;
 };
 
 } // namespace ultraview::models

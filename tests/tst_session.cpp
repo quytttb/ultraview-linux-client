@@ -432,16 +432,20 @@ void TestSession::relayClosedByPartner()
 
 void TestSession::audioAndUnknownKindsAreRefusedButKeepTheSession()
 {
-    // The recovered kinds 42/43/50/51 carry audio and are *not* silently dropped:
-    // the client reports them and keeps the session alive, exactly like the
-    // documented policy for unsupported operations.
+    // Commands 42 (silence) and 43 (G.722 audio) are decoded and consumed; the
+    // microphone kinds 50/51 are still unsupported and an unknown kind is still
+    // refused explicitly, and none of them ends the session.
     const auto packet = [](quint8 kind, const QByteArray &field = QByteArray()) {
         return encodeByteArrayFields({QByteArray(1, static_cast<char>(kind)), field});
     };
+    QByteArray silenceCount(4, '\0');
+    silenceCount[0] = static_cast<char>(0x40);
+    silenceCount[1] = static_cast<char>(0x01);
 
     uvtest::MockUltraviewServer server;
     auto options = mockOptions();
-    options.relayPackets = {packet(42), packet(43), packet(50), packet(51), packet(77), packet(3)};
+    options.relayPackets = {packet(42, silenceCount), packet(43, QByteArrayLiteral("\x01\x02\x03\x04")),
+                            packet(50), packet(51), packet(77), packet(3)};
     server.setOptions(options);
     QVERIFY(server.listen());
 
@@ -450,7 +454,7 @@ void TestSession::audioAndUnknownKindsAreRefusedButKeepTheSession()
     recorder.attach(&session);
     session.start(makeRequest(server));
 
-    QVERIFY(server.waitFor([&] { return recorder.notices.size() >= 6; }, 5000));
+    QVERIFY(server.waitFor([&] { return recorder.notices.size() >= 3; }, 5000));
     QCOMPARE(server.relayConnectionCount(), 1);
     QVERIFY(session.isConnected());
     QVERIFY(recorder.failures.isEmpty());

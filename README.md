@@ -1,11 +1,11 @@
 # Ultraview — native Linux remote desktop client
 
 [![Native build and offline tests](https://github.com/quytttb/ultraview-linux-client/actions/workflows/ci.yml/badge.svg)](https://github.com/quytttb/ultraview-linux-client/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: GPL-2.0-or-later](https://img.shields.io/badge/license-GPL--2.0--or--later-blue.svg)](LICENSE)
 
 Experimental **C++20 / Qt 6 Quick** reimplementation of the recovered
-UltraViewer controller protocol. It targets Windows UltraViewer partners, not
-VNC, RDP or RustDesk. No Wine, browser engine, Python backend or Qt Widgets.
+UltraViewer protocol. It targets Windows UltraViewer partners, not VNC, RDP or
+RustDesk. No Wine, browser engine, Python backend or Qt Widgets.
 
 **Status:** native build, byte-level reference fixtures, offline TLS integration
 tests and QML rendering smoke test are implemented. The live service answers this
@@ -14,27 +14,34 @@ status-11 refusal for an unknown partner). Version 0.2.6 completed the first rea
 Windows-partner session in the local lab: the relay certificate chain verified, the
 partner desktop streamed into the viewer, and the session stayed connected after
 the service closed the drained registration channel (see
-[verification](docs/verification.md)). Input direction, longer sessions, more
-partner/Windows versions and clipboard/file transfer still need work; this is
-**not** a complete or production-certified UltraViewer implementation. Host
-(sender) mode now registers a separate local identity, accepts a Windows viewer
-through the relay, requires local approval and streams this desktop through the
-Wayland portal; its portal capture and registration are live-checked on KDE
-Wayland, but it has not yet been validated with a real Windows viewer. See
-[host mode](docs/host-mode.md) and
+[verification](docs/verification.md)). Version 0.3.0 adds the peer tools the
+protocol carries next to the screen: two-way text clipboard (commands 5/33),
+remote hardware cursor (3/4/28), file transfer (13–16/21), G.722 computer sound
+(42/43/46), in-session chat and typing indicators (12/29/30) and the session
+actions (22/23/31/40/49/53). Host (sender) mode adds a separate local identity,
+registration/relay orchestration, viewer login approval, RGB555/zstd screen
+streaming and input injection through the Wayland desktop portal. Host capture
+and registration are live-checked on KDE Wayland; a real Windows viewer
+controlling this host is still required. Each feature is covered by offline
+codec/state-machine tests; live validation with more partner and Windows versions
+is still the main gap. This is **not** a
+production-certified UltraViewer implementation. See
 [compatibility](docs/compatibility.md).
 
 ## Build on Ubuntu
 
 Requirements: CMake ≥3.24, C++20 compiler, Qt ≥6.5 (Core, Gui, Network, Qml,
-Quick, QuickControls2, Test), OpenSSL ≥3 and libzstd. Host (sender) mode needs
-QtDBus, the PipeWire development headers (`libpipewire-0.3-dev`) and, at runtime,
+Quick, QuickControls2, Test), OpenSSL ≥3 and libzstd. Partner computer sound
+additionally needs the PipeWire development headers (`libpipewire-0.3-dev`); without
+them the client still builds, decodes the stream and reports that no audio output is
+available. Host mode needs the same library plus QtDBus and, at runtime,
 `xdg-desktop-portal` with a backend such as `xdg-desktop-portal-kde` and a
-PipeWire server. Without those headers the client still builds as a controller
-and the Host page reports that screen sharing is unavailable. Ubuntu 26.04's
-distribution Qt meets the requirement. Ubuntu 24.04's stock Qt 6.4 does **not**:
-install a separate Qt ≥6.5 SDK and set `CMAKE_PREFIX_PATH` to its `gcc_64`
-directory. Do not mix SDK headers, plugins or libraries with distribution Qt.
+PipeWire server. Without those development headers the client still builds as a
+controller, and the Host page reports that screen sharing is unavailable. Ubuntu
+26.04's distribution Qt meets the requirement. Ubuntu 24.04's stock Qt 6.4 does
+**not**: install a separate Qt ≥6.5 SDK and set `CMAKE_PREFIX_PATH` to its
+`gcc_64` directory. Do not mix SDK headers, plugins or libraries with
+distribution Qt.
 
 On this laptop, privileged commands use `pkexec`; on other Ubuntu systems use
 your normal privilege mechanism:
@@ -108,17 +115,21 @@ dependencies still works, but cannot suppress compositor shortcuts.
    the top edge to reveal the floating toolbar and choose **Exit full screen**.
    While remote input is enabled, normal keys (including Super/Meta, Ctrl+Q, F11
    and Esc) are reserved for the Windows partner.
-6. Host (sender) mode is the header's **Host** surface and never starts
-   automatically. Choose **Start hosting**, approve the desktop portal's
-   screen-sharing prompt, then give the assigned ID and the 8-digit password to
-   the Windows UltraViewer user. Every incoming connection still requires a local
-   **Allow control**, **View only** or **Refuse** decision; a request expires
-   after 45 seconds, and five wrong passwords lock new attempts for five minutes.
-   Host mode shares screen and input only: chat, clipboard, file transfer and
-   audio are refused rather than guessed. The identity lives in
-   `~/.config/ultraview/host-profile.json` (directory 0700, file 0600) and is
-   separate from the controller profile. Wayland portal capture is implemented;
-   there is no X11 fallback yet. See [host (sender) mode](docs/host-mode.md).
+6. The viewer toolbar carries the peer tools: **Chat** (command 12, unread badge),
+   **File transfers** (accept/decline is explicit by default), **partner sound**
+   and **Session tools** (Ctrl+Alt+Del, lock, restart, display quality, wallpaper,
+   cursor and clipboard preferences). Clipboard text, chat and file offers only
+   travel while connected; received files go to `~/Downloads/Ultraview`.
+7. Host mode is the header's **Host** surface (never automatic). Choose **Start
+   hosting**, approve the desktop portal's screen-sharing prompt, then give the
+   assigned ID and the 8-digit password to the Windows UltraViewer user. Every
+   incoming connection still requires a local **Allow control**, **View only** or
+   **Refuse** decision; a request expires after 45 seconds, and five wrong
+   passwords lock new attempts for five minutes. Host mode shares screen and
+   input only: chat, clipboard, file transfer and audio are refused rather than
+   guessed. The identity lives in `~/.config/ultraview/host-profile.json`
+   (directory 0700, file 0600) and is separate from the controller profile.
+   Wayland portal capture is implemented; there is no X11 fallback yet.
 
 Profiles may contain sensitive identity/password material. Keep them private
 (`chmod 600`), never commit them, and never share raw protocol payloads as logs.
@@ -149,10 +160,11 @@ QMAKE=/usr/bin/qmake6 bash packaging/build-appimage.sh build
 ```
 
 See [packaging](docs/packaging.md) for prerequisites, limits and smoke checks.
-The latest published `.deb` is v0.2.3; local builds 0.2.4–0.2.8 were generated,
-extracted and installed on this host, and each extracted/installed binary passed
+The latest published `.deb` is v0.2.3; local builds 0.2.4–0.3.0 were generated,
+extracted and self-tested on this host, and each extracted/installed binary passed
 the QML self-test. The current local artifact is
-`build/packages/ultraview_0.2.8_amd64.deb`.
+`build/packages/ultraview_0.3.0_amd64.deb`, which depends on the distribution's
+PipeWire client library for partner computer sound.
 The local `.deb` can target this distribution only; building here does not make
 it compatible with older Ubuntu glibc/Qt. The AppImage recipe is supplied, but an
 AppImage has not been built/validated on this machine (deployment tools absent).
@@ -194,15 +206,22 @@ ubuntu-24.04 with an explicit Qt 6.8.3 SDK and passed both jobs on 2026-10-19
 ## Credits
 
 - **Author:** Hai Quy ([@quytttb](https://github.com/quytttb)) — the native client,
-  the interface and this documentation. The project's own code is MIT licensed
-  ([LICENSE](LICENSE)).
+  the interface and this documentation. The project is licensed
+  **GPL-2.0-or-later** ([LICENSE](LICENSE), [NOTICE.md](NOTICE.md));
+  version 0.2.x was published under MIT.
 - **Protocol study / reference implementation:** the Python
   [caohoangphucs/ultraviewer-linux](https://github.com/caohoangphucs/ultraviewer-linux)
   project (commit `a0e090fe4de7ae31924a9a19e685c6f74bad74d3`) — the comparison
   baseline used while recovering the wire format and the schema donor for the
   experimental profile tool. Credit for that work goes to its author. The snapshot
-  is **not included here** (it has no LICENSE file of its own and is not covered by
-  this project's MIT license); see [NOTICE.md](NOTICE.md).
+  is **not included here** (it has no LICENSE file of its own); see
+  [NOTICE.md](NOTICE.md).
+- **Protocol reference (GPL):** the
+  [remmina-plugin-ultraviewer](https://github.com/hmtheboy154/remmina-plugin-ultraviewer)
+  plugin (GPL-2.0-or-later) documents the clipboard, cursor, file-transfer, audio
+  and session-tool commands used here, and its ITU-T G.722 decoder was the
+  reference for this project's port. That is why 0.3.0 relicenses the project
+  under GPL-2.0-or-later; see [NOTICE.md](NOTICE.md).
 - **Built with:** Qt 6 (LGPL/GPL), OpenSSL, libzstd and, when present, libsecret —
   each under its own license.
 - UltraViewer is a trademark of its respective owner; this project is not
@@ -210,3 +229,11 @@ ubuntu-24.04 with an explicit Qt 6.8.3 SDK and passed both jobs on 2026-10-19
 
 Read [NOTICE.md](NOTICE.md) before redistribution. No proprietary dictionary,
 real partner secrets, or upstream runtime is installed by this project.
+# Language / Ngôn ngữ
+
+The interface uses Vietnamese when the system language is Vietnamese; otherwise
+it defaults to English. To update the Vietnamese catalog after changing UI text,
+run `lupdate qml src -ts translations/ultraview_vi.ts -no-obsolete`, translate
+the new entries, then run `lrelease translations/ultraview_vi.ts -qm
+translations/ultraview_vi.qm`. Commit both files; the compiled catalog is embedded
+so Qt Linguist tools are not needed to build the application.

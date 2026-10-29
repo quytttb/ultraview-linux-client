@@ -27,6 +27,10 @@ constexpr auto kSmoothKey = "view/smoothScaling";
 constexpr auto kHidePointerKey = "view/hideLocalPointer";
 constexpr auto kViewportWidthKey = "view/viewportWidth";
 constexpr auto kViewportHeightKey = "view/viewportHeight";
+constexpr auto kRemoteCursorKey = "features/remoteCursor";
+constexpr auto kClipboardSyncKey = "features/clipboardSync";
+constexpr auto kAudioKey = "features/audio";
+constexpr auto kTransferAutoAcceptKey = "features/transferAutoAccept";
 constexpr auto kRegistrationHostKey = "endpoints/registrationHost";
 constexpr auto kRegistrationPortKey = "endpoints/registrationPort";
 constexpr auto kRegistrationHttpHostKey = "endpoints/registrationHttpHost";
@@ -69,6 +73,10 @@ void SettingsModel::load()
     m_hideLocalPointer = store.value(kHidePointerKey, false).toBool();
     m_viewportWidth = store.value(kViewportWidthKey, 1280).toInt();
     m_viewportHeight = store.value(kViewportHeightKey, 720).toInt();
+    m_remoteCursor = store.value(kRemoteCursorKey, true).toBool();
+    m_clipboardSync = store.value(kClipboardSyncKey, true).toBool();
+    m_audioEnabled = store.value(kAudioKey, false).toBool();
+    m_transferAutoAccept = store.value(kTransferAutoAcceptKey, false).toBool();
     m_registrationHostOverride = store.value(kRegistrationHostKey).toString();
     m_registrationPortOverride = store.value(kRegistrationPortKey, 0).toInt();
     m_registrationHttpHostOverride = store.value(kRegistrationHttpHostKey).toString();
@@ -96,6 +104,10 @@ void SettingsModel::save()
     store.setValue(kHidePointerKey, m_hideLocalPointer);
     store.setValue(kViewportWidthKey, m_viewportWidth);
     store.setValue(kViewportHeightKey, m_viewportHeight);
+    store.setValue(kRemoteCursorKey, m_remoteCursor);
+    store.setValue(kClipboardSyncKey, m_clipboardSync);
+    store.setValue(kAudioKey, m_audioEnabled);
+    store.setValue(kTransferAutoAcceptKey, m_transferAutoAccept);
     store.setValue(kRegistrationHostKey, m_registrationHostOverride);
     store.setValue(kRegistrationPortKey, m_registrationPortOverride);
     store.setValue(kRegistrationHttpHostKey, m_registrationHttpHostOverride);
@@ -115,6 +127,7 @@ void SettingsModel::reload()
     emit limitsChanged();
     emit decoderChanged();
     emit viewChanged();
+    emit featuresChanged();
     emit endpointsChanged();
     emit registrationProfilePathChanged();
     emit partnerTemplatePathChanged();
@@ -274,6 +287,38 @@ void SettingsModel::setHideLocalPointer(bool hide)
         return;
     m_hideLocalPointer = hide;
     emit viewChanged();
+}
+
+void SettingsModel::setRemoteCursor(bool enabled)
+{
+    if (m_remoteCursor == enabled)
+        return;
+    m_remoteCursor = enabled;
+    emit featuresChanged();
+}
+
+void SettingsModel::setClipboardSync(bool enabled)
+{
+    if (m_clipboardSync == enabled)
+        return;
+    m_clipboardSync = enabled;
+    emit featuresChanged();
+}
+
+void SettingsModel::setAudioEnabled(bool enabled)
+{
+    if (m_audioEnabled == enabled)
+        return;
+    m_audioEnabled = enabled;
+    emit featuresChanged();
+}
+
+void SettingsModel::setTransferAutoAccept(bool enabled)
+{
+    if (m_transferAutoAccept == enabled)
+        return;
+    m_transferAutoAccept = enabled;
+    emit featuresChanged();
 }
 
 void SettingsModel::setViewportWidth(int value)

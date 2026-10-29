@@ -1,8 +1,12 @@
 #include "network/ConnectionManager.h"
 
 #include "protocol/AuthenticationCodec.h"
+#include "protocol/ClipboardCodec.h"
+#include "protocol/ControlCommands.h"
+#include "protocol/FileTransferCodec.h"
 #include "protocol/InputCodec.h"
 #include "protocol/RegistrationCodec.h"
+#include "protocol/ZstdCodec.h"
 
 #include <QDateTime>
 #include <QSysInfo>
@@ -102,6 +106,37 @@ ConnectionManager::ConnectionManager(QObject *parent)
     m_statisticsTimer = new QTimer(this);
     m_statisticsTimer->setSingleShot(true);
     connect(m_statisticsTimer, &QTimer::timeout, this, [this] { publishStatistics(true); });
+
+    // Remote computer sound.  Decoding stays in this thread; the sink buffers, so
+    // a stalled audio device never blocks the session.
+    m_audio = new audio::AudioPlayer(this);
+    connect(m_audio, &audio::AudioPlayer::streamRequested, this, [this](bool enabled) {
+        if (m_terminating || m_state != SessionState::Connected)
+            return;
+        if (m_relay == nullptr || !m_relay->isReady())
+            return;
+        const protocol::CommandPayload command = protocol::ControlCommands::audio(enabled);
+        sendRelayPayload(command.payload, command.flag);
+        emit audioStateChanged(m_audioEnabled, m_audio->hasOutput(), m_audio->outputDescription());
+    });
+    connect(m_audio, &audio::AudioPlayer::notice, this,
+            [this](const QString &message) { inform(message); });
+
+    // File transfer.  The service owns the files; only the relay payloads leave
+    // this object.
+    m_transfers = new transfer::FileTransferService(this);
+    connect(m_transfers, &transfer::FileTransferService::outbound, this,
+            [this](const QByteArray &payload) {
+                if (!m_terminating && m_state == SessionState::Connected)
+                    sendRelayPayload(payload, 0);
+            });
+    connect(m_transfers, &transfer::FileTransferService::transfersChanged, this,
+            &ConnectionManager::transfersChanged);
+    connect(m_transfers, &transfer::FileTransferService::notice, this,
+            [this](const QString &message) {
+                ++m_transferMessages;
+                inform(message);
+            });
 }
 
 ConnectionManager::~ConnectionManager() = default;
@@ -147,6 +182,7 @@ void ConnectionManager::teardown()
         m_relay->deleteLater();
         m_relay = nullptr;
     }
+    resetSessionFeatures();
 }
 
 void ConnectionManager::fail(const ErrorInfo &error)
@@ -178,6 +214,13 @@ void ConnectionManager::start(const ultraview::network::SessionRequest &request)
     m_loginAcknowledged = false;
     m_drainingRegistration = false;
     m_registrationReplies = 0;
+    m_clipboardUpdates = 0;
+    m_chatMessages = 0;
+    m_audioPackets = 0;
+    m_transferMessages = 0;
+    m_cursorShapes = 0;
+    m_cursorRequests = 0;
+    m_sizeFollowUps = 0;
     m_clientId = 0;
     m_publicSourcePort = 0;
     m_publicIp.clear();
@@ -240,6 +283,21 @@ void ConnectionManager::start(const ultraview::network::SessionRequest &request)
     armPhaseTimeout(request.timeoutMs * 2);
     publishStatistics(true);
     m_registration->start();
+}
+
+void ConnectionManager::resetSessionFeatures()
+{
+    m_cursorCache.clear();
+    m_cursor = decoder::RemoteCursor{};
+    m_cursorPosition = QPoint();
+    m_pendingCursorHash = 0;
+    m_audio->reset();
+    if (m_audio->isEnabled())
+        m_audio->setEnabled(false); // the user preference in m_audioEnabled is kept
+    m_transfers->cancelAll();
+    emit cursorChanged(QImage(), QPoint());
+    emit transfersChanged(m_transfers->rows());
+    emit audioStateChanged(m_audioEnabled, false, m_audio->outputDescription());
 }
 
 void ConnectionManager::stop()
@@ -435,7 +493,10 @@ void ConnectionManager::startRelay()
 
     m_relay = new RelayTransport(this);
     connect(m_relay, &RelayTransport::ready, this, &ConnectionManager::onRelayReady);
-    connect(m_relay, &RelayTransport::payload, this, &ConnectionManager::onRelayPayload);
+    connect(m_relay, &RelayTransport::payloadFrom, this,
+            [this](const QByteArray &payload, quint32, quint16, bool unicode) {
+                onRelayPayload(payload, unicode);
+            });
     connect(m_relay, &RelayTransport::failed, this, &ConnectionManager::onRelayFailed);
     connect(m_relay, &RelayTransport::closed, this, &ConnectionManager::onRelayClosed);
 
@@ -474,15 +535,33 @@ void ConnectionManager::onRelayReady()
     m_relay->sendPayload(login, 1); // UTF-16LE payload -> relay flag 1
 }
 
-void ConnectionManager::onRelayPayload(const QByteArray &payload)
+void ConnectionManager::onRelayPayload(const QByteArray &payload, bool unicode)
 {
     if (m_terminating || m_relay == nullptr)
         return;
+
+    if (unicode) {
+        // UTF-16LE text: the legacy clipboard and chat forms arrive this way, as
+        // do the bare typing indicators.
+        const std::optional<QString> text = protocol::ClipboardCodec::fromUtf16(payload);
+        if (!text.has_value()) {
+            note(ErrorCode::Protocol,
+                 QStringLiteral("a UTF-16 session payload has an odd number of bytes"),
+                 QStringLiteral("%1 bytes").arg(payload.size()));
+            return;
+        }
+        handleTextPayload(*text);
+        return;
+    }
 
     QList<QByteArray> fields;
     try {
         fields = protocol::decodeByteArrayFields(payload);
     } catch (const UvException &exception) {
+        // A delimited text message is not a field array.  The file transfer
+        // commands are the only ones the host may send in that shape.
+        if (handleRawTextCommand(payload))
+            return;
         fail(exception);
         return;
     }
@@ -499,6 +578,124 @@ void ConnectionManager::onRelayPayload(const QByteArray &payload)
     }
 }
 
+void ConnectionManager::handleTextPayload(const QString &text)
+{
+    const QString clipboardPrefix = QStringLiteral("5") + QStringLiteral("|||");
+    const QString chatPrefix = QStringLiteral("12") + QStringLiteral("|||");
+    if (text.startsWith(clipboardPrefix)) {
+        ++m_clipboardUpdates;
+        emit clipboardText(text.mid(clipboardPrefix.size()));
+        publishStatistics(false);
+        return;
+    }
+    if (text.startsWith(chatPrefix)) {
+        ++m_chatMessages;
+        emit chatMessage(text.mid(chatPrefix.size()));
+        publishStatistics(false);
+        return;
+    }
+    if (text == QStringLiteral("29") || text == QStringLiteral("30")) {
+        emit typingChanged(text == QStringLiteral("29"));
+        return;
+    }
+    inform(QStringLiteral("the partner sent an unrecognized text message (%1 characters)")
+               .arg(text.size()));
+}
+
+bool ConnectionManager::handleRawTextCommand(const QByteArray &payload)
+{
+    static const char *const prefixes[] = {"13|||", "14|||", "15|||", "16|||", "21|||"};
+    for (const char *prefix : prefixes) {
+        if (payload.startsWith(prefix)) {
+            ++m_transferMessages;
+            m_transfers->handleInboundText(payload);
+            return true;
+        }
+    }
+    return false;
+}
+
+void ConnectionManager::handleCursorSelection(qint32 hash)
+{
+    if (hash == decoder::CursorDecoder::kIgnoredSelectionHash) {
+        m_cursor = decoder::RemoteCursor{};
+        m_pendingCursorHash = 0;
+        emit cursorChanged(QImage(), QPoint());
+        return;
+    }
+    if (const std::optional<decoder::RemoteCursor> cached = m_cursorCache.find(hash)) {
+        m_cursor = *cached;
+        m_pendingCursorHash = 0;
+        emit cursorChanged(m_cursor.image, m_cursor.hotspot);
+        return;
+    }
+    // A selection whose shape is unknown is answered with the reference's
+    // `|||4<hash>` request, the same bytes the live service answered in 0.2.6.
+    // The reference sent it for every selection; the native client only asks for
+    // shapes it does not have and remembers the request, so a burst of selections
+    // cannot become a request storm.  (`ControlCommands::cursorShapeRequest`
+    // builds the documentation's `4|||<hash>` spelling of the same request; the
+    // live service has only been observed answering the reference's form.)
+    if (m_cursorCache.shouldRequest(hash)) {
+        sendConnectedCommand(protocol::InputCodec::sizeFollowUp(hash), 0);
+        ++m_cursorRequests;
+        // The statistics panel has always counted these as "size follow-ups".
+        ++m_sizeFollowUps;
+    }
+    m_pendingCursorHash = hash;
+}
+
+void ConnectionManager::handleCursorShape(const QList<QByteArray> &fields)
+{
+    if (fields.size() < 4 || fields.at(1).size() != 4 || fields.at(2).size() != 4) {
+        note(ErrorCode::UnsupportedOperation,
+             QStringLiteral("a cursor shape packet is incomplete"),
+             QStringLiteral("%1 fields").arg(fields.size()));
+        return;
+    }
+    const auto readI32 = [](const QByteArray &bytes) {
+        return static_cast<qint32>(static_cast<quint32>(static_cast<quint8>(bytes.at(0)))
+                                   | (static_cast<quint32>(static_cast<quint8>(bytes.at(1))) << 8)
+                                   | (static_cast<quint32>(static_cast<quint8>(bytes.at(2))) << 16)
+                                   | (static_cast<quint32>(static_cast<quint8>(bytes.at(3))) << 24));
+    };
+    const qint32 hash = readI32(fields.at(1));
+    const qint32 declared = readI32(fields.at(2));
+    if (declared <= 0 || declared > decoder::CursorDecoder::kMaxCurBytes) {
+        note(ErrorCode::Resource,
+             QStringLiteral("a cursor shape packet declares an unusable length"),
+             QStringLiteral("%1 bytes").arg(declared));
+        return;
+    }
+    const QByteArray cur = protocol::ZstdCodec::decompress(
+        fields.at(3), declared, decoder::CursorDecoder::kMaxCurBytes);
+    const decoder::RemoteCursor cursor = decoder::CursorDecoder::decode(cur, hash);
+    m_cursorCache.insert(cursor);
+    ++m_cursorShapes;
+    if (hash == m_pendingCursorHash || (m_cursor.isValid() && m_cursor.hash == hash)) {
+        m_cursor = cursor;
+        m_pendingCursorHash = 0;
+        emit cursorChanged(m_cursor.image, m_cursor.hotspot);
+    }
+    publishStatistics(false);
+}
+
+void ConnectionManager::handleCursorPosition(const QList<QByteArray> &fields)
+{
+    const auto readI16 = [](const QByteArray &bytes) {
+        return static_cast<qint16>(static_cast<quint16>(static_cast<quint8>(bytes.at(0)))
+                                   | (static_cast<quint16>(static_cast<quint8>(bytes.at(1))) << 8));
+    };
+    if (fields.size() < 3 || fields.at(1).size() != 2 || fields.at(2).size() != 2) {
+        note(ErrorCode::UnsupportedOperation,
+             QStringLiteral("a pointer position packet is incomplete"),
+             QStringLiteral("%1 fields").arg(fields.size()));
+        return;
+    }
+    m_cursorPosition = QPoint(readI16(fields.at(1)), readI16(fields.at(2)));
+    emit cursorPositionChanged(m_cursorPosition);
+}
+
 void ConnectionManager::handleSessionPacket(const QList<QByteArray> &fields)
 {
     const int kind = static_cast<quint8>(fields.first().at(0));
@@ -511,6 +708,32 @@ void ConnectionManager::handleSessionPacket(const QList<QByteArray> &fields)
         sendRelayPayload(protocol::InputCodec::loginAcknowledged(), 0);
         setState(SessionState::Connected);
         disarmPhaseTimeout(); // screen updates are event driven; no idle deadline
+
+        // Feature negotiation.  Each command is only sent when the feature is
+        // enabled, so a user who disabled remote audio or the remote cursor never
+        // asks the partner to spend bandwidth on it.
+        if (m_cursorTracking) {
+            const protocol::CommandPayload tracking =
+                protocol::ControlCommands::cursorTracking(true);
+            sendRelayPayload(tracking.payload, tracking.flag);
+        }
+        if (m_audioEnabled) {
+            // The preference may already be enabled from before the handshake, in
+            // which case `setEnabled` is a no-op and emits no request.  Send the
+            // documented command 46 toggle exactly once either way: the signal
+            // handler already sends it when `setEnabled` does emit.
+            const bool alreadyEnabled = m_audio->isEnabled();
+            m_audio->setEnabled(true);
+            if (alreadyEnabled) {
+                const protocol::CommandPayload audio =
+                    protocol::ControlCommands::audio(true);
+                sendRelayPayload(audio.payload, audio.flag);
+            }
+        }
+        m_transfers->cancelAll(); // nothing survives a reconnect
+        emit transfersChanged(m_transfers->rows());
+        emit audioStateChanged(m_audioEnabled, m_audio->hasOutput(), m_audio->outputDescription());
+
         publishStatistics(true);
         emit connected(size);
         // The canvas starts black and its whole area is dirty; publishing that
@@ -541,24 +764,156 @@ void ConnectionManager::handleSessionPacket(const QList<QByteArray> &fields)
                 | (static_cast<quint32>(static_cast<quint8>(bytes[1])) << 8)
                 | (static_cast<quint32>(static_cast<quint8>(bytes[2])) << 16)
                 | (static_cast<quint32>(static_cast<quint8>(bytes[3])) << 24));
-            ++m_sizeFollowUps;
-            sendRelayPayload(protocol::InputCodec::sizeFollowUp(value), 0);
-            publishStatistics(false);
+            handleCursorSelection(value);
             return;
         }
         note(ErrorCode::UnsupportedOperation,
-             QStringLiteral("kind 3 packet without a 4-byte field was not answered"),
+             QStringLiteral("a cursor selection without a 4-byte hash was not answered"),
              QStringLiteral("%1 fields").arg(fields.size()));
         return;
     }
 
-    if (kind == 42 || kind == 43 || kind == 50 || kind == 51) {
-        const char *name = kind == 42   ? "Play16BitAudio"
-            : kind == 43                ? "PlayEncodedAudio"
-            : kind == 50                ? "Play16BitMicrophoneAudio"
-                                        : "PlayMicrophoneEncodedAudio";
+    if (kind == 4) {
+        handleCursorShape(fields);
+        return;
+    }
+
+    if (kind == 5) {
+        // Legacy clipboard as a multipart payload: the text is the second field.
+        if (fields.size() < 2) {
+            note(ErrorCode::UnsupportedOperation,
+                 QStringLiteral("a legacy clipboard message carries no text"));
+            return;
+        }
+        const std::optional<QString> text = protocol::ClipboardCodec::fromUtf16(fields.at(1));
+        if (!text.has_value()) {
+            note(ErrorCode::Protocol,
+                 QStringLiteral("a legacy clipboard message is not UTF-16LE"));
+            return;
+        }
+        ++m_clipboardUpdates;
+        emit clipboardText(*text);
+        publishStatistics(false);
+        return;
+    }
+
+    if (kind == 12) {
+        const std::optional<QString> text = protocol::ControlCommands::parseChat(fields);
+        if (!text.has_value()) {
+            note(ErrorCode::UnsupportedOperation, QStringLiteral("a chat message could not be decoded"));
+            return;
+        }
+        ++m_chatMessages;
+        emit chatMessage(*text);
+        publishStatistics(false);
+        return;
+    }
+
+    if ((kind >= 13 && kind <= 16) || kind == 21) {
+        ++m_transferMessages;
+        m_transfers->handleInbound(fields);
+        return;
+    }
+
+    if (kind == 27 || kind == 41) {
+        inform(kind == 27
+                   ? QStringLiteral("the partner closed the session")
+                   : QStringLiteral("the partner terminated the session"));
+        stop();
+        return;
+    }
+
+    if (kind == 28) {
+        handleCursorPosition(fields);
+        return;
+    }
+
+    if (kind == 29 || kind == 30) {
+        emit typingChanged(kind == 29);
+        return;
+    }
+
+    if (kind == 33) {
+        const std::optional<QString> text = protocol::ClipboardCodec::parseModern(fields);
+        if (!text.has_value()) {
+            note(ErrorCode::UnsupportedOperation,
+                 QStringLiteral("a clipboard message could not be decoded"));
+            return;
+        }
+        ++m_clipboardUpdates;
+        emit clipboardText(*text);
+        publishStatistics(false);
+        return;
+    }
+
+    if (kind == 42) {
+        // Audio silence: a byte count in the second field.
+        if (fields.size() < 2 || fields.at(1).isEmpty()) {
+            note(ErrorCode::UnsupportedOperation,
+                 QStringLiteral("an audio silence packet carries no byte count"));
+            return;
+        }
+        quint64 count = 0;
+        for (int index = std::min<int>(static_cast<int>(fields.at(1).size()), 4) - 1; index >= 0; --index)
+            count = (count << 8) | static_cast<quint8>(fields.at(1).at(index));
+        m_audio->submitSilence(static_cast<int>(std::min<quint64>(count, 1u << 20)));
+        ++m_audioPackets;
+        publishStatistics(false);
+        return;
+    }
+
+    if (kind == 43) {
+        if (fields.size() < 2) {
+            note(ErrorCode::UnsupportedOperation,
+                 QStringLiteral("an audio packet carries no payload"));
+            return;
+        }
+        m_audio->submitEncoded(fields.at(1));
+        ++m_audioPackets;
+        publishStatistics(false);
+        return;
+    }
+
+    if (kind == 48) {
+        // The host changed its tile size (8, 16 or 32 pixels).
+        if (fields.size() < 2 || fields.at(1).isEmpty()) {
+            note(ErrorCode::UnsupportedOperation,
+                 QStringLiteral("a tile size packet carries no value"));
+            return;
+        }
+        const int tile = static_cast<quint8>(fields.at(1).at(0));
+        if (tile != 8 && tile != 16 && tile != 32) {
+            inform(QStringLiteral("the partner announced an unsupported tile size (%1); "
+                                  "the current size is kept")
+                       .arg(tile));
+            return;
+        }
+        decoder::ScreenDecoder::Options options = m_decoder.options();
+        options.blockSize = tile;
+        m_decoder.setOptions(options);
+        emit diagnostic(QStringLiteral("the partner changed the tile size to %1").arg(tile));
+        return;
+    }
+
+    if (kind == 49) {
+        if (const std::optional<bool> viewOnly = protocol::ControlCommands::parseViewOnly(fields)) {
+            emit viewOnlyChanged(*viewOnly);
+            if (*viewOnly)
+                inform(QStringLiteral("the partner put this session into view-only mode"));
+            return;
+        }
         note(ErrorCode::UnsupportedOperation,
-             QStringLiteral("the partner sent audio (%1) which this client does not play").arg(QString::fromLatin1(name)),
+             QStringLiteral("a view-only packet carries no state"));
+        return;
+    }
+
+    if (kind == 50 || kind == 51) {
+        const char *name = kind == 50 ? "Play16BitMicrophoneAudio"
+                                      : "PlayMicrophoneEncodedAudio";
+        note(ErrorCode::UnsupportedOperation,
+             QStringLiteral("the partner sent microphone audio (%1), which this client does "
+                            "not record")
+                 .arg(QString::fromLatin1(name)),
              QStringLiteral("kind %1: the packet was refused, the session continues").arg(kind));
         return;
     }
@@ -622,6 +977,133 @@ void ConnectionManager::sendInput(const QByteArray &payload)
         return;
     }
     sendRelayPayload(payload, 0);
+}
+
+void ConnectionManager::sendConnectedCommand(const QByteArray &payload, quint8 flag)
+{
+    if (m_terminating || m_state != SessionState::Connected) {
+        inform(QStringLiteral("the command was ignored: the session is not connected"));
+        return;
+    }
+    sendRelayPayload(payload, flag);
+}
+
+void ConnectionManager::inform(const QString &message)
+{
+    emit notice(ErrorInfo{ErrorCode::None, message});
+}
+
+void ConnectionManager::sendClipboard(const QString &text)
+{
+    try {
+        const protocol::ClipboardCodec::Upload upload = protocol::ClipboardCodec::buildUpload(text);
+        sendConnectedCommand(upload.payload, upload.flag);
+    } catch (const UvException &exception) {
+        inform(exception.message());
+    }
+}
+
+void ConnectionManager::sendChat(const QString &text)
+{
+    try {
+        const protocol::CommandPayload command = protocol::ControlCommands::chat(text);
+        sendConnectedCommand(command.payload, command.flag);
+    } catch (const UvException &exception) {
+        inform(exception.message());
+    }
+}
+
+void ConnectionManager::sendTyping(bool started)
+{
+    const protocol::CommandPayload command = protocol::ControlCommands::typing(started);
+    sendConnectedCommand(command.payload, command.flag);
+}
+
+void ConnectionManager::setAudioEnabled(bool enabled)
+{
+    m_audioEnabled = enabled;
+    if (enabled) {
+        // Opening the device is lazy: the first audio packet does it.  The command
+        // is sent immediately so the host starts capturing right away.
+        m_audio->setEnabled(true);
+    } else {
+        m_audio->setEnabled(false);
+    }
+    emit audioStateChanged(m_audioEnabled, m_audio->hasOutput(), m_audio->outputDescription());
+}
+
+void ConnectionManager::setCursorTracking(bool enabled)
+{
+    m_cursorTracking = enabled;
+    if (!enabled) {
+        m_cursor = decoder::RemoteCursor{};
+        m_pendingCursorHash = 0;
+        emit cursorChanged(QImage(), QPoint());
+    }
+    // Before the handshake the preference is only recorded; the connect path
+    // sends it once the relay carries peer messages.
+    if (m_state != SessionState::Connected)
+        return;
+    const protocol::CommandPayload command = protocol::ControlCommands::cursorTracking(enabled);
+    sendConnectedCommand(command.payload, command.flag);
+}
+
+void ConnectionManager::setWallpaper(bool shown)
+{
+    m_wallpaperShown = shown;
+    const protocol::CommandPayload command = protocol::ControlCommands::wallpaper(shown);
+    sendConnectedCommand(command.payload, command.flag);
+}
+
+void ConnectionManager::setQuality(int value)
+{
+    try {
+        const protocol::CommandPayload command = protocol::ControlCommands::quality(value);
+        sendConnectedCommand(command.payload, command.flag);
+    } catch (const UvException &exception) {
+        inform(exception.message());
+    }
+}
+
+void ConnectionManager::requestCtrlAltDel()
+{
+    const protocol::CommandPayload command = protocol::ControlCommands::ctrlAltDel();
+    sendConnectedCommand(command.payload, command.flag);
+}
+
+void ConnectionManager::requestReboot()
+{
+    const protocol::CommandPayload command = protocol::ControlCommands::reboot();
+    sendConnectedCommand(command.payload, command.flag);
+}
+
+void ConnectionManager::requestLock()
+{
+    const protocol::CommandPayload command = protocol::ControlCommands::lockWorkstation();
+    sendConnectedCommand(command.payload, command.flag);
+}
+
+void ConnectionManager::offerFile(const QString &localPath)
+{
+    QString error;
+    const QString transferId = m_transfers->offerFile(localPath, &error);
+    if (transferId.isEmpty())
+        emit transferError(error);
+}
+
+void ConnectionManager::acceptTransfer(const QString &transferId, bool accept)
+{
+    m_transfers->acceptIncoming(transferId, accept);
+}
+
+void ConnectionManager::cancelTransfer(const QString &transferId)
+{
+    m_transfers->cancel(transferId);
+}
+
+void ConnectionManager::setTransferAutoAccept(bool enabled)
+{
+    m_transfers->setAutoAccept(enabled);
 }
 
 void ConnectionManager::onRelayFailed(const ErrorInfo &error)
@@ -692,6 +1174,14 @@ void ConnectionManager::publishStatistics(bool force)
     statisticsSnapshot.unsupportedNotices = m_unsupportedNotices;
     statisticsSnapshot.ignoredRegistrationPayloads = m_ignoredRegistrationPayloads;
     statisticsSnapshot.sizeFollowUps = m_sizeFollowUps;
+    statisticsSnapshot.clipboardUpdates = m_clipboardUpdates;
+    statisticsSnapshot.chatMessages = m_chatMessages;
+    statisticsSnapshot.cursorShapes = m_cursorShapes;
+    statisticsSnapshot.cursorRequests = m_cursorRequests;
+    statisticsSnapshot.audioPackets = m_audioPackets;
+    statisticsSnapshot.transferMessages = m_transferMessages;
+    statisticsSnapshot.audioEnabled = m_audioEnabled;
+    statisticsSnapshot.audioOutput = m_audio != nullptr && m_audio->hasOutput();
     statisticsSnapshot.clientId = m_clientId;
     statisticsSnapshot.desktopSize = m_desktopSize;
     statisticsSnapshot.dictionaryInstalled = m_decoder.hasDictionary();

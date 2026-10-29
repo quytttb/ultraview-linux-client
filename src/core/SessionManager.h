@@ -51,6 +51,28 @@ public slots:
     void stop();
     /// Posts an input command (see protocol/InputCodec).
     void sendInput(const QByteArray &payload);
+    /// Posts a clipboard update (commands 5/33).
+    void sendClipboard(const QString &text);
+    /// Posts an in-session chat message (command 12).
+    void sendChat(const QString &text);
+    /// Posts a typing indicator (commands 29/30).
+    void sendTyping(bool started);
+    /// Command 46: request or stop the partner's audio stream.
+    void setAudioEnabled(bool enabled);
+    /// Command 28: remote pointer tracking.
+    void setCursorTracking(bool enabled);
+    /// Command 23: partner wallpaper visibility.
+    void setWallpaper(bool shown);
+    /// Command 31: display quality preset (30/45/70).
+    void setQuality(int value);
+    void requestCtrlAltDel();
+    void requestReboot();
+    void requestLock();
+    /// Command 13: offer a local file to the partner.
+    void offerFile(const QString &localPath);
+    void acceptTransfer(const QString &transferId, bool accept);
+    void cancelTransfer(const QString &transferId);
+    void setTransferAutoAccept(bool enabled);
     /// The renderer consumed `count` patches; the worker may publish again.
     void releaseFrames(int count);
 
@@ -64,6 +86,16 @@ signals:
     void routeResolved(const ultraview::protocol::TargetRoute &route);
     void frameReady(const ultraview::decoder::FrameUpdatePtr &update);
     void statisticsChanged(const ultraview::network::SessionStatistics &statistics);
+    /// Peer application messages.
+    void clipboardText(const QString &text);
+    void chatMessage(const QString &text);
+    void typingChanged(bool typing);
+    void viewOnlyChanged(bool viewOnly);
+    void cursorChanged(const QImage &image, const QPoint &hotspot);
+    void cursorPositionChanged(const QPoint &position);
+    void transfersChanged(const QVariantList &rows);
+    void transferError(const QString &message);
+    void audioStateChanged(bool enabled, bool outputAvailable, const QString &description);
     void stopped();
 
 private:

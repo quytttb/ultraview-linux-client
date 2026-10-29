@@ -37,6 +37,10 @@ public synthetic test credentials, never installed or trusted in production.
   selective hostname waiver, explicit accept-any and extra CA behavior.
 - `tst_render_item`: mirror bytes/hash, bounds and size changes, bounded pending
   bookkeeping, consumption credits and a Scene Graph pixel grab when available.
+  The remote-cursor overlay is exercised on a live scene graph (show, hide, show
+  again, a position outside the desktop and `clear()`), which pins the rule that
+  a scene-graph node is never deleted or left without a texture from
+  `updatePaintNode()`.
 - `tst_globalmenu`: the desktop application menu's pure layout (titles, order,
   separators, enabled/checked per session state, the Quit shortcut), the action
   handling (`Connect`/`Disconnect` through the controller, input and statistics
@@ -59,6 +63,25 @@ public synthetic test credentials, never installed or trusted in production.
   TLS regressions additionally use `endpoint.crt` (localhost/127.0.0.1, without
   `ultraviewer`) to prove default endpoint-name authentication, and reject a
   mismatched relay route even when the registration override is valid.
+- `tst_clipboard`: the bounded Zstandard helper and both clipboard encodings
+  (modern ASCII header + frame, multipart download with a declared length, the
+  empty-text legacy fallback, delimiter safety in the modern form, UTF-16
+  helpers), the control commands (chat encoding/limits, typing codes, action
+  codes, quality presets, wallpaper/audio toggles, cursor tracking, view-only
+  parsing and chat multipart decoding) and the clipboard bridge's disabled state
+  and repeated-remote-text guard.
+- `tst_cursor`: the Windows `.cur`/DIB decoder for 1/4/8/16/24/32 bpp (palette,
+  bottom-up rows, padding, AND-mask composition, hotspot clamping) and its
+  refusals (icon type, truncation, oversize, unsupported depth), plus the bounded
+  LRU cache's eviction, request de-duplication and clear.
+- `tst_transfer`: the file-transfer codec in both directions (delimited and
+  multipart, IEEE-754 double fields, safe names, malformed input) and the state
+  machine driven exactly like a session (one-chunk ack pacing, offset validation,
+  explicit accept, unique destination, duplicate offers, cancel, partial-file
+  cleanup).
+- `tst_g722`: the computer-sound decoder against golden vectors produced by
+  compiling the GPL plugin's decoder unmodified, state carry across packets,
+  reset and empty/silence input.
 - `tst_host`: the sender wire format (28-field registration, relay request and
   availability, 23-field login proof), login throttle, 45-second approval, frame
   encoding/pacing, host layout scaling/monitor mapping and Windows VK/scan-code to
@@ -80,10 +103,11 @@ public synthetic test credentials, never installed or trusted in production.
   registering it; the run must stay clean and simply report no global menu. On
   hosts without such a theme the test is a plain pass-through.
 
-The current native suite has **15 CTest targets** — 12 unit suites plus the
+The current native suite has **19 CTest targets** — 16 unit suites plus the
 offscreen app self-test, its themed variant and the unconfigured connect probe —
 and eight image sequences. Tests are deliberately not a proof of every vendor
-feature.
+feature; the 0.3.0 peer features are covered by codec/state-machine tests, not by
+a live partner.
 
 ## Regenerate fixtures (development only)
 
@@ -198,16 +222,20 @@ application menu, again for the 0.2.2 live connect probe, once more for the
 0.2.3 keyring build, again for the 0.2.4 relay certificate identity fix, once more
 for the 0.2.5 copyable session log, again for the 0.2.6 relay chain
 completion, once more for the 0.2.7 real-session status cleanup and full
-screen, and again for 0.2.8 floating full screen, simplified settings and Wayland
-shortcut inhibition, and again for host (sender) mode: **15/15 native CTest
-targets pass** in the RelWithDebInfo build. The 0.2.8 run passed 14/14 in Debug
-with ASan/UBSan using the options above; the host suite raises the RelWithDebInfo
-count to 15/15. The direct 40-patch QML self-test reports mirror/consumed/grab/pixel all `ok`, asserts that
+screen, again for 0.2.8 floating full screen, simplified settings and Wayland
+shortcut inhibition, and again for 0.3.0 peer features: **19/19 native CTest
+targets pass** in the RelWithDebInfo build,
+and **19/19 pass** in Debug with ASan/UBSan using the options above. The direct
+40-patch QML self-test reports mirror/consumed/grab/pixel all `ok`, asserts that
 every embedded theme icon is present and reports the global menu as
-`menu=exported`/`unavailable`/`pending`. CPack generated a `.deb`; version 0.2.8 is
-installed system-wide (`pkexec apt-get install`) and its `/usr/bin/ultraview`
+`menu=exported`/`unavailable`/`pending`. CPack generated the 0.3.0 `.deb`;
+version 0.2.8 remains the installed system-wide package on this host
+(`pkexec apt-get install`), and its `/usr/bin/ultraview`
 passed the same smoke test and announced its menu to KWin on this Wayland session.
+The 0.3.0 package was extracted and its binary passed the smoke test; it was not
+installed system-wide.
 The interface was reviewed through offscreen `--screenshot` frames of each surface
+(including the chat, transfer and session-tools panels)
 and the exported menu through `WAYLAND_DEBUG` plus `com.canonical.dbusmenu` calls
 (see `verification.md`). A manual live probe (`--connect-attempt`) reached the
 service and read back the reference's status-11 refusal for an unknown partner;
@@ -229,7 +257,9 @@ Local development environment: Linux x86_64 Ubuntu 26.04, GCC 15.2, Qt 6.10.2,
 OpenSSL 3.5.5, libzstd 1.5.7, CMake 4.2.3 and Ninja. `libsecret-1-dev` was added
 on 2026-10-19, so the locally compiled backend links the platform Secret Service;
 a build without it keeps the no-persistence path, and the packaging workflows
-assert theirs.
+assert theirs. `libpipewire-0.3-dev` is present, so the local build compiles the
+computer-sound sink and the package depends on `libpipewire-0.3-0t64`; a build
+without those headers still passes the suite and reports audio as unavailable.
 GitHub CI configuration supplies Qt 6.8.3 because stock Ubuntu 24.04 is too old.
 The workflow was executed on GitHub for the first time on 2026-10-19 (repository
 `quytttb/ultraview-linux-client`): both matrix jobs — sanitizers `OFF` and `ON` —
@@ -250,9 +280,10 @@ must keep password storage, and run the suite as the gate — see
 
 Not covered: a real Windows partner, live screen decoding with the vendor
 dictionary in a session, a relay/login exchange, sustained external session,
-host mode against a real Windows viewer or a live portal prompt, clean-host
-package install, hardware/Wayland input shortcut behavior and locked-keyring
-behavior. The registration and partner-request phases are
+the 0.3.0 peer features against a live partner (clipboard, cursor, file transfer,
+computer sound, chat, actions), clean-host package install,
+hardware/Wayland input shortcut behavior and
+locked-keyring behavior. The registration and partner-request phases are
 answered by the live service (status-11 dry run), a human confirmed the desktop
 panel widget drawing the exported application menu, and the platform Secret
 Service store/read/clear round trip ran against the session's gnome-keyring (see

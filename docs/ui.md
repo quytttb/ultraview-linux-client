@@ -35,12 +35,15 @@ Singleton; every colour and metric the interface uses lives there.
 | Component | Role |
 |---|---|
 | `AppButton` | primary / secondary / ghost / danger variants plus the toggled-on (`active`) look; optional icon, animated hover/pressed |
-| `IconButton` | square icon-only button with a themed tooltip (window chrome, dialog close) |
+| `IconButton` | square icon-only button with a themed tooltip and the same `active` look (toolbar and dialog chrome) |
 | `AppTextField`, `PasswordField`, `AppInlineField` | labelled input, password input with reveal toggle, dense grid input |
 | `AppFieldBackground` | shared rounded input surface with hover state and focus halo |
 | `AppCheckBox`, `AppComboBox`, `AppSpinBox`, `AppTabButton` | themed replacements for the Basic-style controls, whose indicator/chrome cannot be recoloured through the palette |
 | `AppSpinner` | accent ring spinner shown while the first screen update is pending |
 | `AppToolbar`, `ViewerToolbar` | application header and viewer session actions |
+| `ChatPanel`, `TransferPanel` | viewer side panels: chat transcript/composer, transfer rows with accept/decline/cancel and a file chooser |
+| `ToolsPanel` | session-actions popup: Ctrl+Alt+Del, lock, restart, display quality and the persisted feature toggles |
+| `CountBadge` | unread/active pill on a toolbar icon button, hidden at zero and saturating at `99+` |
 | `StatusBadge`, `StatRow`, `EmptyState`, `FilePicker` | status pill, statistics line, introductory block, path chooser |
 
 `qml/pages/` (connect page, host page, viewer page) and `qml/dialogs/`
@@ -67,13 +70,27 @@ on the host side. The approval dialog is modal, cannot be dismissed by clicking
 outside, offers **Allow control**, **View only** and **Refuse**, and counts down
 the 45-second request deadline; Escape refuses rather than approves.
 
-The viewer toolbar carries the session state, **Disable input**, **Statistics**,
-**Full screen** and **Disconnect**. Opening a session maximizes the window. Full
-screen sends a real `QWindow::showFullScreen()` request to the compositor, hides
+The viewer toolbar carries the session state and a row of icon actions: **Chat**
+(unread badge), **File transfers** (active badge, highlighted while an offer is
+waiting), **partner sound** (on/off), **Session tools**, **input on/off**,
+**Statistics**, **Full screen** and **Disconnect**. Opening a session maximizes the
+window. Full screen sends a real
+`QWindow::showFullScreen()` request to the compositor, hides
 the application chrome, and leaves the remote screen unobstructed. The viewer
 toolbar is then an auto-hiding floating overlay: move the pointer to the top edge
 to reveal it, then choose **Exit full screen**; the previous maximized/windowed
 state is restored rather than shrinking the window.
+
+The chat and transfer panels are side columns that widen the viewer instead of
+covering the remote desktop, and only one of them (or the statistics panel) is
+open at a time. Opening the chat marks its unread messages as read. The session
+tools popup holds the single-shot actions (Ctrl+Alt+Del, lock, restart), the
+display-quality preset and the persisted feature toggles (partner wallpaper,
+remote cursor, clipboard sync, automatic file acceptance, partner sound); the
+popup is anchored under its
+toolbar button so it stays reachable in full screen too. While the partner has
+put the session in view-only mode, the popup says so and the actions that would
+send input remain available but have no effect there.
 
 While remote input is on, application shortcuts such as Ctrl+Q, F11 and Esc are
 not reserved locally; they go to the partner. On KDE Wayland, the standard
@@ -86,7 +103,7 @@ INFO diagnostic instead of replacing the *Connected* status with a warning.
 
 ## Icons — `qml/assets/icons/*.svg`
 
-Thirteen monochrome SVGs drawn inside this project: no third-party icon set and no
+Sixteen monochrome SVGs drawn inside this project: no third-party icon set and no
 additional licence obligation. `qml/themes/Icon.qml` resolves the file URLs
 relative to itself, so they load from the build tree, from installed resources or
 from a package unchanged. The files are embedded by
@@ -148,13 +165,19 @@ QT_QPA_PLATFORM=offscreen ./build/ultraview \
     --screenshot /tmp/host.png --screenshot-view host
 QT_QPA_PLATFORM=offscreen ./build/ultraview \
     --screenshot /tmp/settings.png --screenshot-dialog settings --screenshot-tab 1
+
+# a viewer side panel or the session-tools popup
+QT_QPA_PLATFORM=offscreen ./build/ultraview \
+    --screenshot /tmp/chat.png --screenshot-view viewer --screenshot-panel chat
+# panels: chat | transfers | tools
 ```
 
-The flags only set the `devViewer`, `devDialog` and `devDialogTab` properties of
-`Main.qml` before the frame is grabbed: no socket is opened and no profile is
-read. `--screenshot-statistics` goes through `GlobalMenu::statisticsVisible`, the
-same state the panel and the desktop menu share. Screenshots taken this way are
-how the interface was reviewed on this machine (see `verification.md`).
+The flags only set the `devViewer`, `devDialog`, `devDialogTab` and `devPanel`
+properties of `Main.qml` before the frame is grabbed: no socket is opened and no
+profile is read. `--screenshot-statistics` goes through
+`GlobalMenu::statisticsVisible`, the same state the panel and the desktop menu
+share. Screenshots taken this way are how the interface was reviewed on this
+machine (see `verification.md`).
 
 Limits: offscreen rendering reproduces layout, typography and colours, but not
 hover/pressed/focus transitions or tooltips, which need an interactive display

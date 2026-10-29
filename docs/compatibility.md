@@ -1,12 +1,16 @@
 # Compatibility / release gate
 
 Local passing tests establish correspondence with a specific recovered Python
-implementation plus synthetic TLS peers. Version 0.2.6 also completed one real
-Windows-partner session in the local lab: registration, route, verified relay
-TLS, login and a 2240×1400 desktop stream were observed. That is **not** vendor
-support or a general compatibility claim: real mouse/keyboard control, longer
-sessions, other partner versions and host (sender) mode still need manual
-validation. See `verification.md`.
+implementation plus synthetic TLS peers. The pinned Python snapshot covers the
+screen/input/login path; the peer application features added in 0.3.0 were
+implemented against the GPL-2.0-or-later `remmina-plugin-ultraviewer` protocol
+reference and are covered by offline codec and state-machine tests, not by a live
+partner. Version 0.2.6 also completed one real Windows-partner session in the
+local lab: registration, route, verified relay TLS, login and a 2240×1400 desktop
+stream were observed. That is **not** vendor support or a general compatibility
+claim: real mouse/keyboard control, longer sessions, other partner versions and
+the peer features against a live partner still need manual validation. See
+`verification.md`.
 
 ## Implemented and locally tested
 
@@ -22,17 +26,19 @@ validation. See `verification.md`.
   bounded coalescing/credit flow, aspect transforms and offscreen pixel smoke test.
 - Native input encoding and a supported Qt→VK subset, including original-mapping
   key releases. Settings, recent IDs and scaffold/profile loading are implemented.
-- Host (sender) role: a separate 28-field registration identity, relay
-  negotiation, inbound 23-field viewer login with proof and throttle, 45-second
-  local approval, RGB555/zstd streaming, control/view-only switching and mapped
-  pointer/keyboard injection. The wire format, state machine, layout and input
-  mapping are covered by offline tests; capture uses the Wayland desktop portal.
+- Peer application messages (0.3.0), each with its own bounded codec and tests:
+  text clipboard in both encodings (5/33) with a 1 s echo guard, remote hardware
+  cursor (3/4/28) with a bounded LRU shape cache, file transfer (13–16/21) with a
+  one-chunk window and explicit accept, G.722 computer sound (42/43/46) through a
+  PipeWire sink, chat and typing indicators (12/29/30), the session actions
+  (22/23/31/40/53) and the partner's view-only state (49). The UI is the chat
+  side panel, the transfer side panel and the session-tools popup.
 
 ## Explicitly unsupported or not session-integrated
 
 - **BitBlt (kind-1 field 5):** fatal UnsupportedOperation, never silently ignored.
-- Audio/microphone kinds 42/43/50/51: notices only, no playback, capture, silence
-  generation or forwarding. Unknown kinds: unsupported notices, not invented replies.
+- Microphone kinds 50/51 (partner recording): refused with a notice. The viewer
+  never captures or forwards a microphone.
 - P2P handshake/discovery/NAT traversal/transport selection. AES wire helpers are
   fixture-tested but not a working P2P feature. Nonempty request term 16 is refused.
 - **Host mode is Wayland-portal-only.** The Host page implements registration,
@@ -42,10 +48,16 @@ validation. See `verification.md`.
   fallback, no unattended access, no host chat/clipboard/file transfer/audio and
   no multi-monitor selection beyond the portal's shared monitors. Portal capture
   and registration are live-checked on KDE Wayland; a real Windows viewer
-  controlling this host has not been verified.
-- Controller-side clipboard, file transfer, chat and remote cursor shapes remain
-  unsupported, as do multi-monitor selection, other pixel codecs/colour depths
-  and arbitrary Windows secure-desktop/privileged key sequences.
+  controlling this host has not been verified. A Linux host backend
+  outside the packaged UI is not implied.
+- **Remote controller host/server role** beyond the above: unattended access,
+  arbitrary Windows secure-desktop/privileged key sequences beyond the documented
+  Ctrl+Alt+Del/lock/reboot commands, and host-side peer tools remain unsupported.
+- Computer sound requires the distribution's PipeWire client library; a build
+  without it still decodes the stream and reports that no output is available.
+  Audio capture, mixing, volume control and device selection are not implemented.
+- Clipboard synchronization is text only: no images, rich text, file lists or X11
+  primary selection, and no clipboard history.
 - Automatic Linux registration fingerprint/installation provisioning inside the
   product. Scaffolds deliberately leave unresolved values blank and cannot connect
   by themselves; the dev-only `tools/make_experimental_profile.py` can draft an
@@ -82,6 +94,12 @@ validation. See `verification.md`.
 - Scene Graph uses public APIs and uploads the entire RGB32 mirror on change,
   not partial GPU texture updates. Two in-flight patches and dirty-region
   coalescing limit queues; this is not a measured high-refresh-rate guarantee.
+- Peer features default to the cautious choice: a file offer waits for an
+  explicit accept (no silent write into the download directory), received names
+  are sanitized and never overwrite an existing file, transfers and clipboard
+  messages have fixed byte budgets, and the transfer list is capped at 8
+  concurrent entries. Audio drops packets when no sink is available instead of
+  buffering without bound.
 - Random salts/markers use the system RNG; VB Rnd state is not emulated. Strict
   supported ANSI encodings do not reproduce all Windows code-page fallbacks.
 
@@ -107,13 +125,18 @@ reference decode; they are not hand-assigned colour claims. Tests remain synthet
    different release orders, focus loss, input-disable, disconnect/reconnect.
 5. Exercise resolution changes, cache churn and sustained updates for a stated
    duration. Check bounded memory, real render backend, and thread shutdown.
-6. Validate host mode with a real Windows UltraViewer viewer: whether it accepts
+6. Validate the 0.3.0 peer features with a real Windows partner: clipboard in
+   both directions, cursor shape and pointer overlay, file offer/accept/chunk
+   pacing in both directions, G.722 playback through PipeWire, chat and typing,
+   the action commands, view-only state and a tile-size change. Offline tests
+   prove the codecs and state machines, not the partner's behaviour.
+7. Verify clean-host `.deb`/AppImage installation and Wayland/X11 behavior on each
+   supported distribution. Verify keyring behavior with a real Secret Service.
+8. Validate host mode with a real Windows UltraViewer viewer: whether it accepts
    the assigned ID/password, approval/refusal, wrong-password lockout over the
    relay, capture/pacing, pointer and keyboard mapping, control/view-only
    switching and stop/cleanup. Portal permission/capture and registration are
    already live-checked; the viewer side is not.
-7. Verify clean-host `.deb`/AppImage installation and Wayland/X11 behavior on each
-   supported distribution. Verify keyring behavior with a real Secret Service.
 
 Upstream `ACCEPTANCE.md` describes the upstream author's experiments; it is **not
 evidence for this C++ binary**. No upstream claim is inherited as native validation.

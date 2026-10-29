@@ -25,4 +25,7 @@ QtObject {
     readonly property url keyboard: Qt.resolvedUrl("../assets/icons/keyboard.svg")
     readonly property url chart: Qt.resolvedUrl("../assets/icons/chart.svg")
     readonly property url power: Qt.resolvedUrl("../assets/icons/power.svg")
+    readonly property url chat: Qt.resolvedUrl("../assets/icons/chat.svg")
+    readonly property url volume: Qt.resolvedUrl("../assets/icons/volume.svg")
+    readonly property url volumeOff: Qt.resolvedUrl("../assets/icons/volume-off.svg")
 }

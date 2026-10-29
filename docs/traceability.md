@@ -97,9 +97,10 @@ Native budgets add stricter refusal. Proprietary dictionary not redistributed.
 
 Byte-array packet/discriminator routing → `PacketCodec::decodeByteArrayFields`,
 `ConnectionManager::handleSessionPacket` → `tst_packet_codec`, `tst_session` →
-**screen/control subset ported**. Audio sink consumption, microphone forwarding,
-silence and failure-forward-as-null semantics are **not implemented**. The native
-session refuses audio kinds explicitly; upstream audio tests remain reference-only.
+**screen/control subset ported**. The 0.3.0 peer path replaces the old
+notice-only audio handling with a real G.722 decoder and PipeWire/null sink
+(`tst_g722`), and turns silence packets into decoded silence. Microphone kinds
+50/51 remain refused with a notice, as upstream has no native counterpart here.
 
 ### `input_control.py`
 
@@ -132,7 +133,9 @@ real Windows keyboard-layout/shortcut effects remain unverified.
   behaviors covered**; synthetic cache/scroll fixtures seed coloured pixels before
   reuse so a no-op cannot pass simply by preserving a black canvas.
 - `test_receive_pipeline.py` (3): field preservation → PacketCodec/session tests;
-  audio/microphone/silence/sink-failure cases → **reference-only / native unsupported**.
+  the audio/silence cases are now covered natively by `tst_g722` and the session
+  playback path, while the microphone cases remain **reference-only / natively
+  refused**.
 - `test_version.py` (3): component precedence, fourth-component ignored and
   supported domain → `RegistrationCodec::versionEqualOrGreater`, `tst_registration`
   fixture checks → **parity helper**, not an update-service implementation.
@@ -177,9 +180,49 @@ real Windows keyboard-layout/shortcut effects remain unverified.
 - `8bit.dat`: **excluded**; user supplied only. `tests/data/test-dict.bin` is a
   separate synthetic dictionary with provenance/hash in fixture metadata.
 
+## GPL protocol reference — peer features (0.3.0)
+
+The peer application features are not in the pinned Python snapshot. Their source
+is the documented protocol and implementation of the GPL-2.0-or-later
+[remmina-plugin-ultraviewer](https://github.com/hmtheboy154/remmina-plugin-ultraviewer)
+plugin (see [NOTICE.md](../NOTICE.md)); its paths are relative to that project, not
+to `reference/`. **Parity** here means agreement with the documented command
+semantics and, for the decoder, sample-exact agreement with the plugin's own
+decoder; none of it is live-partner validation.
+
+- `docs/ultraviewer-protocol.md` §clipboard, `src/uv_clipboard.c` → two encodings →
+  `protocol/ClipboardCodec` (`src/protocol/{ZstdCodec,ClipboardCodec}.cpp`) →
+  `tst_clipboard` (modern header/frame, multipart download, empty-text legacy
+  fallback, delimiter safety, UTF-16 helpers) → **format parity**. The echo guard
+  and the text-only scope are native policy (`platform/ClipboardBridge`).
+- Cursor commands 3/4/28 → `.cur`/DIB decoder and LRU cache →
+  `decoder/{CursorDecoder,CursorCache}`, `render/RemoteScreenItem` →
+  `tst_cursor` (32/24/8/4/1 bpp, palette, AND mask, hotspot clamp, refusals, LRU
+  and request de-duplication) → **decoder parity on synthetic resources**. The
+  live-observed `|||4<hash>` request spelling is kept; the documented
+  `4|||<hash>` builder exists but is unused.
+- File transfer 13/14/15/16/21 → `protocol/FileTransferCodec` and
+  `transfer/FileTransferService` → `tst_transfer` (delimited and multipart
+  encode/parse, IEEE-754 double fields, one-chunk ack pacing, offset validation,
+  unique sanitized names, cancel/partial-file cleanup, duplicate offers, unsafe
+  names) → **state-machine parity**. Explicit accept, the 8-entry cap and the
+  32,000-byte window policy are native additions.
+- G.722 computer sound 42/43/46 → `audio/{G722Decoder,AudioPlayer}` and the
+  optional `audio/PipeWireAudioSink` → `tst_g722` with golden vectors produced by
+  compiling the plugin's decoder unmodified → **sample-exact port parity**. The
+  plugin has no PipeWire sink; playback is a native backend.
+- Chat/typing 12/29/30 and actions 22/23/31/32/40/49/53 →
+  `protocol/ControlCommands` → `tst_clipboard` (chat encoding and limits, typing
+  codes, action codes, quality presets, wallpaper/audio toggles, cursor tracking,
+  view-only parsing, chat multipart) → **format parity**. The panels and the
+  toolbar are native UI.
+- `src/uv_audio.c` microphone/recording paths (kinds 50/51) → **reference-only**;
+  the native session refuses them with a notice and never captures audio.
+
 ## Native-only checks
 
-`tst_viewport`, `tst_render_item`, app `--self-test` (which also checks that every
+`tst_viewport`, `tst_render_item`, `tst_clipboard`, `tst_cursor`, `tst_transfer`,
+`tst_g722`, app `--self-test` (which also checks that every
 embedded theme icon resource is present), the additional input-release and
 backpressure tests validate Qt-specific behavior that has no direct Python
 counterpart. The live connect probe (`--connect-attempt` with

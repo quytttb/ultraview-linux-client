@@ -22,9 +22,12 @@ Run `tools/generate_fixtures.py` against the reference; tests compare external
 expected bytes rather than only encode/decode self-roundtrips. Pin noncanonical
 receive flags, empty PKCS#7 plaintext and strict-four-byte framing behavior.
 
-P2P is helper-only, not an enabled session feature. Raw DIB/sender sampling and
-audio receive semantics are mapped to unsupported/reference-only status rather
-than presented as complete ports. See the traceability matrix for every source.
+P2P is helper-only, not an enabled session feature. The 0.3.0 peer features
+(clipboard, cursor, file transfer, computer sound, chat, session actions) were
+added from the GPL plugin's documented protocol and are counted as a separate
+checkpoint below; raw DIB/sender sampling and microphone capture remain
+unsupported/reference-only rather than presented as complete ports. See the
+traceability matrix for every source.
 
 ## 3. Asynchronous transport / session — completed offline
 
@@ -60,7 +63,17 @@ CPack `.deb`, AppImage recipe and CI workflow supplied. Runtime packages never
 include the reference Python tree, development generator, tests, private profiles
 or vendor dictionary. See testing/packaging docs for what was actually run.
 
-## 7. Real interoperability acceptance — not completed
+## 7. Peer application features — completed offline (0.3.0)
+
+Against the GPL-2.0-or-later `remmina-plugin-ultraviewer` protocol reference,
+implement text clipboard (5/33), remote cursor (3/4/28), file transfer
+(13–16/21), G.722 computer sound (42/43/46), chat/typing (12/29/30), the session
+actions (22/23/31/40/53) and the partner's view-only state (49). Each keeps its
+state machine in the worker thread and is covered by its own suite; the G.722
+decoder is a port with sample-exact golden vectors. GPL-2.0-or-later relicensing
+and provenance are recorded in `NOTICE.md`.
+
+## 8. Real interoperability acceptance — not completed
 
 Requires an authorized Windows partner and a real installation profile/dictionary.
 Run the checklist in `compatibility.md`, collect redacted evidence (version,

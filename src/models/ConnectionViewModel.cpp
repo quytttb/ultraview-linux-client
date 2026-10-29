@@ -3,6 +3,8 @@
 #include "core/ErrorTypes.h"
 #include "decoder/ZstdDecoder.h"
 #include "models/ProfileLoader.h"
+#include "protocol/ControlCommands.h"
+#include "transfer/FileTransferService.h"
 
 #include <QClipboard>
 #include <QCoreApplication>
@@ -48,6 +50,8 @@ ConnectionViewModel::ConnectionViewModel(QObject *parent)
     m_input = new input::InputController(this);
     m_credentials = new security::CredentialStore(this);
     m_session = new SessionManager(this);
+    m_clipboard = new platform::ClipboardBridge(this);
+    m_clipboard->setSession(m_session);
 
     connect(m_session, &SessionManager::stateChanged, this, &ConnectionViewModel::onStateChanged);
     connect(m_session, &SessionManager::connected, this, &ConnectionViewModel::onConnected);
@@ -59,6 +63,68 @@ ConnectionViewModel::ConnectionViewModel(QObject *parent)
     connect(m_session, &SessionManager::statisticsChanged, this, &ConnectionViewModel::onStatistics);
     connect(m_input, &input::InputController::commandReady, this, &ConnectionViewModel::onInputCommand);
     connect(m_input, &input::InputController::statusMessage, this, &ConnectionViewModel::onInputStatus);
+
+    connect(m_clipboard, &platform::ClipboardBridge::statusMessage, this,
+            &ConnectionViewModel::onInputStatus);
+
+    // Peer application messages.  The worker owns the protocol state; this object
+    // only caches the last values so QML can bind to plain properties.
+    connect(m_session, &SessionManager::chatMessage, this,
+            [this](const QString &text) { appendChat(text, false); });
+    connect(m_session, &SessionManager::typingChanged, this, [this](bool typing) {
+        m_partnerTyping = typing;
+        emit typingChanged();
+    });
+    connect(m_session, &SessionManager::viewOnlyChanged, this, [this](bool viewOnly) {
+        m_viewOnly = viewOnly;
+        emit viewOnlyChanged();
+    });
+    connect(m_session, &SessionManager::cursorChanged, this,
+            [this](const QImage &image, const QPoint &hotspot) {
+                m_cursorImage = image;
+                m_cursorHotspot = hotspot;
+                if (m_screen != nullptr)
+                    m_screen->setRemoteCursor(image, hotspot);
+            });
+    connect(m_session, &SessionManager::cursorPositionChanged, this,
+            [this](const QPoint &position) {
+                m_cursorPosition = position;
+                m_cursorPositionValid = true;
+                if (m_screen != nullptr)
+                    m_screen->setCursorPosition(position);
+            });
+    connect(m_session, &SessionManager::transfersChanged, this,
+            [this](const QVariantList &rows) {
+                m_transfers = rows;
+                int active = 0;
+                bool pending = false;
+                for (const QVariant &value : rows) {
+                    const QVariantMap map = value.toMap();
+                    const QString state = map.value(QStringLiteral("state")).toString();
+                    if (state == QLatin1String("waiting") || state == QLatin1String("transferring"))
+                        ++active;
+                    if (state == QLatin1String("waiting")
+                        && map.value(QStringLiteral("direction")).toString()
+                            == QLatin1String("download")) {
+                        pending = true;
+                    }
+                }
+                m_transferActiveCount = active;
+                m_transferPending = pending;
+                emit transfersChanged();
+            });
+    connect(m_session, &SessionManager::transferError, this, [this](const QString &message) {
+        m_noticeText = message;
+        appendLog(QStringLiteral("warning"), message);
+        emit noticeTextChanged();
+    });
+    connect(m_session, &SessionManager::audioStateChanged, this,
+            [this](bool enabled, bool outputAvailable, const QString &description) {
+                m_audioEnabled = enabled;
+                m_audioAvailable = outputAvailable;
+                m_audioDescription = description;
+                emit audioChanged();
+            });
 
     // The log starts with the build identity: a report from an older running
     // binary can then be told apart from the installed package.
@@ -75,6 +141,10 @@ ConnectionViewModel::ConnectionViewModel(QObject *parent)
     };
     connect(m_settings, &SettingsModel::viewChanged, this, [this] {
         applyViewSettings();
+        emit settingsChanged();
+    });
+    connect(m_settings, &SettingsModel::featuresChanged, this, [this] {
+        applyFeatureSettings();
         emit settingsChanged();
     });
     connect(m_settings, &SettingsModel::tlsModeChanged, this, [applyAndNotify] { applyAndNotify(); });
@@ -237,6 +307,29 @@ void ConnectionViewModel::applyViewSettings()
         return;
     m_screen->setFillMode(static_cast<render::RemoteScreenItem::FillMode>(m_settings->fillMode()));
     m_screen->setSmooth(m_settings->smoothScaling());
+}
+
+void ConnectionViewModel::applyFeatureSettings()
+{
+    m_clipboard->setEnabled(m_settings->clipboardSync());
+    if (m_screen != nullptr)
+        m_screen->setRemoteCursorVisible(m_settings->remoteCursor());
+
+    // These preferences may be changed from the session-tools popup while a
+    // session runs, not only from the settings dialog, so the worker is updated
+    // whenever one of them changes.  The cached values keep an unrelated change
+    // (say the clipboard toggle) from re-sending a cursor command, and the first
+    // call of a session always sends both.
+    const bool sendAll = !m_featureSettingsApplied;
+    if (sendAll || m_appliedTransferAutoAccept != m_settings->transferAutoAccept()) {
+        m_appliedTransferAutoAccept = m_settings->transferAutoAccept();
+        m_session->setTransferAutoAccept(m_appliedTransferAutoAccept);
+    }
+    if (sendAll || m_appliedCursorTracking != m_settings->remoteCursor()) {
+        m_appliedCursorTracking = m_settings->remoteCursor();
+        m_session->setCursorTracking(m_appliedCursorTracking);
+    }
+    m_featureSettingsApplied = true;
 }
 
 QString ConnectionViewModel::ensureProfileTemplates()
@@ -500,6 +593,14 @@ void ConnectionViewModel::connectNow()
     m_input->releaseAll();
     m_settings->save();
 
+    // Feature choices travel to the worker before `start`, so the connect
+    // handshake already reflects them (queued calls to one thread are ordered).
+    // A new session must receive every preference, even one unchanged since the
+    // previous session.
+    m_featureSettingsApplied = false;
+    applyFeatureSettings();
+    m_session->setAudioEnabled(m_settings->audioEnabled());
+
     const QString policyWarning = tlsWarning();
     appendLog(policyWarning.isEmpty() ? QStringLiteral("info") : QStringLiteral("warning"),
               policyWarning.isEmpty()
@@ -541,6 +642,12 @@ void ConnectionViewModel::attachScreenItem(ultraview::render::RemoteScreenItem *
     connect(m_screen, &render::RemoteScreenItem::framesConsumed, m_session, &SessionManager::releaseFrames,
             Qt::QueuedConnection);
     applyViewSettings();
+    // A screen item attached after the first cursor selection must still start
+    // with the shape and pointer position the session already reported.
+    m_screen->setRemoteCursor(m_cursorImage, m_cursorHotspot);
+    if (m_cursorPositionValid)
+        m_screen->setCursorPosition(m_cursorPosition);
+    m_screen->setRemoteCursorVisible(m_settings->remoteCursor());
 }
 
 void ConnectionViewModel::onStateChanged(SessionState state)
@@ -634,6 +741,174 @@ QString ConnectionViewModel::logText() const
             lines.append(QStringLiteral("    %1").arg(line));
     }
     return lines.join(QLatin1Char('\n'));
+}
+
+QString ConnectionViewModel::downloadDirectory() const
+{
+    return transfer::FileTransferService::defaultIncomingDirectory();
+}
+
+void ConnectionViewModel::appendChat(const QString &text, bool outgoing, bool system)
+{
+    if (text.isEmpty() && !system)
+        return;
+    QVariantMap entry;
+    entry.insert(QStringLiteral("text"), text);
+    entry.insert(QStringLiteral("outgoing"), outgoing);
+    entry.insert(QStringLiteral("system"), system);
+    entry.insert(QStringLiteral("time"),
+                 QDateTime::currentDateTime().toString(QStringLiteral("HH:mm")));
+    m_chatLog.append(entry);
+    constexpr int limit = 300;
+    while (m_chatLog.size() > limit)
+        m_chatLog.removeFirst();
+    if (!outgoing)
+        ++m_chatUnread;
+    emit chatChanged();
+}
+
+bool ConnectionViewModel::sendChatMessage(const QString &text)
+{
+    const QString trimmed = text.trimmed();
+    if (trimmed.isEmpty())
+        return false;
+    if (!m_session->isConnected()) {
+        m_noticeText = QStringLiteral("The chat is only available while connected.");
+        emit noticeTextChanged();
+        return false;
+    }
+    if (trimmed.contains(QLatin1String("|||"))
+        || trimmed.size() > protocol::ControlCommands::kMaxChatCodeUnits) {
+        m_noticeText = QStringLiteral("The message cannot be sent: it is too long or contains "
+                                      "the protocol delimiter.");
+        appendLog(QStringLiteral("warning"), m_noticeText);
+        emit noticeTextChanged();
+        return false;
+    }
+    m_session->sendChat(trimmed);
+    appendChat(trimmed, true);
+    return true;
+}
+
+void ConnectionViewModel::markChatRead()
+{
+    if (m_chatUnread == 0)
+        return;
+    m_chatUnread = 0;
+    emit chatChanged();
+}
+
+void ConnectionViewModel::clearChat()
+{
+    if (m_chatLog.isEmpty())
+        return;
+    m_chatLog.clear();
+    m_chatUnread = 0;
+    emit chatChanged();
+}
+
+void ConnectionViewModel::notifyTyping(bool typing)
+{
+    if (!m_session->isConnected() || m_localTyping == typing)
+        return;
+    m_localTyping = typing;
+    m_session->sendTyping(typing);
+}
+
+void ConnectionViewModel::setAudioEnabled(bool enabled)
+{
+    m_settings->setAudioEnabled(enabled);
+    m_settings->save();
+    m_audioEnabled = enabled;
+    emit audioChanged();
+    m_session->setAudioEnabled(enabled);
+}
+
+void ConnectionViewModel::toggleAudio()
+{
+    setAudioEnabled(!m_audioEnabled);
+}
+
+bool ConnectionViewModel::offerFile(const QString &url, QString *error)
+{
+    const QString path = localFileFromUrl(url);
+    const QFileInfo info(path);
+    if (path.isEmpty() || !info.exists() || !info.isFile()) {
+        if (error != nullptr)
+            *error = QStringLiteral("The file does not exist.");
+        m_noticeText = QStringLiteral("The selected file does not exist.");
+        emit noticeTextChanged();
+        return false;
+    }
+    if (!m_session->isConnected()) {
+        if (error != nullptr)
+            *error = QStringLiteral("The session is not connected.");
+        m_noticeText = QStringLiteral("A file can only be sent while connected.");
+        emit noticeTextChanged();
+        return false;
+    }
+    m_session->offerFile(path);
+    return true;
+}
+
+void ConnectionViewModel::acceptTransfer(const QString &transferId)
+{
+    m_session->acceptTransfer(transferId, true);
+}
+
+void ConnectionViewModel::declineTransfer(const QString &transferId)
+{
+    m_session->acceptTransfer(transferId, false);
+}
+
+void ConnectionViewModel::cancelTransfer(const QString &transferId)
+{
+    m_session->cancelTransfer(transferId);
+}
+
+void ConnectionViewModel::cancelAllTransfers()
+{
+    for (const QVariant &value : m_transfers) {
+        const QVariantMap map = value.toMap();
+        const QString state = map.value(QStringLiteral("state")).toString();
+        if (state == QLatin1String("waiting") || state == QLatin1String("transferring"))
+            m_session->cancelTransfer(map.value(QStringLiteral("id")).toString());
+    }
+}
+
+void ConnectionViewModel::requestCtrlAltDel()
+{
+    m_session->requestCtrlAltDel();
+}
+
+void ConnectionViewModel::requestReboot()
+{
+    m_session->requestReboot();
+}
+
+void ConnectionViewModel::requestLock()
+{
+    m_session->requestLock();
+}
+
+void ConnectionViewModel::setWallpaperShown(bool shown)
+{
+    if (m_wallpaperShown == shown)
+        return;
+    m_wallpaperShown = shown;
+    emit wallpaperShownChanged();
+    m_session->setWallpaper(shown);
+}
+
+void ConnectionViewModel::setQuality(int value)
+{
+    if (m_quality == value)
+        return;
+    if (value != 30 && value != 45 && value != 70)
+        return;
+    m_quality = value;
+    emit qualityChanged();
+    m_session->setQuality(value);
 }
 
 bool ConnectionViewModel::copyLogToClipboard()

@@ -30,14 +30,20 @@
 //
 #include <QByteArray>
 #include <QElapsedTimer>
+#include <QImage>
 #include <QList>
 #include <QObject>
+#include <QPoint>
 #include <QSize>
 #include <QString>
 #include <QStringList>
+#include <QVariantList>
 
+#include "audio/AudioPlayer.h"
 #include "core/ErrorTypes.h"
 #include "core/SessionState.h"
+#include "decoder/CursorCache.h"
+#include "decoder/CursorDecoder.h"
 #include "decoder/ScreenDecoder.h"
 #include "network/RegistrationTransport.h"
 #include "network/RelayTransport.h"
@@ -45,6 +51,7 @@
 #include "protocol/PacketCodec.h"
 #include "protocol/RouteParser.h"
 #include "security/TlsPolicy.h"
+#include "transfer/FileTransferService.h"
 
 class QTimer;
 
@@ -127,6 +134,14 @@ struct SessionStatistics {
     quint64 atlasTiles = 0;
     quint64 cacheReferences = 0;
     quint64 cacheAdditions = 0;
+    quint64 clipboardUpdates = 0;
+    quint64 chatMessages = 0;
+    quint64 cursorShapes = 0;
+    quint64 cursorRequests = 0;
+    quint64 audioPackets = 0;
+    quint64 transferMessages = 0;
+    bool audioEnabled = false;
+    bool audioOutput = false;
     qint32 clientId = 0;
     QSize desktopSize;
     QString registrationPeer;
@@ -176,6 +191,34 @@ public slots:
     /// The renderer consumed `count` patches; the worker may publish again.
     void releaseFrames(int count);
 
+    // --- peer application messages (docs/protocol.md) ----------------------
+    /// Command 33 / command 5 clipboard text from the partner.
+    void sendClipboard(const QString &text);
+    /// Command 12 chat message; the host echoes nothing back, so the caller adds
+    /// its own line to the chat view.
+    void sendChat(const QString &text);
+    /// Commands 29 / 30 typing indicator.
+    void sendTyping(bool started);
+    /// Command 46: start or stop the partner's audio stream.
+    void setAudioEnabled(bool enabled);
+    /// Command 28: ask the host to track the remote pointer.
+    void setCursorTracking(bool enabled);
+    /// Command 23: show or blank the partner wallpaper.
+    void setWallpaper(bool shown);
+    /// Command 31: 30 = speed, 45 = balanced, 70 = quality.
+    void setQuality(int value);
+    /// Commands 22 / 40 / 53.
+    void requestCtrlAltDel();
+    void requestReboot();
+    void requestLock();
+    /// Command 13: offer a local file to the partner.
+    void offerFile(const QString &localPath);
+    /// Command 14: answer an incoming offer.
+    void acceptTransfer(const QString &transferId, bool accept);
+    /// Command 16.
+    void cancelTransfer(const QString &transferId);
+    void setTransferAutoAccept(bool enabled);
+
 signals:
     void stateChanged(ultraview::SessionState state);
     /// Terminal: the session cannot continue.
@@ -193,6 +236,23 @@ signals:
     /// One decoded, immutable screen patch.  Queued to the render thread.
     void frameReady(const ultraview::decoder::FrameUpdatePtr &update);
     void statisticsChanged(const ultraview::network::SessionStatistics &statistics);
+    /// Clipboard text the partner put on its own clipboard.
+    void clipboardText(const QString &text);
+    /// Command 12 message from the partner.
+    void chatMessage(const QString &text);
+    void typingChanged(bool typing);
+    /// Command 49: the host put the viewer into view-only mode.
+    void viewOnlyChanged(bool viewOnly);
+    /// The active remote cursor shape changed (invalid image = hidden).
+    void cursorChanged(const QImage &image, const QPoint &hotspot);
+    /// Command 28 pointer position in partner desktop pixels.
+    void cursorPositionChanged(const QPoint &position);
+    /// File transfer rows for the UI (see FileTransferService::rows()).
+    void transfersChanged(const QVariantList &rows);
+    /// A file the user asked to send could not be offered.
+    void transferError(const QString &message);
+    /// Audio state for the UI: requested, output available, backend description.
+    void audioStateChanged(bool enabled, bool outputAvailable, const QString &description);
     /// Terminal, graceful: stop() finished (never emitted after failed()).
     void stopped();
 
@@ -211,12 +271,20 @@ private:
 
     void startRelay();
     void onRelayReady();
-    void onRelayPayload(const QByteArray &payload);
+    void onRelayPayload(const QByteArray &payload, bool unicode);
     void onRelayFailed(const ErrorInfo &error);
     void onRelayClosed();
 
     void handleScreenUpdate(const QList<QByteArray> &fields);
     void handleSessionPacket(const QList<QByteArray> &fields);
+    void handleCursorSelection(qint32 hash);
+    void handleCursorShape(const QList<QByteArray> &fields);
+    void handleCursorPosition(const QList<QByteArray> &fields);
+    void handleTextPayload(const QString &text);
+    bool handleRawTextCommand(const QByteArray &payload);
+    void sendConnectedCommand(const QByteArray &payload, quint8 flag);
+    void inform(const QString &message);
+    void resetSessionFeatures();
     void publishStatistics(bool force);
     void sendRelayPayload(const QByteArray &payload, quint8 flag);
     void teardown();
@@ -242,6 +310,23 @@ private:
     QSize m_desktopSize;
 
     decoder::ScreenDecoder m_decoder;
+    decoder::CursorCache m_cursorCache;
+    decoder::RemoteCursor m_cursor;
+    QPoint m_cursorPosition;
+    qint32 m_pendingCursorHash = 0;
+    bool m_cursorTracking = true;
+
+    audio::AudioPlayer *m_audio = nullptr;
+    transfer::FileTransferService *m_transfers = nullptr;
+    bool m_audioEnabled = false;
+    bool m_wallpaperShown = true;
+
+    quint64 m_clipboardUpdates = 0;
+    quint64 m_chatMessages = 0;
+    quint64 m_audioPackets = 0;
+    quint64 m_transferMessages = 0;
+    quint64 m_cursorShapes = 0;
+    quint64 m_cursorRequests = 0;
 
     quint64 m_framesPublished = 0;
     quint64 m_unsupportedNotices = 0;

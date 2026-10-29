@@ -207,6 +207,8 @@ void RemoteScreenItem::clear()
 {
     m_mirror = QImage();
     m_sourceSize = QSize();
+    m_cursorImage = QImage();
+    m_cursorPositionValid = false;
     m_texturePending.clear();
     // Force the next paint to upload: a reconnect can produce a canvas of the
     // same size as the one the (stale) texture was created from.
@@ -219,17 +221,103 @@ void RemoteScreenItem::clear()
     update();
 }
 
+void RemoteScreenItem::setRemoteCursor(const QImage &image, const QPoint &hotspot)
+{
+    m_cursorImage = image;
+    m_cursorHotspot = hotspot;
+    update();
+}
+
+void RemoteScreenItem::setCursorPosition(const QPoint &position)
+{
+    if (m_cursorPosition == position && m_cursorPositionValid)
+        return;
+    m_cursorPosition = position;
+    m_cursorPositionValid = true;
+    update();
+}
+
+void RemoteScreenItem::setRemoteCursorVisible(bool visible)
+{
+    if (m_cursorVisible == visible)
+        return;
+    m_cursorVisible = visible;
+    update();
+}
+
+QSGNode *RemoteScreenItem::updateCursorNode(QSGNode *root, QSGSimpleTextureNode *cursorNode)
+{
+    // Nodes are never deleted here.  The scene graph may still hold a pending
+    // dirty notification for a node that was removed in the same frame, and
+    // deleting it makes the root traverse freed memory.  A hidden overlay keeps
+    // its node and its texture and simply draws an empty rectangle; a node is
+    // only ever created once a texture exists, because a textureless
+    // QSGSimpleTextureNode crashes the batching material comparison.
+    QSGSimpleTextureNode *node = cursorNode;
+    if (m_cursorVisible && m_cursorPositionValid && !m_cursorImage.isNull()) {
+        // A cursor outside the displayed desktop (letterbox) is not drawn.
+        const ViewportMap map = viewportMap();
+        const QRectF content = map.contentRect();
+        const QPointF origin = map.mapSourceToItem(QPointF(m_cursorPosition));
+        if (content.contains(origin)) {
+            QSGTexture *texture = node != nullptr ? node->texture() : nullptr;
+            if (texture == nullptr || texture->textureSize() != m_cursorImage.size()) {
+                QQuickWindow *quickWindow = window();
+                texture = quickWindow != nullptr
+                    ? quickWindow->createTextureFromImage(
+                          m_cursorImage, QQuickWindow::TextureHasAlphaChannel)
+                    : nullptr;
+            }
+            if (texture != nullptr) {
+                if (node == nullptr) {
+                    node = new QSGSimpleTextureNode();
+                    node->setOwnsTexture(true);
+                    node->setTexture(texture); // ownership transfers
+                    root->appendChildNode(node);
+                } else if (node->texture() != texture) {
+                    node->setTexture(texture); // ownership transfers
+                }
+                const QSizeF scale = map.scaleFactors();
+                const QRectF rect(origin.x() - m_cursorHotspot.x() * scale.width(),
+                                  origin.y() - m_cursorHotspot.y() * scale.height(),
+                                  m_cursorImage.width() * scale.width(),
+                                  m_cursorImage.height() * scale.height());
+                node->setRect(rect);
+                node->setFiltering(m_smooth ? QSGTexture::Linear : QSGTexture::Nearest);
+                node->setSourceRect(QRectF(0, 0, m_cursorImage.width(),
+                                           m_cursorImage.height()));
+                texture->setHorizontalWrapMode(QSGTexture::ClampToEdge);
+                texture->setVerticalWrapMode(QSGTexture::ClampToEdge);
+                return node;
+            }
+        }
+    }
+
+    if (node != nullptr && !node->rect().isEmpty())
+        node->setRect(QRectF());
+    return node;
+}
+
 QSGNode *RemoteScreenItem::updatePaintNode(QSGNode *node, UpdatePaintNodeData *data)
 {
     Q_UNUSED(data);
-    QSGSimpleTextureNode *textureNode = static_cast<QSGSimpleTextureNode *>(node);
+    QSGNode *root = node;
     if (m_mirror.isNull()) {
-        delete textureNode;
+        // Returning null tells the scene graph to drop (and delete) the node.
         return nullptr;
     }
-    if (textureNode == nullptr) {
+    QSGSimpleTextureNode *textureNode = nullptr;
+    QSGSimpleTextureNode *cursorNode = nullptr;
+    if (root == nullptr) {
+        root = new QSGNode;
         textureNode = new QSGSimpleTextureNode();
         textureNode->setOwnsTexture(true);
+        root->appendChildNode(textureNode);
+    } else {
+        // The cursor node is optional and managed by `updateCursorNode`; it is
+        // appended after this one once it owns a texture.
+        textureNode = static_cast<QSGSimpleTextureNode *>(root->firstChild());
+        cursorNode = static_cast<QSGSimpleTextureNode *>(textureNode->nextSibling());
     }
 
     // The texture is created from the mirror whenever it changed since the last
@@ -258,8 +346,10 @@ QSGNode *RemoteScreenItem::updatePaintNode(QSGNode *node, UpdatePaintNodeData *d
         texture->setHorizontalWrapMode(QSGTexture::ClampToEdge);
         texture->setVerticalWrapMode(QSGTexture::ClampToEdge);
     } else {
-        delete textureNode;
-        return nullptr; // never return an untextured QSGSimpleTextureNode
+        // Never return an untextured QSGSimpleTextureNode.  The scene graph owns
+        // this node tree and deletes it when null is returned; deleting it here
+        // would leave a stale dirty notification behind.
+        return nullptr;
     }
 
     const QRectF content = contentRect();
@@ -269,7 +359,8 @@ QSGNode *RemoteScreenItem::updatePaintNode(QSGNode *node, UpdatePaintNodeData *d
     // texture and let the viewport clip overflow; cropping the source as well
     // would apply the transform twice and disagree with pointer mapping.
     textureNode->setSourceRect(QRectF(0, 0, m_mirror.width(), m_mirror.height()));
-    return textureNode;
+    updateCursorNode(root, cursorNode);
+    return root;
 }
 
 } // namespace ultraview::render

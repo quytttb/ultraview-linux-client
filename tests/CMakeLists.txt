@@ -19,6 +19,10 @@ set(UV_TEST_SOURCES
     tst_session
     tst_globalmenu
     tst_host
+    tst_clipboard
+    tst_cursor
+    tst_transfer
+    tst_g722
 )
 
 foreach(test IN LISTS UV_TEST_SOURCES)

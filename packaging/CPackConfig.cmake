@@ -1,7 +1,8 @@
 # Build .deb packages against the distribution's Qt, not a private SDK.
 set(CPACK_PACKAGE_NAME "ultraview")
 set(CPACK_PACKAGE_VENDOR "Independent Ultraview project")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Experimental native UltraViewer-compatible controller")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Native GPL-2.0-or-later UltraViewer-compatible remote desktop client")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_LIST_DIR}/../LICENSE")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_CONTACT "Ultraview maintainers (local build)")
 set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")

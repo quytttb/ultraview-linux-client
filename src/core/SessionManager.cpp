@@ -1,5 +1,7 @@
 #include "core/SessionManager.h"
 
+#include <QImage>
+
 #include <utility>
 
 namespace ultraview {
@@ -26,6 +28,21 @@ SessionManager::SessionManager(QObject *parent)
     connect(m_worker, &network::ConnectionManager::statisticsChanged, this,
             &SessionManager::onWorkerStatistics);
     connect(m_worker, &network::ConnectionManager::stopped, this, &SessionManager::stopped);
+    connect(m_worker, &network::ConnectionManager::clipboardText, this, &SessionManager::clipboardText);
+    connect(m_worker, &network::ConnectionManager::chatMessage, this, &SessionManager::chatMessage);
+    connect(m_worker, &network::ConnectionManager::typingChanged, this, &SessionManager::typingChanged);
+    connect(m_worker, &network::ConnectionManager::viewOnlyChanged, this,
+            &SessionManager::viewOnlyChanged);
+    connect(m_worker, &network::ConnectionManager::cursorChanged, this,
+            &SessionManager::cursorChanged);
+    connect(m_worker, &network::ConnectionManager::cursorPositionChanged, this,
+            &SessionManager::cursorPositionChanged);
+    connect(m_worker, &network::ConnectionManager::transfersChanged, this,
+            &SessionManager::transfersChanged);
+    connect(m_worker, &network::ConnectionManager::transferError, this,
+            &SessionManager::transferError);
+    connect(m_worker, &network::ConnectionManager::audioStateChanged, this,
+            &SessionManager::audioStateChanged);
 
     connect(this, &SessionManager::routeResolved, this, [this](const protocol::TargetRoute &route) {
         m_route = route;
@@ -98,6 +115,91 @@ void SessionManager::releaseFrames(int count)
         return;
     QMetaObject::invokeMethod(
         m_worker, [worker = m_worker, count] { worker->releaseFrames(count); }, Qt::QueuedConnection);
+}
+
+namespace {
+
+/// Post `call` to the worker thread.  Every command is a tiny lambda so the GUI
+/// never has to know the worker's API beyond SessionManager.
+template <typename Function>
+void post(network::ConnectionManager *worker, Function &&call)
+{
+    if (worker == nullptr)
+        return;
+    QMetaObject::invokeMethod(worker, std::forward<Function>(call), Qt::QueuedConnection);
+}
+
+} // namespace
+
+void SessionManager::sendClipboard(const QString &text)
+{
+    post(m_worker, [worker = m_worker, text] { worker->sendClipboard(text); });
+}
+
+void SessionManager::sendChat(const QString &text)
+{
+    post(m_worker, [worker = m_worker, text] { worker->sendChat(text); });
+}
+
+void SessionManager::sendTyping(bool started)
+{
+    post(m_worker, [worker = m_worker, started] { worker->sendTyping(started); });
+}
+
+void SessionManager::setAudioEnabled(bool enabled)
+{
+    post(m_worker, [worker = m_worker, enabled] { worker->setAudioEnabled(enabled); });
+}
+
+void SessionManager::setCursorTracking(bool enabled)
+{
+    post(m_worker, [worker = m_worker, enabled] { worker->setCursorTracking(enabled); });
+}
+
+void SessionManager::setWallpaper(bool shown)
+{
+    post(m_worker, [worker = m_worker, shown] { worker->setWallpaper(shown); });
+}
+
+void SessionManager::setQuality(int value)
+{
+    post(m_worker, [worker = m_worker, value] { worker->setQuality(value); });
+}
+
+void SessionManager::requestCtrlAltDel()
+{
+    post(m_worker, [worker = m_worker] { worker->requestCtrlAltDel(); });
+}
+
+void SessionManager::requestReboot()
+{
+    post(m_worker, [worker = m_worker] { worker->requestReboot(); });
+}
+
+void SessionManager::requestLock()
+{
+    post(m_worker, [worker = m_worker] { worker->requestLock(); });
+}
+
+void SessionManager::offerFile(const QString &localPath)
+{
+    post(m_worker, [worker = m_worker, localPath] { worker->offerFile(localPath); });
+}
+
+void SessionManager::acceptTransfer(const QString &transferId, bool accept)
+{
+    post(m_worker,
+         [worker = m_worker, transferId, accept] { worker->acceptTransfer(transferId, accept); });
+}
+
+void SessionManager::cancelTransfer(const QString &transferId)
+{
+    post(m_worker, [worker = m_worker, transferId] { worker->cancelTransfer(transferId); });
+}
+
+void SessionManager::setTransferAutoAccept(bool enabled)
+{
+    post(m_worker, [worker = m_worker, enabled] { worker->setTransferAutoAccept(enabled); });
 }
 
 void SessionManager::onWorkerStateChanged(SessionState state)

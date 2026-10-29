@@ -55,6 +55,7 @@ private slots:
     void contentRectFollowsTheItem();
     void reportsConsumptionToTheWorker();
     void buildsSceneGraphNode();
+    void rendersAndHidesTheRemoteCursor();
 };
 
 void TestRenderItem::itemIsPlainQuickItem()
@@ -273,6 +274,79 @@ void TestRenderItem::buildsSceneGraphNode()
     } else {
         QWARN("no window grab available on this platform");
     }
+    window.hide();
+}
+
+void TestRenderItem::rendersAndHidesTheRemoteCursor()
+{
+    // Regression: a cursor node that stayed in the tree without a texture crashed
+    // the batching renderer (null material texture) and the software renderer.
+    // Drive show -> move -> hide -> show -> clear on a live scene graph.
+    RemoteScreenItem item;
+    item.setSize(QSizeF(64, 64));
+    item.submitUpdate(makeUpdate(QSize(64, 64), QRect(0, 0, 64, 64), qRgb(0, 0, 255), 1, true));
+
+    QImage cursor(8, 8, QImage::Format_ARGB32_Premultiplied);
+    cursor.fill(QColor(255, 0, 0));
+    item.setRemoteCursor(cursor, QPoint(0, 0));
+    item.setCursorPosition(QPoint(32, 32));
+
+    QQuickWindow window;
+    window.resize(64, 64);
+    item.setParentItem(window.contentItem());
+    item.setPosition(QPointF(0, 0));
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    QTest::qWait(100);
+
+    const bool rendered = item.pendingTexturePatches() == 0;
+    if (!rendered) {
+        QWARN("the offscreen platform did not render the scene graph; cursor pixels untested");
+    } else {
+        const QImage shown = window.grabWindow();
+        if (shown.isNull()) {
+            QWARN("no window grab available on this platform");
+        } else {
+            const QColor overCursor = shown.pixelColor(35, 35);
+            QVERIFY2(overCursor.red() > 200 && overCursor.blue() < 80,
+                     qPrintable(QStringLiteral("cursor pixel is %1,%2,%3")
+                                    .arg(overCursor.red())
+                                    .arg(overCursor.green())
+                                    .arg(overCursor.blue())));
+        }
+    }
+
+    // Hiding the overlay must remove the node, not leave an untextured one behind.
+    item.setRemoteCursorVisible(false);
+    QTest::qWait(50);
+    if (rendered) {
+        const QImage hidden = window.grabWindow();
+        if (!hidden.isNull()) {
+            const QColor uncovered = hidden.pixelColor(35, 35);
+            QVERIFY2(uncovered.blue() > 200 && uncovered.red() < 80,
+                     qPrintable(QStringLiteral("pixel under the hidden cursor is %1,%2,%3")
+                                    .arg(uncovered.red())
+                                    .arg(uncovered.green())
+                                    .arg(uncovered.blue())));
+        }
+    }
+
+    // Showing it again allocates a fresh node; a position outside the displayed
+    // desktop keeps it detached, and clearing the mirror must not leave a node
+    // that references a stale texture.
+    item.setRemoteCursorVisible(true);
+    item.setCursorPosition(QPoint(-100, -100));
+    QTest::qWait(50);
+    item.setCursorPosition(QPoint(10, 10));
+    QTest::qWait(50);
+    item.clear();
+    QTest::qWait(50);
+    QVERIFY(!item.hasContent());
+
+    // And the item still renders a fresh mirror after the cursor was used.
+    item.submitUpdate(makeUpdate(QSize(64, 64), QRect(0, 0, 64, 64), qRgb(0, 200, 0), 2, true));
+    QTest::qWait(50);
+    QVERIFY(item.hasContent());
     window.hide();
 }
 

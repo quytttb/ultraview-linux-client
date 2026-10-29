@@ -8,6 +8,9 @@ Item {
 
     property bool fullScreen: false
     property bool statisticsVisible: false
+    property bool chatVisible: false
+    property bool transfersVisible: false
+    property string devPanel: ""
     property var statisticsRows: []
     // Outside full screen the toolbar is part of the layout.  In full screen it
     // floats over the remote desktop and only appears when the pointer reaches
@@ -167,6 +170,34 @@ Item {
                 }
             }
         }
+
+        // ------------------------------------------------------------------ chat
+        ChatPanel {
+            id: chatPanel
+            Layout.fillHeight: true
+            Layout.preferredWidth: page.chatVisible ? 340 : 0
+            visible: Layout.preferredWidth > 0
+            active: page.chatVisible
+            onCloseRequested: page.chatVisible = false
+
+            Behavior on Layout.preferredWidth {
+                NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+            }
+        }
+
+        // -------------------------------------------------------- file transfers
+        TransferPanel {
+            id: transferPanel
+            Layout.fillHeight: true
+            Layout.preferredWidth: page.transfersVisible ? 360 : 0
+            visible: Layout.preferredWidth > 0
+            active: page.transfersVisible
+            onCloseRequested: page.transfersVisible = false
+
+            Behavior on Layout.preferredWidth {
+                NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+            }
+        }
     }
 
     // --------------------------------------------------------- viewer toolbar
@@ -180,9 +211,34 @@ Item {
         fullScreen: page.fullScreen
         inputEnabled: controller.inputEnabled
         statisticsVisible: page.statisticsVisible
+        chatVisible: page.chatVisible
+        transfersVisible: page.transfersVisible
+        chatUnread: controller.chatUnread
+        transferActive: controller.transferActiveCount
+        devTools: page.devPanel === "tools"
         onDisconnectRequested: controller.disconnectNow()
         onInputToggled: controller.inputEnabled = !controller.inputEnabled
-        onStatisticsToggled: globalMenu.statisticsVisible = !globalMenu.statisticsVisible
+        onStatisticsToggled: {
+            globalMenu.statisticsVisible = !globalMenu.statisticsVisible
+            if (globalMenu.statisticsVisible) {
+                page.chatVisible = false
+                page.transfersVisible = false
+            }
+        }
+        onChatToggled: {
+            page.chatVisible = !page.chatVisible
+            if (page.chatVisible) {
+                page.transfersVisible = false
+                globalMenu.statisticsVisible = false
+            }
+        }
+        onTransfersToggled: {
+            page.transfersVisible = !page.transfersVisible
+            if (page.transfersVisible) {
+                page.chatVisible = false
+                globalMenu.statisticsVisible = false
+            }
+        }
         onFullScreenRequested: page.fullScreenRequested()
 
         HoverHandler {
@@ -269,5 +325,29 @@ Item {
             screenMouse.forceActiveFocus()
     }
 
-    Component.onCompleted: page.statisticsRows = controller.statisticsRows()
+    Connections {
+        target: globalMenu
+        function onStatisticsVisibleChanged() {
+            if (globalMenu.statisticsVisible) {
+                page.chatVisible = false
+                page.transfersVisible = false
+            }
+        }
+    }
+
+    // The screenshot aid sets `devPanel` after the scene is created, so the panel
+    // has to react to the change instead of only checking it once at completion.
+    function applyDevPanel() {
+        if (page.devPanel === "chat")
+            page.chatVisible = true
+        else if (page.devPanel === "transfers")
+            page.transfersVisible = true
+    }
+
+    onDevPanelChanged: applyDevPanel()
+
+    Component.onCompleted: {
+        page.statisticsRows = controller.statisticsRows()
+        applyDevPanel()
+    }
 }

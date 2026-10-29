@@ -66,10 +66,13 @@ QtObject {
     function statusColor(stateName) {
         switch (stateName) {
         case "Connected":
+        case "Sharing":
             return theme.success
         case "Failed":
             return theme.danger
         case "Disconnected":
+        case "Not hosting":
+        case "Stopped":
             return theme.textMuted
         default:
             return theme.warning

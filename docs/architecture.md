@@ -23,6 +23,13 @@ browser canvas or alternate remote desktop protocol in the application.
   `ProfileLoader` loads user-supplied schema values. `SettingsModel` writes
   ordinary preferences, never partner passwords. `CredentialStore` optionally
   uses libsecret; unavailable builds explicitly refuse password persistence.
+- Peer features keep the same split: `protocol/{ClipboardCodec,ControlCommands,
+  FileTransferCodec,ZstdCodec}` are pure codecs, `decoder/{CursorDecoder,
+  CursorCache}` and `transfer/FileTransferService` run in the worker thread,
+  `audio/{G722Decoder,AudioPlayer,PipeWireAudioSink}` decode and play the partner
+  sound, and `platform/ClipboardBridge` owns the GUI-thread clipboard and its echo
+  guard. `ConnectionViewModel` caches their reported state for QML; the panels and
+  the tools popup only send `Q_INVOKABLE` actions.
 - `models/HostViewModel` is the GUI-thread facade for host mode. It owns a
   separate `QThread` with `host/HostManager`, loads the private host identity only
   when the Host page is opened or hosting starts, and mirrors state/approval
@@ -54,8 +61,9 @@ a graceful close. Registration command 3 yields a controller ID; command 8 yield
 the target route; relay login acknowledgement yields the actual desktop size.
 
 Registration is drained after route resolution. Its loss then becomes a notice,
-not a fatal control-session error. Relay loss remains fatal. Unsupported audio
-and unknown packet kinds are reported without inventing behavior. Malformed
+not a fatal control-session error. Relay loss remains fatal. Microphone audio and
+unknown packet kinds are reported without inventing behavior; the computer-sound
+stream is decoded and played. Malformed
 screen updates and BitBlt operations end the session rather than leaving the user
 viewing a falsely authoritative screen. There is no automatic reconnect loop.
 

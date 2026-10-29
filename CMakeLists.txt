@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 project(Ultraview
-    VERSION 0.2.8
+    VERSION 0.3.0
     DESCRIPTION "Native Linux remote desktop client for UltraViewer partners (independent re-implementation)"
     LANGUAGES CXX)
 
@@ -22,6 +22,8 @@ option(ULTRAVIEW_REQUIRE_SECRET_SERVICE
     "Fail the build when a platform secret service (libsecret) is unavailable" OFF)
 option(ULTRAVIEW_REQUIRE_WAYLAND_SHORTCUT_INHIBIT
     "Fail the build when Wayland keyboard-shortcut inhibition is unavailable" OFF)
+option(ULTRAVIEW_REQUIRE_AUDIO
+    "Fail the build when remote-audio playback (PipeWire) is unavailable" OFF)
 option(ULTRAVIEW_REQUIRE_WAYLAND_HOST
     "Fail the build when host-mode Wayland portal capture is unavailable" OFF)
 
@@ -124,6 +126,14 @@ add_library(ultraview_core STATIC
     src/protocol/RouteParser.cpp
     src/protocol/InputCodec.cpp
     src/protocol/P2pCodec.cpp
+    src/protocol/ZstdCodec.cpp
+    src/protocol/ClipboardCodec.cpp
+    src/protocol/ControlCommands.cpp
+    src/protocol/FileTransferCodec.cpp
+
+    src/audio/G722Decoder.cpp
+    src/audio/AudioPlayer.cpp
+    src/audio/AudioSink.cpp
 
     src/host/HostProfile.cpp
     src/host/HostProtocol.cpp
@@ -137,6 +147,8 @@ add_library(ultraview_core STATIC
     src/decoder/TileCache.cpp
     src/decoder/FrameBuffer.cpp
     src/decoder/ScreenDecoder.cpp
+    src/decoder/CursorDecoder.cpp
+    src/decoder/CursorCache.cpp
 
     src/network/HttpTunnelSocket.cpp
     src/network/RegistrationTransport.cpp
@@ -145,6 +157,8 @@ add_library(ultraview_core STATIC
 
     src/input/KeyboardMapper.cpp
     src/input/InputController.cpp
+
+    src/transfer/FileTransferService.cpp
 
     src/render/ViewportMap.cpp
     src/render/RemoteScreenItem.cpp
@@ -159,6 +173,7 @@ add_library(ultraview_core STATIC
     src/models/RecentConnectionsModel.cpp
 
     src/platform/GlobalMenu.cpp
+    src/platform/ClipboardBridge.cpp
 )
 add_library(Ultraview::Core ALIAS ultraview_core)
 
@@ -191,6 +206,27 @@ if(ULTRAVIEW_WAYLAND_SHORTCUT_INHIBIT)
         PROPERTIES COMPILE_OPTIONS "-Wno-attributes")
     target_link_libraries(ultraview_core PRIVATE PkgConfig::WAYLAND_CLIENT)
     target_compile_definitions(ultraview_core PRIVATE ULTRAVIEW_HAVE_WAYLAND_SHORTCUT_INHIBIT=1)
+endif()
+
+# Remote computer sound (command 43).  The decoder is always built; the PipeWire
+# sink is optional so the client keeps building on systems whose PipeWire
+# development headers are absent.
+set(ULTRAVIEW_PIPEWIRE_AUDIO OFF)
+if(PIPEWIRE_FOUND)
+    set(ULTRAVIEW_PIPEWIRE_AUDIO ON)
+    message(STATUS "Remote audio output: enabled (PipeWire playback sink)")
+else()
+    message(STATUS "Remote audio output: disabled (needs libpipewire-0.3); audio is decoded and dropped")
+    if(ULTRAVIEW_REQUIRE_AUDIO)
+        message(FATAL_ERROR "ULTRAVIEW_REQUIRE_AUDIO is ON but libpipewire-0.3 was not found")
+    endif()
+endif()
+if(ULTRAVIEW_PIPEWIRE_AUDIO)
+    target_sources(ultraview_core PRIVATE
+        src/audio/PipeWireAudioSink.cpp
+    )
+    target_link_libraries(ultraview_core PRIVATE PkgConfig::PIPEWIRE)
+    target_compile_definitions(ultraview_core PRIVATE ULTRAVIEW_HAVE_PIPEWIRE_AUDIO=1)
 endif()
 
 if(ULTRAVIEW_WAYLAND_HOST)
@@ -241,12 +277,16 @@ qt_add_qml_module(ultraview
         qml/components/AppTabButton.qml
         qml/components/AppTextField.qml
         qml/components/AppToolbar.qml
+        qml/components/ChatPanel.qml
+        qml/components/CountBadge.qml
         qml/components/EmptyState.qml
         qml/components/FilePicker.qml
         qml/components/IconButton.qml
         qml/components/PasswordField.qml
         qml/components/StatRow.qml
         qml/components/StatusBadge.qml
+        qml/components/ToolsPanel.qml
+        qml/components/TransferPanel.qml
         qml/components/ViewerToolbar.qml
         qml/pages/ConnectPage.qml
         qml/pages/HostPage.qml
@@ -259,6 +299,7 @@ qt_add_qml_module(ultraview
         qml/themes/Theme.qml
     RESOURCES
         qml/assets/icons/chart.svg
+        qml/assets/icons/chat.svg
         qml/assets/icons/check.svg
         qml/assets/icons/chevron-down.svg
         qml/assets/icons/chevron-up.svg
@@ -275,7 +316,14 @@ qt_add_qml_module(ultraview
         qml/assets/icons/keyboard.svg
         qml/assets/icons/monitor.svg
         qml/assets/icons/power.svg
+        qml/assets/icons/volume.svg
+        qml/assets/icons/volume-off.svg
 )
+
+qt_add_resources(ultraview translations
+    PREFIX /i18n
+    BASE translations
+    FILES translations/ultraview_vi.qm)
 
 target_link_libraries(ultraview PRIVATE Ultraview::Core Qt6::Quick Qt6::QuickControls2 Qt6::Qml)
 if(ULTRAVIEW_WAYLAND_SHORTCUT_INHIBIT)
@@ -292,8 +340,12 @@ set_target_properties(ultraview PROPERTIES
 install(TARGETS ultraview RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES packaging/ultraview.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 install(FILES qml/assets/icons/ultraview.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
-install(FILES README.md NOTICE.md DESTINATION ${CMAKE_INSTALL_DOCDIR})
-install(DIRECTORY docs/ DESTINATION ${CMAKE_INSTALL_DOCDIR}/docs FILES_MATCHING PATTERN "*.md")
+# Debian policy expects the documentation under `share/doc/<package name>` and a
+# `copyright` file with the license text; the TGZ package gets the same layout.
+set(ULTRAVIEW_INSTALL_DOCDIR "${CMAKE_INSTALL_DATADIR}/doc/ultraview")
+install(FILES README.md NOTICE.md DESTINATION ${ULTRAVIEW_INSTALL_DOCDIR})
+install(FILES LICENSE DESTINATION ${ULTRAVIEW_INSTALL_DOCDIR} RENAME copyright)
+install(DIRECTORY docs/ DESTINATION ${ULTRAVIEW_INSTALL_DOCDIR}/docs FILES_MATCHING PATTERN "*.md")
 # Intentionally no install rule for reference/, tools/, tests/, or user profiles.
 include(packaging/CPackConfig.cmake)
 

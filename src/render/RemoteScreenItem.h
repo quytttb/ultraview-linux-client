@@ -28,6 +28,10 @@
 #include <QRectF>
 #include <QQuickItem>
 
+QT_BEGIN_NAMESPACE
+class QSGSimpleTextureNode;
+QT_END_NAMESPACE
+
 #include "decoder/FrameBuffer.h"
 #include "render/ViewportMap.h"
 
@@ -80,6 +84,14 @@ public slots:
     void submitUpdate(const ultraview::decoder::FrameUpdatePtr &update);
     /// Drop all pixels (disconnect / reconnect).
     void clear();
+    /// Commands 3/4: the partner's cursor shape, drawn over the desktop at the
+    /// position from command 28.  An invalid image hides it.
+    void setRemoteCursor(const QImage &image, const QPoint &hotspot);
+    /// Command 28: pointer position in partner desktop pixels.
+    void setCursorPosition(const QPoint &position);
+    /// Show or hide the partner cursor independently of the shape (the user's
+    /// "show remote cursor" preference).
+    void setRemoteCursorVisible(bool visible);
 
 signals:
     void sourceSizeChanged();
@@ -98,6 +110,7 @@ private:
     ViewportMap viewportMap() const;
     QRect contentRectI() const;
     void blitIntoMirror(const QRect &rect, const QImage &patch);
+    QSGNode *updateCursorNode(QSGNode *root, QSGSimpleTextureNode *cursorNode);
 
     QImage m_mirror;
     QSize m_sourceSize;
@@ -110,6 +123,14 @@ private:
     FillMode m_fillMode = FillMode::PreserveAspectFit;
     bool m_smooth = true;
     QRect m_lastContentRect;
+
+    // Remote cursor overlay.  The image is scaled with the desktop, so the
+    // hotspot stays exactly under the pointer at every zoom level.
+    QImage m_cursorImage;
+    QPoint m_cursorHotspot;
+    QPoint m_cursorPosition;
+    bool m_cursorPositionValid = false;
+    bool m_cursorVisible = true;
 };
 
 } // namespace ultraview::render

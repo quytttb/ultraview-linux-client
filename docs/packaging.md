@@ -3,7 +3,8 @@
 ## What gets installed
 
 The allowlisted CMake install contains `bin/ultraview`, desktop/icon files,
-`README.md`, `NOTICE.md` and these documents. The app's own QML is embedded in
+`README.md`, `NOTICE.md`, `LICENSE` (installed as `share/doc/ultraview/copyright`)
+and these documents. The app's own QML is embedded in
 its resources. Qt runtime QML modules/plugins remain runtime dependencies unless
 explicitly bundled by a deployment tool.
 
@@ -36,7 +37,15 @@ control session forward Super/Meta and compositor shortcuts to the partner rathe
 than invoking them on the controller. A source build without these optional
 development dependencies remains usable, but has no compositor-shortcut block.
 
-Host mode uses QtDBus and the same PipeWire client library for the
+Partner computer sound (command 43) uses the distribution's PipeWire client
+library when `libpipewire-0.3-dev` is present at configure time; `dpkg-shlibdeps`
+then records `libpipewire-0.3-0t64`. Without the headers the build succeeds, the
+sink is replaced by a null sink and the UI reports that no audio output is
+available. Configure with `-DULTRAVIEW_REQUIRE_AUDIO=ON` to make a missing
+PipeWire header a hard error for a package that must ship playback (the same
+pattern as `ULTRAVIEW_REQUIRE_SECRET_SERVICE` for the keyring).
+
+Host mode uses the same PipeWire client library plus QtDBus for the
 xdg-desktop-portal ScreenCast/RemoteDesktop APIs. The package recommends
 `xdg-desktop-portal`, a backend (`xdg-desktop-portal-kde` is used on this host;
 GNOME/wlroots alternatives are accepted) and the `pipewire` server. Configure
@@ -49,18 +58,22 @@ session and a working portal backend.
 ```sh
 ctest --test-dir build --output-on-failure
 cpack --config build/CPackConfig.cmake -G DEB -B build/packages
-dpkg-deb --info build/packages/ultraview_0.2.8_amd64.deb
-dpkg-deb --contents build/packages/ultraview_0.2.8_amd64.deb
+dpkg-deb --info build/packages/ultraview_0.3.0_amd64.deb
+dpkg-deb --contents build/packages/ultraview_0.3.0_amd64.deb
 # No root needed to inspect and smoke-test an extracted package:
-dpkg-deb --extract build/packages/ultraview_0.2.8_amd64.deb build/package-check
+dpkg-deb --extract build/packages/ultraview_0.3.0_amd64.deb build/package-check
 QT_QPA_PLATFORM=offscreen build/package-check/usr/bin/ultraview --self-test
 ```
 
 To install after review on a compatible Ubuntu machine:
-`pkexec apt install ./build/packages/ultraview_0.2.8_amd64.deb`.
+`pkexec apt install ./build/packages/ultraview_0.3.0_amd64.deb`.
 This documentation is not authorization for the agent to install it system-wide.
 Architecture/file names vary. A binary built against glibc/Qt from Ubuntu 26.04
 must not be advertised as an Ubuntu 22.04/24.04 package.
+
+Documentation is installed under `share/doc/ultraview/`, and `LICENSE` is
+installed there as `copyright` so the package carries the GPL text Debian policy
+expects (the same layout is used in the TGZ).
 
 Locally verified: the 0.1.0 package was generated, inspected and extracted; the
 0.2.1 package (desktop application menu) was inspected, extracted and installed;
@@ -75,9 +88,16 @@ and installed as well; the 0.2.7 package (expected post-route registration
 closure logged instead of warned, full-screen viewer) was generated, extracted
 and installed too; the 0.2.8 package (true full screen/floating toolbar, simpler
 settings and KDE Wayland shortcut inhibition) was generated, extracted and
-installed as well; the extracted and the installed binaries both passed
-`--self-test` on the build host.
+installed as well; the 0.3.0 package (clipboard, cursor, file transfer, computer
+sound, chat and session tools under GPL-2.0-or-later) was generated, extracted and
+its binary passed `--self-test` on the build host.
 This is not a clean-host installation test or a signed release.
+
+The 0.3.0 package (`ultraview_0.3.0_amd64.deb`, 16,166,224 bytes,
+`29027f9a3fb60d7d15e895df4baf8c8eb049395a96dc4569e8c116ee2b08dac4`) records the
+new runtime dependencies `libpipewire-0.3-0t64` (computer sound) and
+`qml6-module-qtquick-dialogs` (the file chooser); a build without the PipeWire
+development headers omits the first one and reports audio as unavailable.
 
 ## CI packages (dev build / release)
 

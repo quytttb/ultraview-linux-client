@@ -1,10 +1,23 @@
-# Author, provenance and redistribution
+# Author, license, provenance and redistribution
 
 ## Author
 
 **Hai Quy ([@quytttb](https://github.com/quytttb))** — the native C++/Qt client,
-its interface and this documentation. This project's own code is MIT licensed
-(see [LICENSE](LICENSE)).
+its interface and this documentation.
+
+## License
+
+This project is licensed under the **GNU General Public License, version 2 or
+(at your option) any later version** (GPL-2.0-or-later). The full text of version 2
+is in [LICENSE](LICENSE); the "or later" choice is the one stated in the license
+notice at its top.
+
+Versions up to and including 0.2.8 were published under the MIT license. Version
+0.3.0 relicenses the project because it implements protocol features documented
+by, and in one case ported from, the GPL-2.0-or-later
+`remmina-plugin-ultraviewer` plugin (see below). The copyright holder of this
+project made that relicensing decision; it does not change the license of any
+earlier release or of third-party material.
 
 ## Reference study material (not part of this repository)
 
@@ -16,12 +29,32 @@ study and reference implementation goes to its author.
 That snapshot is **not vendored in this repository**: `reference/` is ignored by
 git and must be fetched from upstream (same commit) if the comparison or the
 upstream baseline tests are wanted. It is never a runtime dependency and is never
-installed or packaged.
+installed or packaged. The snapshot had **no LICENSE file**; this project grants
+no license for upstream material.
 
-The snapshot had **no LICENSE file**. This repository grants no license for
-upstream material, and its MIT license covers only this project's own code.
-Obtain permission/legal review before redistributing upstream material or
-binaries that embed it.
+## GPL protocol reference: remmina-plugin-ultraviewer
+
+The peer features added in 0.3.0 were implemented against the documented protocol
+of [hmtheboy154/remmina-plugin-ultraviewer](https://github.com/hmtheboy154/remmina-plugin-ultraviewer),
+which is GPL-2.0-or-later, Copyright (C) 2026 hmtheboy154
+&lt;buingoc67@gmail.com&gt;.
+
+- **Ported code:** `src/audio/G722Decoder.cpp` is a C++ port of the ITU-T G.722
+  64 kbit/s decoder as embedded in that plugin (`src/uv_audio.c`), which in turn
+  follows the ITU-T G.722 reference algorithm. The port keeps the same integer
+  arithmetic and tables so its output can be compared sample for sample; it was
+  renamed, restructured and made stateful per stream, but it is a derived work and
+  carries the GPL.
+- **Protocol details:** clipboard (commands 5/33), cursor (3/4/28), file transfer
+  (13–16/21), audio (42/43/46), chat and typing (12/29/30) and the session
+  commands (22/23/31/32/40/49/53) follow the command semantics documented by that
+  project. The native implementation, state machines and tests here are written
+  for this client; no plugin source files are vendored.
+- **No endorsement:** the plugin authors do not endorse or maintain this client.
+
+The ITU-T G.722 recommendation itself is an ITU publication; the algorithm
+description is referenced for interoperability, and the implementation above is
+attributed through the plugin that was used as the porting reference.
 
 ## Trademark
 
@@ -38,9 +71,17 @@ anchor. The zstd test dictionary is trained from synthetic pixels. Machine
 identity material (registration profiles, settings, dictionaries copied from a
 Windows installation) is listed in `.gitignore` and must stay local.
 
-Qt, OpenSSL, libzstd and optionally libsecret retain their respective licenses.
-AppImage distributors must supply required library notices and comply with Qt's
-applicable licensing/relinking obligations. Packaging scripts are not legal clearance.
+Qt, OpenSSL, libzstd, PipeWire and optionally libsecret retain their respective
+licenses. AppImage distributors must supply required library notices and comply
+with Qt's applicable licensing/relinking obligations. Packaging scripts are not
+legal clearance.
+
+## PipeWire audio output
+
+The optional playback sink (`src/audio/PipeWireAudioSink.cpp`) links the
+distribution's PipeWire client library when its development headers are present.
+PipeWire is MIT licensed; the sink is loaded as a normal system library and is not
+vendored here.
 
 ## Wayland protocol bindings
 

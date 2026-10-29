@@ -252,7 +252,8 @@ Neither step proves server acceptance or a working session.
 - The repository is published as `quytttb/ultraview-linux-client`. This project's
   own code is MIT licensed (`LICENSE`); the upstream comparison snapshot is
   excluded from the published tree and credited in `NOTICE.md`, together with the
-  author (@quytttb).
+  author (@quytttb). *(The project moved to GPL-2.0-or-later in 0.3.0 — see the
+  newest entry.)*
 - Before publishing, the tracked tree (141 files) was checked for identity
   material: no MAC address, hostname, personal e-mail, real partner ID,
   registration profile, `client.ini` or vendor dictionary is present;
@@ -515,6 +516,54 @@ Neither step proves server acceptance or a working session.
   Rust/Swift source is included or copied here. Wayland hosting uses the
   ScreenCast + RemoteDesktop portals/PipeWire; there is no X11 fallback.
 
+## Peer features, GPL relicensing and 0.3.0 — 2026-10-28
+
+- Version 0.3.0 implements the peer application features the protocol carries
+  next to the screen. Each has a bounded codec and a state machine in the worker
+  thread, and each is covered by a new offline suite:
+  - text clipboard, modern (33) and legacy (5) encodings, with the 1 s echo guard
+    and text-only scope (`protocol/ClipboardCodec`, `platform/ClipboardBridge`,
+    `tst_clipboard`);
+  - remote hardware cursor (3/4/28): `.cur`/DIB decoder, bounded LRU shape cache,
+    on-demand shape requests and the `RemoteScreenItem` overlay (`tst_cursor`);
+  - file transfer (13–16/21): one-chunk acknowledgement window, explicit accept by
+    default, sanitized non-overwriting names, partial-file cleanup
+    (`transfer/FileTransferService`, `tst_transfer`);
+  - G.722 computer sound (42/43/46) decoded into a native PipeWire sink with a
+    null-sink fallback (`audio/`, `tst_g722`);
+  - chat and typing (12/29/30) and the session actions (22/23/31/32/40/49/53)
+    (`protocol/ControlCommands`, `tst_clipboard`).
+- `tst_g722` compares the decoder sample for sample with the ITU-T G.722 decoder
+  as embedded in the GPL plugin, compiled unmodified for this host. The three
+  golden vectors (silence, ramp, full-scale) match exactly.
+- 19/19 CTest targets pass in the RelWithDebInfo build and 19/19 under
+  ASan/UBSan (Debug, `detect_leaks=0`), including the four new suites and the
+  existing session/render/QML checks. Under ASan the suite adds no diagnostic.
+- The QML surfaces were reviewed through offscreen frames: the reworked viewer
+  toolbar (icon actions, chat/transfer badges), the chat side panel, the transfer
+  side panel and the session-tools popup, using the new
+  `--screenshot-panel chat|transfers|tools` aid. Layout, typography and colours
+  are verified; hover/focus transitions and tooltips are not.
+- The GPL-2.0-or-later relicensing (0.2.x was MIT) is recorded in `LICENSE`
+  (notice + full GPLv2 text), `NOTICE.md` (rationale, plugin and G.722
+  provenance, PipeWire) and the README badge/credits. The `.deb` now installs the
+  license as `/usr/share/doc/ultraview/copyright`.
+- `ultraview_0.3.0_amd64.deb` (16,166,224 bytes,
+  `29027f9a3fb60d7d15e895df4baf8c8eb049395a96dc4569e8c116ee2b08dac4`) was
+  generated, extracted and its binary passed `--self-test`. Its dependencies add
+  `libpipewire-0.3-0t64` (compiled-in audio sink; PipeWire 1.5 headers were found
+  on this host) and keep `qml6-module-qtquick-dialogs` for the file chooser.
+- The remote-cursor overlay is verified on a real scene graph by `tst_render_item`:
+  the cursor is shown, hidden, shown again, moved outside the desktop and dropped
+  by `clear()`. This regression test was added after a textureless/hidden
+  `QSGSimpleTextureNode` crashed both the batching material comparison and the
+  software renderer; the overlay now keeps a valid texture and hides with an
+  empty rectangle, and no scene-graph node is deleted inside `updatePaintNode()`.
+- Not validated: any of the new features against a live Windows partner. Audible
+  playback through a real PipeWire device, real Windows cursor shapes, transfer
+  pacing and clipboard behaviour are covered only by codecs, state machines and
+  synthetic resources. There was no live partner session for 0.3.0.
+
 ## Host (sender) mode and UI — 2026-10-29
 
 - Commit `0a95b08` added the host core: `HostProfile` (private 32-hex identity and
@@ -537,7 +586,7 @@ Neither step proves server acceptance or a working session.
   encoding and pacing, approval timeout, host layout scaling and pointer/key
   mapping. It also creates and reloads a host profile at an explicit path,
   checks the stable identity/password, the 0700 directory and 0600 file modes,
-  and refuses malformed JSON. The full suite is **15/15** in RelWithDebInfo. The
+  and refuses malformed JSON. The full suite is **19/19** in RelWithDebInfo. The
   offscreen Host page was reviewed with `--screenshot-view host`; the layout fits
   1024×720 and the empty identity/backend diagnostics render correctly.
 - Packaging/CI builds request `-DULTRAVIEW_REQUIRE_WAYLAND_HOST=ON`; the package

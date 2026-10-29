@@ -41,6 +41,10 @@ class SettingsModel : public QObject {
     Q_PROPERTY(int fillMode READ fillMode WRITE setFillMode NOTIFY viewChanged)
     Q_PROPERTY(bool smoothScaling READ smoothScaling WRITE setSmoothScaling NOTIFY viewChanged)
     Q_PROPERTY(bool hideLocalPointer READ hideLocalPointer WRITE setHideLocalPointer NOTIFY viewChanged)
+    Q_PROPERTY(bool remoteCursor READ remoteCursor WRITE setRemoteCursor NOTIFY featuresChanged)
+    Q_PROPERTY(bool clipboardSync READ clipboardSync WRITE setClipboardSync NOTIFY featuresChanged)
+    Q_PROPERTY(bool audioEnabled READ audioEnabled WRITE setAudioEnabled NOTIFY featuresChanged)
+    Q_PROPERTY(bool transferAutoAccept READ transferAutoAccept WRITE setTransferAutoAccept NOTIFY featuresChanged)
     Q_PROPERTY(int viewportWidth READ viewportWidth WRITE setViewportWidth NOTIFY viewChanged)
     Q_PROPERTY(int viewportHeight READ viewportHeight WRITE setViewportHeight NOTIFY viewChanged)
     Q_PROPERTY(QString registrationHostOverride READ registrationHostOverride WRITE setRegistrationHostOverride NOTIFY endpointsChanged)
@@ -102,6 +106,21 @@ public:
     int viewportHeight() const { return m_viewportHeight; }
     void setViewportHeight(int value);
 
+    // --- session features ---------------------------------------------------
+    /// Draw the partner's hardware cursor (commands 3/4/28).
+    bool remoteCursor() const { return m_remoteCursor; }
+    void setRemoteCursor(bool enabled);
+    /// Synchronize the text clipboard in both directions (commands 5/33).
+    bool clipboardSync() const { return m_clipboardSync; }
+    void setClipboardSync(bool enabled);
+    /// Ask the partner for its computer sound (command 46).
+    bool audioEnabled() const { return m_audioEnabled; }
+    void setAudioEnabled(bool enabled);
+    /// Accept incoming files without asking.  Off by default: an unsolicited
+    /// write into the download directory is not something a client should do.
+    bool transferAutoAccept() const { return m_transferAutoAccept; }
+    void setTransferAutoAccept(bool enabled);
+
     // --- endpoint overrides -------------------------------------------------
     QString registrationHostOverride() const { return m_registrationHostOverride; }
     void setRegistrationHostOverride(const QString &value);
@@ -145,6 +164,7 @@ signals:
     void limitsChanged();
     void decoderChanged();
     void viewChanged();
+    void featuresChanged();
     void endpointsChanged();
 
 private:
@@ -164,6 +184,10 @@ private:
     bool m_hideLocalPointer = false;
     int m_viewportWidth = 1280;
     int m_viewportHeight = 720;
+    bool m_remoteCursor = true;
+    bool m_clipboardSync = true;
+    bool m_audioEnabled = false;
+    bool m_transferAutoAccept = false;
     QString m_registrationHostOverride;
     int m_registrationPortOverride = 0;
     QString m_registrationHttpHostOverride;

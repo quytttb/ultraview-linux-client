@@ -19,6 +19,9 @@ ApplicationWindow {
     // src/app/main.cpp); they stay false during a normal session.
     property bool devViewer: false
     property string devDialog: ""
+    // Development aid: open a viewer panel (or the tools popup) so the UI review
+    // screenshots cover it; empty during a normal session.
+    property string devPanel: ""
     property int devDialogTab: 0
     // The header switch selects the controller form or the host page.  A live
     // controller session always takes over the window; hosting keeps the host
@@ -151,6 +154,7 @@ ApplicationWindow {
         ViewerPage {
             id: viewerPage
             fullScreen: app.fullScreen
+            devPanel: app.devPanel
             onFullScreenRequested: app.toggleFullScreen()
             statisticsVisible: globalMenu.statisticsVisible
         }
