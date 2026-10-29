@@ -22,7 +22,6 @@ Item {
 
             EmptyState {
                 Layout.fillWidth: true
-                iconSource: Icon.monitor
                 title: qsTr("Control an UltraViewer partner")
                 description: qsTr("This client speaks the recovered UltraViewer wire protocol to a "
                                   + "Windows partner. It needs your registration profile (the identity "

@@ -14,6 +14,7 @@
 // That is what CI can check without a real UltraViewer partner.
 //
 #include <QGuiApplication>
+#include <QIcon>
 #include <QImage>
 #include <QPainter>
 #include <QQmlApplicationEngine>
@@ -348,6 +349,7 @@ int main(int argc, char *argv[])
     QCoreApplication::setApplicationName(QStringLiteral("ultraview"));
     QCoreApplication::setApplicationVersion(QStringLiteral(ULTRAVIEW_VERSION));
     QGuiApplication::setApplicationDisplayName(QStringLiteral("UltraViewer (native Linux client)"));
+    QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/qt/qml/Ultraview/qml/assets/icons/ultraview.svg")));
     // The UI is fully themed in QML; the Basic style keeps Qt from injecting its
     // own look on top of the theme.
     QQuickStyle::setStyle(QStringLiteral("Basic"));

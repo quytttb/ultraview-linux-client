@@ -31,7 +31,6 @@ Item {
 
                 EmptyState {
                     Layout.fillWidth: true
-                    iconSource: Icon.monitor
                     title: qsTr("Let a Windows UltraViewer control this computer")
                     description: qsTr("Start hosting to register this Linux computer with "
                                       + "UltraViewer. The Windows partner enters the ID and the "

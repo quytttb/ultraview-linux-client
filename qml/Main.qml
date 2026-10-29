@@ -11,6 +11,7 @@ ApplicationWindow {
     minimumWidth: 720
     minimumHeight: 520
     visible: true
+    flags: Qt.Window | Qt.FramelessWindowHint | Qt.WindowSystemMenuHint
     title: qsTr("UltraViewer — Linux client")
     color: Theme.windowBackground
 
@@ -81,6 +82,7 @@ ApplicationWindow {
         visible: !app.fullScreen
         implicitHeight: app.fullScreen ? 0 : Theme.toolbarHeight
         mode: app.mode
+        windowRef: app
         modeSwitchEnabled: !controller.busy && !controller.connected && !host.hosting
         onSettingsRequested: settingsDialog.open()
         onAboutRequested: aboutDialog.open()
@@ -88,6 +90,34 @@ ApplicationWindow {
             if (mode === "host")
                 host.prepare()
             app.mode = mode
+        }
+    }
+
+    // Frameless windows need compositor-driven resize handles. Keep them out of
+    // the way when maximized or full screen, including during remote input.
+    Repeater {
+        parent: Overlay.overlay
+        model: [
+            { edges: Qt.LeftEdge, x: 0, y: 8, w: 6, h: app.height - 16, cursor: Qt.SizeHorCursor },
+            { edges: Qt.RightEdge, x: app.width - 6, y: 8, w: 6, h: app.height - 16, cursor: Qt.SizeHorCursor },
+            { edges: Qt.TopEdge, x: 8, y: 0, w: app.width - 16, h: 6, cursor: Qt.SizeVerCursor },
+            { edges: Qt.BottomEdge, x: 8, y: app.height - 6, w: app.width - 16, h: 6, cursor: Qt.SizeVerCursor },
+            { edges: Qt.TopEdge | Qt.LeftEdge, x: 0, y: 0, w: 8, h: 8, cursor: Qt.SizeFDiagCursor },
+            { edges: Qt.TopEdge | Qt.RightEdge, x: app.width - 8, y: 0, w: 8, h: 8, cursor: Qt.SizeBDiagCursor },
+            { edges: Qt.BottomEdge | Qt.LeftEdge, x: 0, y: app.height - 8, w: 8, h: 8, cursor: Qt.SizeBDiagCursor },
+            { edges: Qt.BottomEdge | Qt.RightEdge, x: app.width - 8, y: app.height - 8, w: 8, h: 8, cursor: Qt.SizeFDiagCursor }
+        ]
+        MouseArea {
+            required property var modelData
+            x: modelData.x; y: modelData.y
+            width: modelData.w; height: modelData.h
+            z: 1
+            visible: app.visibility === Window.Windowed
+            cursorShape: modelData.cursor
+            onPressed: function(mouse) {
+                if (mouse.button === Qt.LeftButton)
+                    app.startSystemResize(modelData.edges)
+            }
         }
     }
 

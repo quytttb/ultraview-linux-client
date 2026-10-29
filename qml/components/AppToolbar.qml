@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Window
 import Ultraview
 
 // Application header: brand mark, product name and the window-chrome actions.
@@ -11,6 +12,8 @@ Rectangle {
 
     property string mode: "control"
     property bool modeSwitchEnabled: true
+    property var windowRef: null
+    readonly property bool maximized: windowRef && windowRef.visibility === Window.Maximized
 
     signal settingsRequested
     signal aboutRequested
@@ -23,29 +26,35 @@ Rectangle {
         color: Theme.border
     }
 
+    MouseArea {
+        anchors.fill: parent
+        onPressed: function(mouse) {
+            if (mouse.button === Qt.LeftButton && bar.windowRef)
+                bar.windowRef.startSystemMove()
+        }
+        onDoubleClicked: function(mouse) {
+            if (mouse.button === Qt.LeftButton && bar.windowRef) {
+                if (bar.maximized)
+                    bar.windowRef.showNormal()
+                else
+                    bar.windowRef.showMaximized()
+            }
+        }
+    }
+
     RowLayout {
         anchors.fill: parent
         anchors.leftMargin: Theme.spacing
         anchors.rightMargin: Theme.spacingSmall + 2
         spacing: Theme.spacingSmall + 2
 
-        Rectangle {
+        Image {
             Layout.alignment: Qt.AlignVCenter
-            implicitWidth: 30
-            implicitHeight: 30
-            radius: 9
-            gradient: Gradient {
-                GradientStop { position: 0.0; color: Theme.accentHover }
-                GradientStop { position: 1.0; color: Theme.accentPressed }
-            }
-
-            Label {
-                anchors.centerIn: parent
-                text: "U"
-                color: Theme.textInverted
-                font.pixelSize: 16
-                font.weight: Font.Bold
-            }
+            Layout.preferredWidth: 30
+            Layout.preferredHeight: 30
+            source: Qt.resolvedUrl("../assets/icons/ultraview.svg")
+            sourceSize: Qt.size(60, 60)
+            fillMode: Image.PreserveAspectFit
         }
 
         ColumnLayout {
@@ -100,6 +109,35 @@ Rectangle {
             iconSource: Icon.info
             tooltip: qsTr("About this client")
             onClicked: bar.aboutRequested()
+        }
+
+        Rectangle {
+            Layout.alignment: Qt.AlignVCenter
+            Layout.leftMargin: Theme.spacingXSmall
+            implicitWidth: 1
+            implicitHeight: 22
+            color: Theme.border
+        }
+
+        IconButton {
+            iconSource: Icon.windowMinimize
+            tooltip: qsTr("Minimize")
+            onClicked: if (bar.windowRef) bar.windowRef.showMinimized()
+        }
+        IconButton {
+            iconSource: bar.maximized ? Icon.windowRestore : Icon.windowMaximize
+            tooltip: bar.maximized ? qsTr("Restore") : qsTr("Maximize")
+            onClicked: {
+                if (!bar.windowRef) return
+                if (bar.maximized) bar.windowRef.showNormal()
+                else bar.windowRef.showMaximized()
+            }
+        }
+        IconButton {
+            iconSource: Icon.close
+            tooltip: qsTr("Close")
+            danger: true
+            onClicked: if (bar.windowRef) bar.windowRef.close()
         }
     }
 }

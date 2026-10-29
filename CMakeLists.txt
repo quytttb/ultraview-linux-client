@@ -268,6 +268,10 @@ qt_add_qml_module(ultraview
         qml/assets/icons/folder.svg
         qml/assets/icons/gear.svg
         qml/assets/icons/info.svg
+        qml/assets/icons/ultraview.svg
+        qml/assets/icons/window-minimize.svg
+        qml/assets/icons/window-maximize.svg
+        qml/assets/icons/window-restore.svg
         qml/assets/icons/keyboard.svg
         qml/assets/icons/monitor.svg
         qml/assets/icons/power.svg
@@ -287,7 +291,7 @@ set_target_properties(ultraview PROPERTIES
 
 install(TARGETS ultraview RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES packaging/ultraview.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
-install(FILES packaging/ultraview.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
+install(FILES qml/assets/icons/ultraview.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
 install(FILES README.md NOTICE.md DESTINATION ${CMAKE_INSTALL_DOCDIR})
 install(DIRECTORY docs/ DESTINATION ${CMAKE_INSTALL_DOCDIR}/docs FILES_MATCHING PATTERN "*.md")
 # Intentionally no install rule for reference/, tools/, tests/, or user profiles.
