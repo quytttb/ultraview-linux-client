@@ -1,4 +1,4 @@
-# Ultraview — native Linux controller
+# Ultraview — native Linux remote desktop client
 
 [![Native build and offline tests](https://github.com/quytttb/ultraview-linux-client/actions/workflows/ci.yml/badge.svg)](https://github.com/quytttb/ultraview-linux-client/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -16,7 +16,11 @@ partner desktop streamed into the viewer, and the session stayed connected after
 the service closed the drained registration channel (see
 [verification](docs/verification.md)). Input direction, longer sessions, more
 partner/Windows versions and clipboard/file transfer still need work; this is
-**not** a complete or production-certified UltraViewer implementation. See
+**not** a complete or production-certified UltraViewer implementation. Host
+(sender) mode now registers a separate local identity, accepts a Windows viewer
+through the relay, requires local approval and streams this desktop through the
+Wayland portal; it is covered by offline tests but has not been validated against
+a real Windows viewer. See [host mode](docs/host-mode.md) and
 [compatibility](docs/compatibility.md).
 
 ## Build on Ubuntu
