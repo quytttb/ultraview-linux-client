@@ -262,13 +262,19 @@ Input is accepted only while the viewer is streaming and control is allowed.
 `WaylandPortalBackend` uses `org.freedesktop.portal.RemoteDesktop` and
 `org.freedesktop.portal.ScreenCast` over QtDBus:
 
-1. `CreateSession`.
-2. `SelectDevices` with keyboard and pointer, persist mode 2.
-3. `SelectSources` with monitor sources, multiple monitors and embedded cursor,
-   persist mode 2.
-4. `Start`, which may show the compositor's screen-sharing permission dialog
-   (up to 180 seconds), and returns the PipeWire stream nodes.
-5. `OpenPipeWireRemote` and one PipeWire stream per shared monitor.
+1. `CreateSession` on `RemoteDesktop`.
+2. `SelectDevices` with keyboard and pointer.
+3. `SelectSources` on `ScreenCast` for the same session handle, with monitor
+   sources, multiple monitors and embedded cursor. Remote-desktop sessions cannot
+   persist, so no `persist_mode`/`restore_token` is requested; KDE rejects one
+   with "Remote desktop sessions cannot persist".
+4. `Start` on `RemoteDesktop`, which may show the compositor's remote-control
+   permission dialog (up to 180 seconds), and returns the shared devices and the
+   PipeWire stream nodes. `OpenPipeWireRemote` only finds those streams on the
+   remote-desktop session, so `Start` must be sent there rather than to
+   `ScreenCast`.
+5. `OpenPipeWireRemote` on `ScreenCast` and one PipeWire stream per shared
+   monitor.
 
 Captures are composed from the latest frame of each selected monitor into the
 union rectangle; pointer coordinates select the monitor under the cursor. The

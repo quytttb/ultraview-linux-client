@@ -98,6 +98,9 @@ struct RawFrame {
 struct StreamState {
     quint32 node = 0;
     pw_stream *stream = nullptr;
+    // PipeWire keeps a pointer to this table for the stream's whole lifetime;
+    // it must not be a local in startPipeWire().
+    pw_stream_events events{};
     spa_hook listener{};
     QMutex mutex;
     QWaitCondition condition;
@@ -309,7 +312,7 @@ private:
     bool createSession(QString *error);
     bool selectDevices(QString *error);
     bool selectSources(QString *error);
-    bool startScreenCast(QString *error);
+    bool startRemoteDesktop(QString *error);
     bool openPipeWire(QString *error);
     bool startPipeWire(int fd, QString *error);
     bool request(const QString &interface, const QString &method, const QVariantList &args,
@@ -377,7 +380,7 @@ bool WaylandPortalBackend::start(QString *error)
 
     QString failure;
     if (!createSession(&failure) || !selectDevices(&failure) || !selectSources(&failure)
-        || !startScreenCast(&failure) || !openPipeWire(&failure)) {
+        || !startRemoteDesktop(&failure) || !openPipeWire(&failure)) {
         closeSession();
         if (error)
             *error = failure;
@@ -545,7 +548,6 @@ bool WaylandPortalBackend::selectDevices(QString *error)
 {
     QVariantMap options;
     options.insert(QStringLiteral("types"), QVariant::fromValue<quint32>(3)); // keyboard | pointer
-    options.insert(QStringLiteral("persist_mode"), QVariant::fromValue<quint32>(2));
     QVariantList args;
     args.append(QVariant::fromValue(QDBusObjectPath(m_sessionPath)));
     return request(QString::fromLatin1(kRemoteDesktop), QStringLiteral("SelectDevices"), args,
@@ -558,20 +560,23 @@ bool WaylandPortalBackend::selectSources(QString *error)
     options.insert(QStringLiteral("types"), QVariant::fromValue<quint32>(1)); // monitor
     options.insert(QStringLiteral("multiple"), true);
     options.insert(QStringLiteral("cursor_mode"), QVariant::fromValue<quint32>(2)); // embedded
-    options.insert(QStringLiteral("persist_mode"), QVariant::fromValue<quint32>(2));
     QVariantList args;
     args.append(QVariant::fromValue(QDBusObjectPath(m_sessionPath)));
     return request(QString::fromLatin1(kScreenCast), QStringLiteral("SelectSources"), args,
                    options, kPortalSetupTimeoutMs, nullptr, error);
 }
 
-bool WaylandPortalBackend::startScreenCast(QString *error)
+bool WaylandPortalBackend::startRemoteDesktop(QString *error)
 {
     QVariantMap results;
     QVariantList args;
     args.append(QVariant::fromValue(QDBusObjectPath(m_sessionPath)));
     args.append(QString());
-    if (!request(QString::fromLatin1(kScreenCast), QStringLiteral("Start"), args, {},
+    // Start belongs to the RemoteDesktop interface: the portal stores the
+    // returned stream list on the remote-desktop session, and only there does
+    // OpenPipeWireRemote find it.  ScreenCast.SelectSources selected the monitors
+    // for this same session handle.
+    if (!request(QString::fromLatin1(kRemoteDesktop), QStringLiteral("Start"), args, {},
                  kPortalStartTimeoutMs, &results, error)) {
         return false;
     }
@@ -688,12 +693,12 @@ bool WaylandPortalBackend::startPipeWire(int fd, QString *error)
                 *error = QStringLiteral("Cannot create a PipeWire screen stream.");
             return false;
         }
-        pw_stream_events events{};
-        events.version = PW_VERSION_STREAM_EVENTS;
-        events.state_changed = onStreamStateChanged;
-        events.param_changed = onStreamParamChanged;
-        events.process = onStreamProcess;
-        pw_stream_add_listener(state->stream, &state->listener, &events, state);
+        state->events = {};
+        state->events.version = PW_VERSION_STREAM_EVENTS;
+        state->events.state_changed = onStreamStateChanged;
+        state->events.param_changed = onStreamParamChanged;
+        state->events.process = onStreamProcess;
+        pw_stream_add_listener(state->stream, &state->listener, &state->events, state);
 
         uint8_t podBuffer[1024];
         const spa_pod *pod = buildVideoFormat(podBuffer, sizeof(podBuffer));
