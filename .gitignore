@@ -11,6 +11,7 @@ __pycache__/
 # Local identity material: never commit a profile, dictionary or settings file.
 # (A real installation identity is machine-specific and private.)
 /profiles/
+host-profile.json
 8bit.dat
 registration-*.json
 client.ini
