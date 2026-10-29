@@ -141,6 +141,7 @@ private:
     QTimer *m_tickTimer = nullptr;
     QTimer *m_replyTimer = nullptr;
     QTimer *m_relayAddressTimer = nullptr;
+    bool m_startingBackend = false;
 
     RegistrationReply m_registrationReply;
     bool m_registered = false;

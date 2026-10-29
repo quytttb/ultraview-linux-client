@@ -135,7 +135,20 @@ void HostManager::start(const HostStartRequest &request)
         return;
     }
     m_backendName = m_backend->name();
-    if (!m_backend->start(&error)) {
+    m_startingBackend = true;
+    const bool backendStarted = m_backend->start(&error);
+    m_startingBackend = false;
+    if (m_terminating) {
+        // stop() arrived while the portal dialog was open.  The backend call has
+        // returned now, so it is safe to tear it down and finish the stop.
+        cleanup(QStringLiteral("The host stopped sharing."));
+        m_terminating = false;
+        setState(HostState::Stopped);
+        setStatus(QStringLiteral("Not hosting"));
+        emit stopped();
+        return;
+    }
+    if (!backendStarted) {
         m_backend.reset();
         fail(QStringLiteral("Screen sharing could not start: %1").arg(error));
         return;
@@ -198,6 +211,13 @@ void HostManager::start(const HostStartRequest &request)
 
 void HostManager::stop()
 {
+    if (m_startingBackend) {
+        // The desktop portal is running a nested event loop, so this stop can
+        // run re-entrantly inside start().  Do not delete the backend under its
+        // own start() call; start() finishes the stop once the call returns.
+        m_terminating = true;
+        return;
+    }
     if (m_state == HostState::Stopped)
         return;
     m_terminating = true;
@@ -220,7 +240,6 @@ void HostManager::approve(bool allowControl)
         flushActions();
         setStatus(QStringLiteral("The screen could not be captured; the request was refused. %1")
                       .arg(error));
-        emit approvalCleared();
         setState(HostState::Waiting);
         return;
     }
@@ -229,7 +248,6 @@ void HostManager::approve(bool allowControl)
         m_session->decline();
         flushActions();
         setStatus(QStringLiteral("The viewer session could not start: %1").arg(error));
-        emit approvalCleared();
         setState(HostState::Waiting);
         return;
     }
@@ -244,7 +262,6 @@ void HostManager::decline()
     if (m_session == nullptr || !m_session->awaitingApproval())
         return;
     m_session->decline();
-    emit approvalCleared();
     flushActions();
     setState(HostState::Waiting);
 }
@@ -295,6 +312,7 @@ void HostManager::flushActions(bool allowNetwork)
     if (m_session == nullptr)
         return;
     const QList<HostAction> actions = m_session->takeActions();
+    const bool awaitingApproval = m_state == HostState::WaitingApproval;
     for (const HostAction &action : actions) {
         switch (action.type) {
         case HostAction::Type::SendPeer:
@@ -335,6 +353,8 @@ void HostManager::flushActions(bool allowNetwork)
                 setState(HostState::Waiting);
             setStatus(action.text);
             emit controlChanged(false);
+            if (awaitingApproval)
+                emit approvalCleared();
             emit viewerDisconnected(action.text);
             break;
         }
