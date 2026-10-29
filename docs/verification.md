@@ -532,12 +532,14 @@ Neither step proves server acceptance or a working session.
   **Refuse**, and Escape refuses. Hosted sessions can switch control/view-only
   through command 49. The host page states that chat, clipboard, transfer and
   audio are not implemented.
-- `tst_host` now has 18 protocol/session/profile/layout/input-mapping tests
+- `tst_host` now has 19 protocol/session/profile/layout/input-mapping tests
   covering registration terms, relay parsing, login proofs, throttle, frame
   encoding and pacing, approval timeout, host layout scaling and pointer/key
-  mapping. The full suite is **15/15** in RelWithDebInfo. The offscreen Host page
-  was reviewed with `--screenshot-view host`; the layout fits 1024×720 and the
-  identity/backend diagnostics render correctly.
+  mapping. It also creates and reloads a host profile at an explicit path,
+  checks the stable identity/password, the 0700 directory and 0600 file modes,
+  and refuses malformed JSON. The full suite is **15/15** in RelWithDebInfo. The
+  offscreen Host page was reviewed with `--screenshot-view host`; the layout fits
+  1024×720 and the empty identity/backend diagnostics render correctly.
 - Packaging/CI builds request `-DULTRAVIEW_REQUIRE_WAYLAND_HOST=ON`; the package
   recommends `xdg-desktop-portal`, a portal backend and PipeWire. Runtime host
   dependencies are otherwise the same PipeWire client library as audio.

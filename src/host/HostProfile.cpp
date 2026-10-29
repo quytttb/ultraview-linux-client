@@ -316,9 +316,18 @@ QString HostProfile::fallbackMac(const QString &deviceIdentity)
 
 HostIdentity HostProfile::loadOrCreate(QString *error)
 {
-    const QString path = defaultPath();
+    return loadOrCreateAt(defaultPath(), error);
+}
+
+HostIdentity HostProfile::loadOrCreateAt(const QString &path, QString *error)
+{
     HostIdentity identity;
     identity.profilePath = path;
+    if (path.isEmpty()) {
+        if (error)
+            *error = QStringLiteral("the host profile path is empty");
+        return {};
+    }
 
     QString json;
     if (QFileInfo::exists(path)) {

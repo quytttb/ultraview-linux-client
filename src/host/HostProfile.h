@@ -40,6 +40,10 @@ public:
     /// valid identity.  Errors are credential-free.
     static HostIdentity loadOrCreate(QString *error);
 
+    /// Same as loadOrCreate() for an explicit profile path.  Used by tests and
+    /// by callers that must keep the identity outside the default location.
+    static HostIdentity loadOrCreateAt(const QString &path, QString *error);
+
     /// Default profile location (`<AppConfig>/host-profile.json`).
     static QString defaultPath();
 

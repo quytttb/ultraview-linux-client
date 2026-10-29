@@ -15,8 +15,16 @@
 #include "protocol/Digest.h"
 #include "protocol/PacketCodec.h"
 
+#include <QFile>
+#include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QTemporaryDir>
+
 #include <QtEndian>
 #include <QtTest>
+
+#include <sys/stat.h>
 
 #include <zstd.h>
 
@@ -99,6 +107,7 @@ private slots:
     void sessionWrongPassword();
     void sessionTimeoutAndDisconnect();
     void profileHelpers();
+    void profilePersistence();
     void layoutScaling();
     void inputMapping();
 };
@@ -426,6 +435,66 @@ void TestHost::profileHelpers()
     QVERIFY(HostProfile::isAcceptablePassword(QStringLiteral("12345678")));
     QVERIFY(!HostProfile::isAcceptablePassword(QStringLiteral("1234")));
     QVERIFY(!HostProfile::isAcceptablePassword(QStringLiteral("1234\t567")));
+}
+
+void TestHost::profilePersistence()
+{
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    const QString path = directory.filePath("private/host-profile.json");
+
+    const auto storedObject = [](const QString &filePath) {
+        QFile file(filePath);
+        if (!file.open(QIODevice::ReadOnly))
+            return QJsonObject();
+        return QJsonDocument::fromJson(file.readAll()).object();
+    };
+
+    QString error;
+    const HostIdentity first = HostProfile::loadOrCreateAt(path, &error);
+    QVERIFY2(QFileInfo::exists(path), qPrintable(error));
+    if (first.isValid()) {
+        QCOMPARE(first.profilePath, path);
+        QCOMPARE(first.deviceIdentity,
+                 storedObject(path).value(QStringLiteral("device_identity")).toString());
+    }
+
+    const QJsonObject stored = storedObject(path);
+    const QString device = stored.value(QStringLiteral("device_identity")).toString();
+    const QString password = stored.value(QStringLiteral("password")).toString();
+    QCOMPARE(device.size(), 32);
+    QCOMPARE(password.size(), 8);
+    for (const QChar unit : device)
+        QVERIFY((unit >= QLatin1Char('0') && unit <= QLatin1Char('9'))
+                || (unit >= QLatin1Char('A') && unit <= QLatin1Char('F')));
+    for (const QChar unit : password)
+        QVERIFY(unit >= QLatin1Char('0') && unit <= QLatin1Char('9'));
+
+    struct stat status {};
+    QCOMPARE(::stat(QFileInfo(path).absolutePath().toLocal8Bit().constData(), &status), 0);
+    QCOMPARE(static_cast<int>(status.st_mode & 0777), 0700);
+    QCOMPARE(::stat(path.toLocal8Bit().constData(), &status), 0);
+    QCOMPARE(static_cast<int>(status.st_mode & 0777), 0600);
+
+    const HostIdentity second = HostProfile::loadOrCreateAt(path, &error);
+    const QJsonObject reloaded = storedObject(path);
+    QCOMPARE(reloaded.value(QStringLiteral("device_identity")).toString(), device);
+    QCOMPARE(reloaded.value(QStringLiteral("password")).toString(), password);
+    if (second.isValid()) {
+        QCOMPARE(second.deviceIdentity, device);
+        QCOMPARE(second.password, password);
+        QCOMPARE(second.profilePath, path);
+    }
+
+    QFile corrupted(path);
+    QVERIFY(corrupted.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    QCOMPARE(corrupted.write("{not json"), qint64(9));
+    corrupted.close();
+    error.clear();
+    const HostIdentity invalid = HostProfile::loadOrCreateAt(path, &error);
+    QVERIFY(invalid.deviceIdentity.isEmpty());
+    QVERIFY(invalid.password.isEmpty());
+    QVERIFY(error.contains(path));
 }
 
 void TestHost::layoutScaling()
