@@ -78,20 +78,32 @@ void RelayTransport::onData()
             m_channel.abort();
             return;
         }
+        if (body.kind == protocol::TransportBody::Kind::Direct) {
+            if (!m_endpoint.allowSystemMessages) {
+                // The reference raises `unexpected session transport packet`
+                // here; a direct (P2P) body is never expected on this channel.
+                m_errorReported = true;
+                const ErrorInfo info{ErrorCode::UnsupportedOperation,
+                                     QStringLiteral("unexpected session transport packet"),
+                                     QStringLiteral("direct/P2P body on a relay channel")};
+                emit failed(info);
+                m_channel.abort();
+                return;
+            }
+            emit systemPayload(body.data);
+            continue;
+        }
         if (body.kind != protocol::TransportBody::Kind::Relay) {
-            // The reference raises `unexpected session transport packet` here; a
-            // direct (P2P) body is never expected on this channel.
             m_errorReported = true;
             const ErrorInfo info{ErrorCode::UnsupportedOperation,
                                  QStringLiteral("unexpected session transport packet"),
-                                 body.kind == protocol::TransportBody::Kind::Direct
-                                     ? QStringLiteral("direct/P2P body on a relay channel")
-                                     : QStringLiteral("unknown transport kind")};
+                                 QStringLiteral("unknown transport kind")};
             emit failed(info);
             m_channel.abort();
             return;
         }
         emit payload(body.data);
+        emit payloadFrom(body.data, body.addressValue, body.port, body.flag);
     }
 }
 
@@ -114,14 +126,59 @@ void RelayTransport::sendPayload(const QByteArray &payload, quint8 flag)
         emit failed(exception.info());
         return;
     }
+    writeFramed(framed);
+}
+
+void RelayTransport::sendPayloadTo(const QString &ipv4, quint16 port, const QByteArray &payload,
+                                   quint8 flag)
+{
+    if (!m_ready || payload.isEmpty())
+        return;
+    QByteArray framed;
+    try {
+        framed = protocol::encodeRelayFrame(payload, ipv4, port, flag);
+    } catch (const UvException &exception) {
+        emit failed(exception.info());
+        return;
+    }
+    writeFramed(framed);
+}
+
+void RelayTransport::sendSystemPayload(const QByteArray &payload, bool withFlag)
+{
+    if (!m_ready || payload.isEmpty())
+        return;
+    QByteArray body;
+    body.reserve(payload.size() + (withFlag ? 2 : 1));
+    body.append(static_cast<char>(0x01));
+    if (withFlag)
+        body.append(static_cast<char>(0x00));
+    body.append(payload);
+    try {
+        writeFramed(protocol::encodeTransportFrame(body));
+    } catch (const UvException &exception) {
+        emit failed(exception.info());
+    }
+}
+
+void RelayTransport::sendRelayKeepalive()
+{
+    sendSystemPayload(QByteArrayLiteral("ping"), false);
+}
+
+bool RelayTransport::writeFramed(const QByteArray &framed)
+{
     if (framed.size() - 4 > static_cast<qint64>(m_maxFrameBytes)) {
         const ErrorInfo info{ErrorCode::Resource, QStringLiteral("outbound frame exceeds limit"),
-                             QStringLiteral("%1 > %2 bytes").arg(framed.size() - 4).arg(m_maxFrameBytes)};
+                             QStringLiteral("%1 > %2 bytes")
+                                 .arg(framed.size() - 4)
+                                 .arg(m_maxFrameBytes)};
         emit failed(info);
-        return;
+        return false;
     }
     m_bytesSent += framed.size();
     m_channel.write(framed);
+    return true;
 }
 
 } // namespace ultraview::network

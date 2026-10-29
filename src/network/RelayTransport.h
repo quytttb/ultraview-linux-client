@@ -36,6 +36,9 @@ public:
         /// Partner endpoint repeated in every outbound relay frame.
         QString targetIpv4;
         quint16 targetPort = 0;
+        /// Host relays receive relay-originated system messages (`0:port:ip`
+        /// and `ping`).  Controller relays keep rejecting them as before.
+        bool allowSystemMessages = false;
     };
 
     explicit RelayTransport(QObject *parent = nullptr);
@@ -48,6 +51,13 @@ public:
     /// Wrap `payload` in a relay frame addressed to the partner endpoint.
     /// `flag` is 1 for UTF-16LE payloads (the login frame) and 0 for ASCII.
     void sendPayload(const QByteArray &payload, quint8 flag);
+    /// Wrap `payload` for an explicit viewer route (host mode).
+    void sendPayloadTo(const QString &ipv4, quint16 port, const QByteArray &payload,
+                       quint8 flag);
+    /// Relay system envelope: `01 [flag] payload` (host relay negotiation).
+    void sendSystemPayload(const QByteArray &payload, bool withFlag);
+    /// The recovered relay keepalive `01 "ping"` sent every 60 seconds.
+    void sendRelayKeepalive();
 
     bool isReady() const { return m_ready; }
     QString peerDescription() const { return m_channel.peerDescription(); }
@@ -61,6 +71,10 @@ signals:
     void ready();
     /// Payload of a relay-kind transport body.
     void payload(const QByteArray &payload);
+    /// Host mode: relay frame with its explicit route and UTF-16 flag.
+    void payloadFrom(const QByteArray &payload, quint32 addressValue, quint16 port, bool unicode);
+    /// Host mode: relay-originated system body (`0:port:ip`, `ping`).
+    void systemPayload(const QByteArray &payload);
     void failed(const ultraview::ErrorInfo &error);
     void closed();
 
@@ -68,6 +82,7 @@ private:
     void onReady();
     void onData();
     void onClosed();
+    bool writeFramed(const QByteArray &framed);
 
     Endpoint m_endpoint;
     HttpTunnelSocket m_channel;

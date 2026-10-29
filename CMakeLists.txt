@@ -24,6 +24,7 @@ option(ULTRAVIEW_REQUIRE_WAYLAND_SHORTCUT_INHIBIT
     "Fail the build when Wayland keyboard-shortcut inhibition is unavailable" OFF)
 
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Network Test)
+find_package(Qt6 QUIET COMPONENTS DBus)
 find_package(OpenSSL 3.0 REQUIRED)
 
 # ---------------------------------------------------------------------------
@@ -51,6 +52,7 @@ endif()
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(ZSTD REQUIRED IMPORTED_TARGET libzstd)
 pkg_check_modules(WAYLAND_CLIENT QUIET IMPORTED_TARGET wayland-client)
+pkg_check_modules(PIPEWIRE QUIET IMPORTED_TARGET libpipewire-0.3)
 
 # Wayland's keyboard-shortcuts-inhibit protocol lets an active remote-control
 # session receive Super/Meta and other compositor shortcuts instead of triggering
@@ -69,6 +71,17 @@ else()
     if(ULTRAVIEW_REQUIRE_WAYLAND_SHORTCUT_INHIBIT)
         message(FATAL_ERROR "ULTRAVIEW_REQUIRE_WAYLAND_SHORTCUT_INHIBIT is ON but the feature is unavailable")
     endif()
+endif()
+
+# Wayland host capture/input: xdg-desktop-portal RemoteDesktop + ScreenCast over
+# QtDBus, frames through PipeWire.  The feature is optional so the controller
+# keeps building on systems without the PipeWire development headers.
+set(ULTRAVIEW_WAYLAND_HOST OFF)
+if(TARGET Qt6::DBus AND PIPEWIRE_FOUND)
+    set(ULTRAVIEW_WAYLAND_HOST ON)
+    message(STATUS "Wayland host capture: enabled (QtDBus + libpipewire-0.3)")
+else()
+    message(STATUS "Wayland host capture: disabled (needs Qt6::DBus and libpipewire-0.3)")
 endif()
 
 qt_standard_project_setup(REQUIRES 6.5)
@@ -106,6 +119,13 @@ add_library(ultraview_core STATIC
     src/protocol/RouteParser.cpp
     src/protocol/InputCodec.cpp
     src/protocol/P2pCodec.cpp
+
+    src/host/HostProfile.cpp
+    src/host/HostProtocol.cpp
+    src/host/HostSession.cpp
+    src/host/HostManager.cpp
+    src/host/HostBackend.cpp
+    src/host/InputMapping.cpp
 
     src/decoder/ZstdDecoder.cpp
     src/decoder/JpegAtlasDecoder.cpp
@@ -165,6 +185,14 @@ if(ULTRAVIEW_WAYLAND_SHORTCUT_INHIBIT)
         PROPERTIES COMPILE_OPTIONS "-Wno-attributes")
     target_link_libraries(ultraview_core PRIVATE PkgConfig::WAYLAND_CLIENT)
     target_compile_definitions(ultraview_core PRIVATE ULTRAVIEW_HAVE_WAYLAND_SHORTCUT_INHIBIT=1)
+endif()
+
+if(ULTRAVIEW_WAYLAND_HOST)
+    target_sources(ultraview_core PRIVATE
+        src/host/WaylandPortal.cpp
+    )
+    target_link_libraries(ultraview_core PRIVATE Qt6::DBus PkgConfig::PIPEWIRE)
+    target_compile_definitions(ultraview_core PRIVATE ULTRAVIEW_HAVE_WAYLAND_HOST=1)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")

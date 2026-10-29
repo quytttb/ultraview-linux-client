@@ -18,6 +18,7 @@ set(UV_TEST_SOURCES
     tst_render_item
     tst_session
     tst_globalmenu
+    tst_host
 )
 
 foreach(test IN LISTS UV_TEST_SOURCES)
