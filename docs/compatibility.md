@@ -35,14 +35,14 @@ validation. See `verification.md`.
   generation or forwarding. Unknown kinds: unsupported notices, not invented replies.
 - P2P handshake/discovery/NAT traversal/transport selection. AES wire helpers are
   fixture-tested but not a working P2P feature. Nonempty request term 16 is refused.
-- **Host mode is Wayland-portal-only and not live-validated.** The Host page
-  implements registration, inbound relay/login, local approval, RGB555/zstd
-  streaming, pointer/key injection and control/view-only switching. It requires a
-  Wayland session with xdg-desktop-portal, a portal backend and PipeWire; there is
-  no X11 capture fallback, no unattended access, no host chat/clipboard/file
-  transfer/audio and no multi-monitor selection beyond the portal's shared
-  monitors. The protocol and state machine are covered by offline tests; a real
-  Windows viewer controlling this host has not been verified.
+- **Host mode is Wayland-portal-only.** The Host page implements registration,
+  inbound relay/login, local approval, RGB555/zstd streaming, pointer/key
+  injection and control/view-only switching. It requires a Wayland session with
+  xdg-desktop-portal, a portal backend and PipeWire; there is no X11 capture
+  fallback, no unattended access, no host chat/clipboard/file transfer/audio and
+  no multi-monitor selection beyond the portal's shared monitors. Portal capture
+  and registration are live-checked on KDE Wayland; a real Windows viewer
+  controlling this host has not been verified.
 - Controller-side clipboard, file transfer, chat and remote cursor shapes remain
   unsupported, as do multi-monitor selection, other pixel codecs/colour depths
   and arbitrary Windows secure-desktop/privileged key sequences.
@@ -107,11 +107,11 @@ reference decode; they are not hand-assigned colour claims. Tests remain synthet
    different release orders, focus loss, input-disable, disconnect/reconnect.
 5. Exercise resolution changes, cache churn and sustained updates for a stated
    duration. Check bounded memory, real render backend, and thread shutdown.
-6. Validate host mode on a real Wayland desktop with a real Windows UltraViewer
-   viewer: portal permission, assigned ID/password, approval/refusal, wrong-password
-   lockout, capture/pacing, pointer and keyboard mapping, control/view-only
-   switching and stop/cleanup. The offline suite covers the protocol/state machine
-   but not portal or viewer behaviour.
+6. Validate host mode with a real Windows UltraViewer viewer: whether it accepts
+   the assigned ID/password, approval/refusal, wrong-password lockout over the
+   relay, capture/pacing, pointer and keyboard mapping, control/view-only
+   switching and stop/cleanup. Portal permission/capture and registration are
+   already live-checked; the viewer side is not.
 7. Verify clean-host `.deb`/AppImage installation and Wayland/X11 behavior on each
    supported distribution. Verify keyring behavior with a real Secret Service.
 

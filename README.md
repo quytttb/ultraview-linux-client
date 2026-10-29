@@ -19,8 +19,9 @@ partner/Windows versions and clipboard/file transfer still need work; this is
 **not** a complete or production-certified UltraViewer implementation. Host
 (sender) mode now registers a separate local identity, accepts a Windows viewer
 through the relay, requires local approval and streams this desktop through the
-Wayland portal; it is covered by offline tests but has not been validated against
-a real Windows viewer. See [host mode](docs/host-mode.md) and
+Wayland portal; its portal capture and registration are live-checked on KDE
+Wayland, but it has not yet been validated with a real Windows viewer. See
+[host mode](docs/host-mode.md) and
 [compatibility](docs/compatibility.md).
 
 ## Build on Ubuntu

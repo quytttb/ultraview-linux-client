@@ -602,10 +602,20 @@ Neither step proves server acceptance or a working session.
   event table is now owned by the stream state instead of a stack local, fixing a
   crash in the PipeWire data thread. The probe returned one 1920×1080 display,
   a 1920×1080 layout and 4,147,200 RGB555 bytes with 2,073,055 non-black pixels.
-- Not validated: a real Windows UltraViewer viewer controlling this host, portal
-  pointer/keyboard injection actually moving the local desktop, the approval
-  dialog against a real viewer, and stop/cleanup on a live session. No host
-  password or profile is written by the test suite or the package.
+- A temporary live probe (outside the repository, linked against the same host
+  core) then exercised registration with the real host identity. After the KDE
+  permission dialog was approved it reached **Waiting for a viewer** and the
+  service assigned this computer an ID; it was stopped without accepting a
+  viewer. The probe printed only the profile path, identity length and assigned
+  ID, never the password. The identity was moved to the application's own
+  profile path, so the Host page and a later session use the same registration.
+- Not validated: a real Windows UltraViewer viewer controlling this host, whether
+  the viewer accepts the displayed ID/password and reaches local approval, the
+  approval/refusal dialog against a real viewer, the wrong-password lockout over
+  the relay, portal pointer/keyboard injection actually moving the local desktop,
+  control/view-only switching, and stop/cleanup during a live viewer session. No
+  host password or profile is written by the test suite or the package, and the
+  live ID/address are not recorded here.
 
 This record describes the checked local build, not a vendor-certified release or
 a claim that all recovered/undocumented protocol features were implemented.
