@@ -14,7 +14,7 @@ jobs:
       - name: Native dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build libssl-dev libzstd-dev libsecret-1-dev libwayland-dev libgl1-mesa-dev libxkbcommon-dev libxcb-cursor0
+          sudo apt-get install -y ninja-build libssl-dev libzstd-dev libsecret-1-dev libwayland-dev libpipewire-0.3-dev libgl1-mesa-dev libxkbcommon-dev libxcb-cursor0
       # Noble's distribution Qt is older than 6.5; use an explicit SDK.
       - uses: jurplel/install-qt-action@v4
         with:
@@ -25,6 +25,7 @@ jobs:
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
           -DULTRAVIEW_ENABLE_SANITIZERS=${{ matrix.sanitizers }}
           -DULTRAVIEW_REQUIRE_SECRET_SERVICE=ON
+          -DULTRAVIEW_REQUIRE_WAYLAND_HOST=ON
       - name: Build
         run: cmake --build build --parallel 2
       - name: Test (no external endpoints)
