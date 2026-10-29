@@ -77,7 +77,7 @@ HostViewModel::HostViewModel(SettingsModel *settings, QObject *parent)
     }
 
     m_stateName = host::hostStateName(host::HostState::Stopped);
-    m_statusText = QStringLiteral("Not hosting. Choose Start hosting to share this computer.");
+    m_statusText = tr("Not hosting. Choose Start hosting to share this computer.");
     m_thread->start();
 }
 
@@ -108,7 +108,7 @@ HostViewModel::~HostViewModel()
 QString HostViewModel::stateName() const
 {
     if (m_startPending && m_stateCode == static_cast<int>(host::HostState::Stopped))
-        return QStringLiteral("Starting host mode");
+        return tr("Starting host mode");
     return m_stateName;
 }
 
@@ -133,11 +133,11 @@ bool HostViewModel::captureSupported() const
 QString HostViewModel::captureHint() const
 {
 #if defined(ULTRAVIEW_HAVE_WAYLAND_HOST)
-    return QStringLiteral("Screen capture uses the desktop portal (ScreenCast and RemoteDesktop) "
+    return tr("Screen capture uses the desktop portal (ScreenCast and RemoteDesktop) "
                           "over PipeWire. A Wayland session with xdg-desktop-portal and a portal "
                           "backend is required.");
 #else
-    return QStringLiteral("This build has no screen-sharing backend. Rebuild with QtDBus and "
+    return tr("This build has no screen-sharing backend. Rebuild with QtDBus and "
                           "libpipewire-0.3 to enable Wayland portal capture.");
 #endif
 }
@@ -179,7 +179,7 @@ bool HostViewModel::loadIdentity(QString *error)
     }
 
     m_profileError = loadError.isEmpty()
-        ? QStringLiteral("The host profile could not be loaded.")
+        ? tr("The host profile could not be loaded.")
         : loadError;
     if (!m_profileReady)
         m_identity = {};
@@ -196,12 +196,12 @@ void HostViewModel::startHosting()
 
     QString profileError;
     if (!loadIdentity(&profileError)) {
-        setError(QStringLiteral("Host mode cannot start without a host identity."),
+        setError(tr("Host mode cannot start without a host identity."),
                  profileError);
         return;
     }
     if (m_worker == nullptr || m_settings == nullptr) {
-        setError(QStringLiteral("Host mode is unavailable in this build."), {});
+        setError(tr("Host mode is unavailable in this build."), {});
         return;
     }
 
@@ -234,7 +234,7 @@ void HostViewModel::startHosting()
     m_publicAddress.clear();
     m_backendName.clear();
     m_layoutText.clear();
-    m_statusText = QStringLiteral("Requesting screen-sharing permission from the desktop…");
+    m_statusText = tr("Requesting screen-sharing permission from the desktop…");
     emit stateChanged();
     emit identityChanged();
     emit backendChanged();
@@ -256,7 +256,7 @@ void HostViewModel::stopHosting()
     if (m_worker == nullptr || (!isHosting() && !m_startPending))
         return;
     m_startPending = false;
-    m_statusText = QStringLiteral("Stopping host mode…");
+    m_statusText = tr("Stopping host mode…");
     emit statusChanged();
     QMetaObject::invokeMethod(m_worker, [worker = m_worker] { worker->stop(); },
                               Qt::QueuedConnection);
@@ -437,7 +437,7 @@ void HostViewModel::onWorkerStopped()
     m_publicAddress.clear();
     m_backendName.clear();
     m_layoutText.clear();
-    m_statusText = QStringLiteral("Not hosting. Choose Start hosting to share this computer.");
+    m_statusText = tr("Not hosting. Choose Start hosting to share this computer.");
     clearError();
     emit statusChanged();
     emit identityChanged();

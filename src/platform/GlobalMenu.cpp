@@ -43,23 +43,19 @@ bool canAnnounceMenuBar()
 
 QVector<MenuItemDescription> describeMenu(const MenuState &state)
 {
-    const auto translate = [](const char *text) {
-        return QCoreApplication::translate("GlobalMenu", text);
-    };
-
     QVector<MenuItemDescription> entries;
 
     // -------------------------------------------------------------- Session
-    entries.append({.id = QStringLiteral("session"), .text = translate("Session"), .isMenu = true});
+    entries.append({.id = QStringLiteral("session"), .text = QCoreApplication::translate("GlobalMenu", "Session"), .isMenu = true});
     entries.append({.id = QStringLiteral("session.connect"),
                     .parentId = QStringLiteral("session"),
-                    .text = translate("Connect"),
+                    .text = QCoreApplication::translate("GlobalMenu", "Connect"),
                     .iconName = QStringLiteral("network-connect"),
                     .action = MenuAction::Connect,
                     .enabled = state.canConnect});
     entries.append({.id = QStringLiteral("session.disconnect"),
                     .parentId = QStringLiteral("session"),
-                    .text = translate("Disconnect"),
+                    .text = QCoreApplication::translate("GlobalMenu", "Disconnect"),
                     .iconName = QStringLiteral("network-disconnect"),
                     .action = MenuAction::Disconnect,
                     .enabled = state.sessionActive});
@@ -71,7 +67,7 @@ QVector<MenuItemDescription> describeMenu(const MenuState &state)
     // accelerator returns as soon as input is disabled or the session ends.
     entries.append({.id = QStringLiteral("session.quit"),
                     .parentId = QStringLiteral("session"),
-                    .text = translate("Quit"),
+                    .text = QCoreApplication::translate("GlobalMenu", "Quit"),
                     .iconName = QStringLiteral("application-exit"),
                     .shortcut = (state.connected && state.inputEnabled)
                         ? QKeySequence{}
@@ -79,10 +75,10 @@ QVector<MenuItemDescription> describeMenu(const MenuState &state)
                     .action = MenuAction::Quit});
 
     // ----------------------------------------------------------------- View
-    entries.append({.id = QStringLiteral("view"), .text = translate("View"), .isMenu = true});
+    entries.append({.id = QStringLiteral("view"), .text = QCoreApplication::translate("GlobalMenu", "View"), .isMenu = true});
     entries.append({.id = QStringLiteral("view.input"),
                     .parentId = QStringLiteral("view"),
-                    .text = translate("Remote input"),
+                    .text = QCoreApplication::translate("GlobalMenu", "Remote input"),
                     .iconName = QStringLiteral("input-keyboard"),
                     .action = MenuAction::ToggleInput,
                     .checkable = true,
@@ -90,7 +86,7 @@ QVector<MenuItemDescription> describeMenu(const MenuState &state)
                     .enabled = state.connected});
     entries.append({.id = QStringLiteral("view.statistics"),
                     .parentId = QStringLiteral("view"),
-                    .text = translate("Statistics"),
+                    .text = QCoreApplication::translate("GlobalMenu", "Statistics"),
                     .iconName = QStringLiteral("view-statistics"),
                     .action = MenuAction::ToggleStatistics,
                     .checkable = true,
@@ -99,18 +95,18 @@ QVector<MenuItemDescription> describeMenu(const MenuState &state)
 
     // ------------------------------------------------------------- Settings
     entries.append(
-        {.id = QStringLiteral("settings"), .text = translate("Settings"), .isMenu = true});
+        {.id = QStringLiteral("settings"), .text = QCoreApplication::translate("GlobalMenu", "Settings"), .isMenu = true});
     entries.append({.id = QStringLiteral("settings.configure"),
                     .parentId = QStringLiteral("settings"),
-                    .text = translate("Configure Ultraview…"),
+                    .text = QCoreApplication::translate("GlobalMenu", "Configure Ultraview…"),
                     .iconName = QStringLiteral("configure"),
                     .action = MenuAction::Preferences});
 
     // ----------------------------------------------------------------- Help
-    entries.append({.id = QStringLiteral("help"), .text = translate("Help"), .isMenu = true});
+    entries.append({.id = QStringLiteral("help"), .text = QCoreApplication::translate("GlobalMenu", "Help"), .isMenu = true});
     entries.append({.id = QStringLiteral("help.about"),
                     .parentId = QStringLiteral("help"),
-                    .text = translate("About Ultraview…"),
+                    .text = QCoreApplication::translate("GlobalMenu", "About Ultraview…"),
                     .iconName = QStringLiteral("help-about"),
                     .action = MenuAction::About});
 

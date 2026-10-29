@@ -273,6 +273,64 @@
         </message>
     </context>
     <context>
+        <name>GlobalMenu</name>
+        <message>
+            <location filename="../src/platform/GlobalMenu.cpp" line="49" />
+            <source>Session</source>
+            <translation>Phiên</translation>
+        </message>
+        <message>
+            <location filename="../src/platform/GlobalMenu.cpp" line="52" />
+            <source>Connect</source>
+            <translation>Kết nối</translation>
+        </message>
+        <message>
+            <location filename="../src/platform/GlobalMenu.cpp" line="58" />
+            <source>Disconnect</source>
+            <translation>Ngắt kết nối</translation>
+        </message>
+        <message>
+            <location filename="../src/platform/GlobalMenu.cpp" line="70" />
+            <source>Quit</source>
+            <translation>Thoát</translation>
+        </message>
+        <message>
+            <location filename="../src/platform/GlobalMenu.cpp" line="78" />
+            <source>View</source>
+            <translation>Xem</translation>
+        </message>
+        <message>
+            <location filename="../src/platform/GlobalMenu.cpp" line="81" />
+            <source>Remote input</source>
+            <translation>Điều khiển từ xa</translation>
+        </message>
+        <message>
+            <location filename="../src/platform/GlobalMenu.cpp" line="89" />
+            <source>Statistics</source>
+            <translation>Thống kê</translation>
+        </message>
+        <message>
+            <location filename="../src/platform/GlobalMenu.cpp" line="98" />
+            <source>Settings</source>
+            <translation>Cài đặt</translation>
+        </message>
+        <message>
+            <location filename="../src/platform/GlobalMenu.cpp" line="101" />
+            <source>Configure Ultraview…</source>
+            <translation>Cấu hình Ultraview…</translation>
+        </message>
+        <message>
+            <location filename="../src/platform/GlobalMenu.cpp" line="106" />
+            <source>Help</source>
+            <translation>Trợ giúp</translation>
+        </message>
+        <message>
+            <location filename="../src/platform/GlobalMenu.cpp" line="109" />
+            <source>About Ultraview…</source>
+            <translation>Giới thiệu Ultraview…</translation>
+        </message>
+    </context>
+    <context>
         <name>HostApprovalDialog</name>
         <message>
             <location filename="../qml/dialogs/HostApprovalDialog.qml" line="21" />
@@ -1082,6 +1140,267 @@
             <location filename="../src/input/InputController.cpp" line="171" />
             <source>the key %1 has no Windows equivalent and was not sent</source>
             <translation>phím %1 không có phím tương ứng trên Windows nên không được gửi</translation>
+        </message>
+    </context>
+    <context>
+        <name>ultraview::models::ConnectionViewModel</name>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="223" />
+            <source>Ready</source>
+            <translation>Sẵn sàng</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="225" />
+            <source>Connecting to the registration service…</source>
+            <translation>Đang kết nối tới dịch vụ đăng ký…</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="227" />
+            <source>Registering this controller…</source>
+            <translation>Đang đăng ký máy điều khiển này…</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="229" />
+            <source>Requesting partner %1…</source>
+            <translation>Đang yêu cầu kết nối đối tác %1…</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="231" />
+            <source>Connecting to the partner relay…</source>
+            <translation>Đang kết nối tới máy chủ chuyển tiếp của đối tác…</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="233" />
+            <source>Signing in at the partner…</source>
+            <translation>Đang đăng nhập vào máy đối tác…</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="235" />
+            <source>Connected to %1 (%2)</source>
+            <translation>Đã kết nối với %1 (%2)</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="237" />
+            <source>Disconnecting…</source>
+            <translation>Đang ngắt kết nối…</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="239" />
+            <source>The session failed</source>
+            <translation>Phiên kết nối thất bại</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="248" />
+            <source>unknown size</source>
+            <translation>không rõ kích thước</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="256" />
+            <source>no route yet</source>
+            <translation>chưa có tuyến kết nối</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="263" />
+            <source>Select a registration profile (26 terms) in the settings first.</source>
+            <translation>Trước tiên hãy chọn hồ sơ đăng ký (26 trường) trong phần cài đặt.</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="265" />
+            <source>Enter the partner ID to control.</source>
+            <translation>Nhập ID của đối tác cần điều khiển.</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="267" />
+            <location filename="../src/models/ConnectionViewModel.cpp" line="531" />
+            <source>Enter the partner password.</source>
+            <translation>Nhập mật khẩu của đối tác.</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="269" />
+            <source>The configured screen dictionary could not be read.</source>
+            <translation>Không thể đọc từ điển màn hình đã cấu hình.</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="271" />
+            <source>Without the 8bit.dat screen dictionary, compressed screen updates cannot be decoded. Set it in the settings.</source>
+            <translation>Không thể giải mã cập nhật màn hình nén nếu thiếu từ điển 8bit.dat. Hãy chọn tệp này trong phần cài đặt.</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="347" />
+            <source>Could not create the partner template: %1</source>
+            <translation>Không thể tạo mẫu đối tác: %1</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="353" />
+            <source>Could not create the registration template: %1</source>
+            <translation>Không thể tạo mẫu đăng ký: %1</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="361" />
+            <source>Templates already present in %1</source>
+            <translation>Các tệp mẫu đã có trong %1</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="363" />
+            <source>Created %1 in %2. The registration template still needs the values of this controller's installation.</source>
+            <translation>Đã tạo %1 trong %2. Mẫu đăng ký vẫn cần thông tin từ bản cài đặt của máy điều khiển này.</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="374" />
+            <source>Cannot read %1: %2</source>
+            <translation>Không thể đọc %1: %2</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="377" />
+            <source>%1 is empty</source>
+            <translation>%1 trống</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="384" />
+            <source>The file is not a usable zstd dictionary: %1</source>
+            <translation>Tệp không phải từ điển zstd có thể sử dụng: %1</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="502" />
+            <source>No registration profile selected.</source>
+            <translation>Chưa chọn hồ sơ đăng ký.</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="533" />
+            <source>Enter the partner ID.</source>
+            <translation>Nhập ID của đối tác.</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="612" />
+            <source>No screen dictionary configured: compressed screen updates will be refused. Set 8bit.dat in the settings.</source>
+            <translation>Chưa cấu hình từ điển màn hình: các cập nhật màn hình nén sẽ bị từ chối. Hãy chọn 8bit.dat trong phần cài đặt.</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="776" />
+            <source>The chat is only available while connected.</source>
+            <translation>Chỉ có thể trò chuyện khi đã kết nối.</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="782" />
+            <source>The message cannot be sent: it is too long or contains the protocol delimiter.</source>
+            <translation>Không thể gửi tin nhắn: nội dung quá dài hoặc chứa dấu phân cách của giao thức.</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="838" />
+            <source>The file does not exist.</source>
+            <translation>Tệp không tồn tại.</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="839" />
+            <source>The selected file does not exist.</source>
+            <translation>Tệp đã chọn không tồn tại.</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="845" />
+            <source>The session is not connected.</source>
+            <translation>Phiên chưa được kết nối.</translation>
+        </message>
+        <message>
+            <location filename="../src/models/ConnectionViewModel.cpp" line="846" />
+            <source>A file can only be sent while connected.</source>
+            <translation>Chỉ có thể gửi tệp khi đã kết nối.</translation>
+        </message>
+    </context>
+    <context>
+        <name>ultraview::models::HostViewModel</name>
+        <message>
+            <location filename="../src/models/HostViewModel.cpp" line="80" />
+            <location filename="../src/models/HostViewModel.cpp" line="440" />
+            <source>Not hosting. Choose Start hosting to share this computer.</source>
+            <translation>Chưa chia sẻ. Chọn Bắt đầu chia sẻ để chia sẻ máy tính này.</translation>
+        </message>
+        <message>
+            <location filename="../src/models/HostViewModel.cpp" line="111" />
+            <source>Starting host mode</source>
+            <translation>Đang khởi động chế độ chia sẻ</translation>
+        </message>
+        <message>
+            <location filename="../src/models/HostViewModel.cpp" line="136" />
+            <source>Screen capture uses the desktop portal (ScreenCast and RemoteDesktop) over PipeWire. A Wayland session with xdg-desktop-portal and a portal backend is required.</source>
+            <translation>Việc ghi màn hình sử dụng desktop portal (ScreenCast và RemoteDesktop) qua PipeWire. Cần phiên Wayland có xdg-desktop-portal và backend portal.</translation>
+        </message>
+        <message>
+            <location filename="../src/models/HostViewModel.cpp" line="140" />
+            <source>This build has no screen-sharing backend. Rebuild with QtDBus and libpipewire-0.3 to enable Wayland portal capture.</source>
+            <translation>Bản dựng này không có backend chia sẻ màn hình. Hãy dựng lại với QtDBus và libpipewire-0.3 để bật ghi màn hình qua Wayland portal.</translation>
+        </message>
+        <message>
+            <location filename="../src/models/HostViewModel.cpp" line="182" />
+            <source>The host profile could not be loaded.</source>
+            <translation>Không thể tải hồ sơ máy chia sẻ.</translation>
+        </message>
+        <message>
+            <location filename="../src/models/HostViewModel.cpp" line="199" />
+            <source>Host mode cannot start without a host identity.</source>
+            <translation>Không thể bắt đầu chia sẻ nếu không có danh tính máy chia sẻ.</translation>
+        </message>
+        <message>
+            <location filename="../src/models/HostViewModel.cpp" line="204" />
+            <source>Host mode is unavailable in this build.</source>
+            <translation>Bản dựng này không hỗ trợ chế độ chia sẻ.</translation>
+        </message>
+        <message>
+            <location filename="../src/models/HostViewModel.cpp" line="237" />
+            <source>Requesting screen-sharing permission from the desktop…</source>
+            <translation>Đang yêu cầu quyền chia sẻ màn hình từ hệ thống…</translation>
+        </message>
+        <message>
+            <location filename="../src/models/HostViewModel.cpp" line="259" />
+            <source>Stopping host mode…</source>
+            <translation>Đang dừng chế độ chia sẻ…</translation>
+        </message>
+    </context>
+    <context>
+        <name>ultraview::models::SettingsModel</name>
+        <message>
+            <location filename="../src/models/SettingsModel.cpp" line="213" />
+            <source>Verified (chain and host name)</source>
+            <translation>Đã xác minh (chuỗi chứng chỉ và tên máy chủ)</translation>
+        </message>
+        <message>
+            <location filename="../src/models/SettingsModel.cpp" line="215" />
+            <source>Verified chain, host name not checked</source>
+            <translation>Đã xác minh chuỗi chứng chỉ, chưa kiểm tra tên máy chủ</translation>
+        </message>
+        <message>
+            <location filename="../src/models/SettingsModel.cpp" line="217" />
+            <source>Any certificate accepted (insecure)</source>
+            <translation>Chấp nhận mọi chứng chỉ (không an toàn)</translation>
+        </message>
+        <message>
+            <location filename="../src/models/SettingsModel.cpp" line="219" />
+            <source>unknown</source>
+            <translation>không rõ</translation>
+        </message>
+        <message>
+            <location filename="../src/models/SettingsModel.cpp" line="424" />
+            <source>no screen dictionary is configured</source>
+            <translation>chưa cấu hình từ điển màn hình</translation>
+        </message>
+        <message>
+            <location filename="../src/models/SettingsModel.cpp" line="427" />
+            <source>cannot read the screen dictionary: %1</source>
+            <translation>không thể đọc từ điển màn hình: %1</translation>
+        </message>
+        <message>
+            <location filename="../src/models/SettingsModel.cpp" line="430" />
+            <source>the screen dictionary file is empty</source>
+            <translation>tệp từ điển màn hình trống</translation>
+        </message>
+        <message>
+            <location filename="../src/models/SettingsModel.cpp" line="439" />
+            <source>no dictionary configured</source>
+            <translation>chưa cấu hình từ điển</translation>
+        </message>
+        <message>
+            <location filename="../src/models/SettingsModel.cpp" line="442" />
+            <source>the configured dictionary file is not readable</source>
+            <translation>không thể đọc tệp từ điển đã cấu hình</translation>
         </message>
     </context>
 </TS>

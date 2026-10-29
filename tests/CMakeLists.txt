@@ -23,6 +23,7 @@ set(UV_TEST_SOURCES
     tst_cursor
     tst_transfer
     tst_g722
+    tst_translation
 )
 
 foreach(test IN LISTS UV_TEST_SOURCES)
@@ -40,6 +41,9 @@ foreach(test IN LISTS UV_TEST_SOURCES)
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
         TIMEOUT 180)
 endforeach()
+
+target_compile_definitions(tst_translation PRIVATE
+    UV_TRANSLATION_FILE="${CMAKE_SOURCE_DIR}/translations/ultraview_vi.qm")
 
 # tst_globalmenu inspects the exported com.canonical.dbusmenu object over the
 # session bus, which needs QtDBus; without it the test only checks the layout and

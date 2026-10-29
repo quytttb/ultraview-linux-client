@@ -210,13 +210,13 @@ QString SettingsModel::tlsModeName() const
 {
     switch (m_tlsMode) {
     case security::TlsPolicy::Mode::VerifyPeer:
-        return QStringLiteral("Verified (chain and host name)");
+        return tr("Verified (chain and host name)");
     case security::TlsPolicy::Mode::VerifyPeerAllowHostMismatch:
-        return QStringLiteral("Verified chain, host name not checked");
+        return tr("Verified chain, host name not checked");
     case security::TlsPolicy::Mode::AcceptAnyCertificate:
-        return QStringLiteral("Any certificate accepted (insecure)");
+        return tr("Any certificate accepted (insecure)");
     }
-    return QStringLiteral("unknown");
+    return tr("unknown");
 }
 
 void SettingsModel::setRememberPassword(bool remember)
@@ -421,13 +421,13 @@ QByteArray SettingsModel::loadDictionary(QString *error) const
         return QByteArray();
     };
     if (m_dictionaryPath.isEmpty())
-        return fail(QStringLiteral("no screen dictionary is configured"));
+        return fail(tr("no screen dictionary is configured"));
     QFile file(m_dictionaryPath);
     if (!file.open(QIODevice::ReadOnly))
-        return fail(QStringLiteral("cannot read the screen dictionary: %1").arg(file.errorString()));
+        return fail(tr("cannot read the screen dictionary: %1").arg(file.errorString()));
     const QByteArray data = file.readAll();
     if (data.isEmpty())
-        return fail(QStringLiteral("the screen dictionary file is empty"));
+        return fail(tr("the screen dictionary file is empty"));
     if (error != nullptr)
         error->clear();
     return data;
@@ -436,10 +436,10 @@ QByteArray SettingsModel::loadDictionary(QString *error) const
 QString SettingsModel::dictionaryStatus() const
 {
     if (m_dictionaryPath.isEmpty())
-        return QStringLiteral("no dictionary configured");
+        return tr("no dictionary configured");
     const QFileInfo info(m_dictionaryPath);
     if (!info.isReadable())
-        return QStringLiteral("the configured dictionary file is not readable");
+        return tr("the configured dictionary file is not readable");
     return QStringLiteral("%1 (%2 bytes)").arg(info.fileName()).arg(info.size());
 }
 

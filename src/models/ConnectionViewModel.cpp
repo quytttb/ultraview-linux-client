@@ -220,23 +220,23 @@ QString ConnectionViewModel::statusText() const
         return m_errorText;
     switch (m_session->state()) {
     case SessionState::Disconnected:
-        return QStringLiteral("Ready");
+        return tr("Ready");
     case SessionState::Connecting:
-        return QStringLiteral("Connecting to the registration service…");
+        return tr("Connecting to the registration service…");
     case SessionState::Registering:
-        return QStringLiteral("Registering this controller…");
+        return tr("Registering this controller…");
     case SessionState::RequestingPartner:
-        return QStringLiteral("Requesting partner %1…").arg(m_partnerId);
+        return tr("Requesting partner %1…").arg(m_partnerId);
     case SessionState::RelayConnecting:
-        return QStringLiteral("Connecting to the partner relay…");
+        return tr("Connecting to the partner relay…");
     case SessionState::Authenticating:
-        return QStringLiteral("Signing in at the partner…");
+        return tr("Signing in at the partner…");
     case SessionState::Connected:
-        return QStringLiteral("Connected to %1 (%2)").arg(m_partnerId, desktopSizeText());
+        return tr("Connected to %1 (%2)").arg(m_partnerId, desktopSizeText());
     case SessionState::Disconnecting:
-        return QStringLiteral("Disconnecting…");
+        return tr("Disconnecting…");
     case SessionState::Failed:
-        return QStringLiteral("The session failed");
+        return tr("The session failed");
     }
     return QString();
 }
@@ -245,7 +245,7 @@ QString ConnectionViewModel::desktopSizeText() const
 {
     const QSize size = m_statistics.desktopSize;
     if (!size.isValid() || size.isEmpty())
-        return QStringLiteral("unknown size");
+        return tr("unknown size");
     return QStringLiteral("%1 × %2").arg(size.width()).arg(size.height());
 }
 
@@ -253,22 +253,22 @@ QString ConnectionViewModel::routeText() const
 {
     const protocol::TargetRoute route = m_session->route();
     if (route.tcpServerIp.isEmpty())
-        return QStringLiteral("no route yet");
+        return tr("no route yet");
     return QStringLiteral("%1:%2 via %3").arg(route.publicIp).arg(route.tcpPort).arg(route.tcpServerIp);
 }
 
 QString ConnectionViewModel::configurationHint() const
 {
     if (m_settings->registrationProfilePath().isEmpty())
-        return QStringLiteral("Select a registration profile (26 terms) in the settings first.");
+        return tr("Select a registration profile (26 terms) in the settings first.");
     if (m_partnerId.isEmpty())
-        return QStringLiteral("Enter the partner ID to control.");
+        return tr("Enter the partner ID to control.");
     if (m_password.isEmpty())
-        return QStringLiteral("Enter the partner password.");
+        return tr("Enter the partner password.");
     if (!m_dictionaryLoaded && !m_settings->dictionaryPath().isEmpty())
-        return QStringLiteral("The configured screen dictionary could not be read.");
+        return tr("The configured screen dictionary could not be read.");
     if (!m_dictionaryLoaded)
-        return QStringLiteral("Without the 8bit.dat screen dictionary, compressed screen updates "
+        return tr("Without the 8bit.dat screen dictionary, compressed screen updates "
                               "cannot be decoded. Set it in the settings.");
     return QString();
 }
@@ -344,13 +344,13 @@ QString ConnectionViewModel::ensureProfileTemplates()
     QStringList created;
     if (!QFileInfo::exists(partnerPath)) {
         if (!ProfileLoader::writePartnerTemplate(partnerPath, m_partnerId, false, &error))
-            return QStringLiteral("Could not create the partner template: %1").arg(error);
+            return tr("Could not create the partner template: %1").arg(error);
         created.append(QStringLiteral("partner-template.json"));
     }
     if (!QFileInfo::exists(registrationPath)) {
         if (!ProfileLoader::writeRegistrationTemplate(registrationPath, QStringLiteral("cp1252"), false,
                                                       &error)) {
-            return QStringLiteral("Could not create the registration template: %1").arg(error);
+            return tr("Could not create the registration template: %1").arg(error);
         }
         created.append(QStringLiteral("registration-template.json"));
     }
@@ -358,9 +358,9 @@ QString ConnectionViewModel::ensureProfileTemplates()
     m_settings->setRegistrationProfilePath(registrationPath);
     m_settings->save();
     if (created.isEmpty()) {
-        return QStringLiteral("Templates already present in %1").arg(directory);
+        return tr("Templates already present in %1").arg(directory);
     }
-    m_noticeText = QStringLiteral("Created %1 in %2. The registration template still needs the "
+    m_noticeText = tr("Created %1 in %2. The registration template still needs the "
                                   "values of this controller's installation.")
                        .arg(created.join(QStringLiteral(", ")), directory);
     emit noticeTextChanged();
@@ -371,17 +371,17 @@ QString ConnectionViewModel::loadDictionary(const QString &path)
 {
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly))
-        return QStringLiteral("Cannot read %1: %2").arg(path, file.errorString());
+        return tr("Cannot read %1: %2").arg(path, file.errorString());
     const QByteArray data = file.readAll();
     if (data.isEmpty())
-        return QStringLiteral("%1 is empty").arg(path);
+        return tr("%1 is empty").arg(path);
     try {
         // Validate with a throw-away decoder so a corrupt file is rejected here
         // instead of during the first compressed screen update.
         decoder::ZstdDecoder probe;
         probe.setDictionary(data);
     } catch (const UvException &exception) {
-        return QStringLiteral("The file is not a usable zstd dictionary: %1").arg(exception.message());
+        return tr("The file is not a usable zstd dictionary: %1").arg(exception.message());
     }
     m_settings->setDictionaryPath(path);
     m_settings->save();
@@ -499,7 +499,7 @@ bool ConnectionViewModel::buildSessionRequest(network::SessionRequest *request, 
     network::SessionRequest result;
     try {
         if (m_settings->registrationProfilePath().isEmpty())
-            return fail(QStringLiteral("No registration profile selected."));
+            return fail(tr("No registration profile selected."));
         const RegistrationProfile registration =
             ProfileLoader::loadRegistrationProfile(m_settings->registrationProfilePath());
         result.registrationTerms = registration.terms;
@@ -528,9 +528,9 @@ bool ConnectionViewModel::buildSessionRequest(network::SessionRequest *request, 
     if (result.password.isEmpty())
         result.password = m_password;
     if (result.password.isEmpty())
-        return fail(QStringLiteral("Enter the partner password."));
+        return fail(tr("Enter the partner password."));
     if (result.requestTerms.value(1).isEmpty() && result.partnerId.isEmpty())
-        return fail(QStringLiteral("Enter the partner ID."));
+        return fail(tr("Enter the partner ID."));
 
     result.viewportHint = QSize(m_settings->viewportWidth(), m_settings->viewportHeight());
     result.tlsPolicy = m_settings->tlsPolicy();
@@ -609,7 +609,7 @@ void ConnectionViewModel::connectNow()
 
     const bool hasDictionary = !request.screenDictionary.isEmpty();
     if (!hasDictionary) {
-        m_noticeText = QStringLiteral("No screen dictionary configured: compressed screen updates "
+        m_noticeText = tr("No screen dictionary configured: compressed screen updates "
                                       "will be refused. Set 8bit.dat in the settings.");
         appendLog(QStringLiteral("warning"), m_noticeText);
         emit noticeTextChanged();
@@ -773,13 +773,13 @@ bool ConnectionViewModel::sendChatMessage(const QString &text)
     if (trimmed.isEmpty())
         return false;
     if (!m_session->isConnected()) {
-        m_noticeText = QStringLiteral("The chat is only available while connected.");
+        m_noticeText = tr("The chat is only available while connected.");
         emit noticeTextChanged();
         return false;
     }
     if (trimmed.contains(QLatin1String("|||"))
         || trimmed.size() > protocol::ControlCommands::kMaxChatCodeUnits) {
-        m_noticeText = QStringLiteral("The message cannot be sent: it is too long or contains "
+        m_noticeText = tr("The message cannot be sent: it is too long or contains "
                                       "the protocol delimiter.");
         appendLog(QStringLiteral("warning"), m_noticeText);
         emit noticeTextChanged();
@@ -835,15 +835,15 @@ bool ConnectionViewModel::offerFile(const QString &url, QString *error)
     const QFileInfo info(path);
     if (path.isEmpty() || !info.exists() || !info.isFile()) {
         if (error != nullptr)
-            *error = QStringLiteral("The file does not exist.");
-        m_noticeText = QStringLiteral("The selected file does not exist.");
+            *error = tr("The file does not exist.");
+        m_noticeText = tr("The selected file does not exist.");
         emit noticeTextChanged();
         return false;
     }
     if (!m_session->isConnected()) {
         if (error != nullptr)
-            *error = QStringLiteral("The session is not connected.");
-        m_noticeText = QStringLiteral("A file can only be sent while connected.");
+            *error = tr("The session is not connected.");
+        m_noticeText = tr("A file can only be sent while connected.");
         emit noticeTextChanged();
         return false;
     }
