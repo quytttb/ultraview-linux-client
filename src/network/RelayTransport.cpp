@@ -1,5 +1,7 @@
 #include "network/RelayTransport.h"
 
+#include <QCoreApplication>
+
 namespace ultraview::network {
 
 RelayTransport::RelayTransport(QObject *parent)
@@ -42,7 +44,7 @@ void RelayTransport::onReady()
     const QByteArray statusLine = header.left(header.indexOf("\r\n"));
     if (!m_endpoint.httpHostHeader.isEmpty() && !statusLine.startsWith("HTTP/1.1 200 ")) {
         const ErrorInfo info{ErrorCode::Protocol,
-                             QStringLiteral("session tunnel did not return HTTP 200"),
+                             QCoreApplication::translate("RelayTransport", "session tunnel did not return HTTP 200"),
                              QString::fromLatin1(statusLine).left(64)};
         m_errorReported = true;
         emit failed(info);
@@ -84,8 +86,8 @@ void RelayTransport::onData()
                 // here; a direct (P2P) body is never expected on this channel.
                 m_errorReported = true;
                 const ErrorInfo info{ErrorCode::UnsupportedOperation,
-                                     QStringLiteral("unexpected session transport packet"),
-                                     QStringLiteral("direct/P2P body on a relay channel")};
+                                     QCoreApplication::translate("RelayTransport", "unexpected session transport packet"),
+                                     QCoreApplication::translate("RelayTransport", "direct/P2P body on a relay channel")};
                 emit failed(info);
                 m_channel.abort();
                 return;
@@ -96,8 +98,8 @@ void RelayTransport::onData()
         if (body.kind != protocol::TransportBody::Kind::Relay) {
             m_errorReported = true;
             const ErrorInfo info{ErrorCode::UnsupportedOperation,
-                                 QStringLiteral("unexpected session transport packet"),
-                                 QStringLiteral("unknown transport kind")};
+                                 QCoreApplication::translate("RelayTransport", "unexpected session transport packet"),
+                                 QCoreApplication::translate("RelayTransport", "unknown transport kind")};
             emit failed(info);
             m_channel.abort();
             return;
@@ -169,7 +171,7 @@ void RelayTransport::sendRelayKeepalive()
 bool RelayTransport::writeFramed(const QByteArray &framed)
 {
     if (framed.size() - 4 > static_cast<qint64>(m_maxFrameBytes)) {
-        const ErrorInfo info{ErrorCode::Resource, QStringLiteral("outbound frame exceeds limit"),
+        const ErrorInfo info{ErrorCode::Resource, QCoreApplication::translate("RelayTransport", "outbound frame exceeds limit"),
                              QStringLiteral("%1 > %2 bytes")
                                  .arg(framed.size() - 4)
                                  .arg(m_maxFrameBytes)};

@@ -1,5 +1,6 @@
 #include "host/HostProtocol.h"
 
+#include <QCoreApplication>
 #include "core/ErrorTypes.h"
 #include "host/HostProfile.h"
 #include "protocol/Digest.h"
@@ -173,7 +174,7 @@ QByteArray compressZstd(const QByteArray &input)
 {
     const qint64 maxOutput = static_cast<qint64>(kMaxPayload) - (44 + 1 + 8 + 4);
     if (input.isEmpty() || input.size() > kMaxPayload)
-        throwError(ErrorCode::Resource, QStringLiteral("screen frame exceeds the encoder limit"));
+        throwError(ErrorCode::Resource, QCoreApplication::translate("HostProtocol", "screen frame exceeds the encoder limit"));
     const size_t bound = ZSTD_compressBound(static_cast<size_t>(input.size()));
     const size_t capacity = static_cast<size_t>(qMin<qint64>(
         static_cast<qint64>(bound), maxOutput));
@@ -181,16 +182,16 @@ QByteArray compressZstd(const QByteArray &input)
     output.resize(static_cast<int>(capacity));
     ZSTD_CCtx *context = ZSTD_createCCtx();
     if (context == nullptr)
-        throwError(ErrorCode::Resource, QStringLiteral("cannot create a Zstandard compression context"));
+        throwError(ErrorCode::Resource, QCoreApplication::translate("HostProtocol", "cannot create a Zstandard compression context"));
     const size_t produced = ZSTD_compressCCtx(context, output.data(), capacity,
                                              input.constData(), static_cast<size_t>(input.size()), 1);
     ZSTD_freeCCtx(context);
     if (ZSTD_isError(produced)) {
-        throwError(ErrorCode::Resource, QStringLiteral("Zstandard compression failed"),
+        throwError(ErrorCode::Resource, QCoreApplication::translate("HostProtocol", "Zstandard compression failed"),
                    QString::fromUtf8(ZSTD_getErrorName(produced)));
     }
     if (static_cast<qint64>(produced) > maxOutput)
-        throwError(ErrorCode::Resource, QStringLiteral("compressed screen frame is too large"));
+        throwError(ErrorCode::Resource, QCoreApplication::translate("HostProtocol", "compressed screen frame is too large"));
     output.resize(static_cast<int>(produced));
     return output;
 }
@@ -214,14 +215,14 @@ QByteArray buildRegistrationCommand(const HostIdentity &identity)
 {
     const QStringList terms = identity.registrationTerms();
     if (terms.size() != 28)
-        throwError(ErrorCode::Configuration, QStringLiteral("host registration needs 28 fields"));
+        throwError(ErrorCode::Configuration, QCoreApplication::translate("HostProtocol", "host registration needs 28 fields"));
     for (int index = 0; index < terms.size(); ++index) {
         const QString &term = terms.at(index);
         for (const QChar unit : term) {
             const ushort code = unit.unicode();
             if (code < 32 || code > 126 || code == ':')
                 throwError(ErrorCode::Configuration,
-                           QStringLiteral("host registration field %1 is not printable ASCII")
+                           QCoreApplication::translate("HostProtocol", "host registration field %1 is not printable ASCII")
                                .arg(index));
         }
     }
@@ -231,32 +232,32 @@ QByteArray buildRegistrationCommand(const HostIdentity &identity)
 RegistrationReply parseRegistrationReply(const QByteArray &payload)
 {
     if (payload.isEmpty() || payload.size() > 65536)
-        throwProtocol(QStringLiteral("host registration reply has an invalid size"));
+        throwProtocol(QCoreApplication::translate("HostProtocol", "host registration reply has an invalid size"));
     if (!isAsciiPrintable(payload))
-        throwProtocol(QStringLiteral("host registration reply is not printable ASCII"));
+        throwProtocol(QCoreApplication::translate("HostProtocol", "host registration reply is not printable ASCII"));
     const QStringList fields = splitFields(payload);
     if (fields.size() < 11 || fields.size() > 128)
-        throwProtocol(QStringLiteral("host registration reply has the wrong field count"));
+        throwProtocol(QCoreApplication::translate("HostProtocol", "host registration reply has the wrong field count"));
     if (fields.at(0) != QLatin1String("3"))
-        throwProtocol(QStringLiteral("not a command 3 reply"));
+        throwProtocol(QCoreApplication::translate("HostProtocol", "not a command 3 reply"));
 
     if (!isAsciiDigits(fields.at(1)))
-        throwProtocol(QStringLiteral("host registration reply has no public port"));
+        throwProtocol(QCoreApplication::translate("HostProtocol", "host registration reply has no public port"));
     const auto port = strictUnsigned(fields.at(1), 65535);
     if (!port.has_value() || *port == 0)
-        throwProtocol(QStringLiteral("host registration reply has an invalid public port"));
+        throwProtocol(QCoreApplication::translate("HostProtocol", "host registration reply has an invalid public port"));
     if (!isAsciiDigits(fields.at(2)))
-        throwProtocol(QStringLiteral("host registration reply has no assigned ID"));
+        throwProtocol(QCoreApplication::translate("HostProtocol", "host registration reply has no assigned ID"));
     const auto id = strictUnsigned(fields.at(2), std::numeric_limits<quint64>::max());
     if (!id.has_value() || *id == 0)
-        throwProtocol(QStringLiteral("host registration reply has an invalid assigned ID"));
+        throwProtocol(QCoreApplication::translate("HostProtocol", "host registration reply has an invalid assigned ID"));
     quint32 address = 0;
     if (!protocol::parseCanonicalIpv4(fields.at(3), &address))
-        throwProtocol(QStringLiteral("host registration reply has an invalid public address"));
+        throwProtocol(QCoreApplication::translate("HostProtocol", "host registration reply has an invalid public address"));
     const auto status = strictInteger(fields.at(7), std::numeric_limits<qint32>::min(),
                                       std::numeric_limits<qint32>::max());
     if (!status.has_value())
-        throwProtocol(QStringLiteral("host registration reply has an invalid status"));
+        throwProtocol(QCoreApplication::translate("HostProtocol", "host registration reply has an invalid status"));
 
     RegistrationReply reply;
     reply.publicPort = static_cast<quint16>(*port);
@@ -366,36 +367,36 @@ std::optional<LoginRequest> parseLogin(const QByteArray &payload, QString *error
         return std::nullopt;
     };
     if (payload.size() > 16384)
-        return fail(QStringLiteral("viewer login is too large"));
+        return fail(QCoreApplication::translate("HostProtocol", "viewer login is too large"));
     if (payload.isEmpty() || !isAsciiPrintable(payload))
-        return fail(QStringLiteral("viewer login is not printable ASCII"));
+        return fail(QCoreApplication::translate("HostProtocol", "viewer login is not printable ASCII"));
     int colons = 0;
     for (const char unit : payload) {
         if (unit == ':')
             ++colons;
     }
     if (colons != 22)
-        return fail(QStringLiteral("viewer login has the wrong field count"));
+        return fail(QCoreApplication::translate("HostProtocol", "viewer login has the wrong field count"));
     const QStringList fields = splitFields(payload);
     for (const QString &field : fields) {
         if (field.size() > 4096)
-            return fail(QStringLiteral("viewer login contains an oversized field"));
+            return fail(QCoreApplication::translate("HostProtocol", "viewer login contains an oversized field"));
     }
     if (fields.value(0) != QLatin1String("login"))
-        return fail(QStringLiteral("not a viewer login"));
+        return fail(QCoreApplication::translate("HostProtocol", "not a viewer login"));
     if (!isAsciiDigits(fields.value(1)) || fields.value(1).size() != 8)
-        return fail(QStringLiteral("viewer login has an invalid nonce"));
+        return fail(QCoreApplication::translate("HostProtocol", "viewer login has an invalid nonce"));
     if (!isLowerHex(fields.value(2), 32))
-        return fail(QStringLiteral("viewer login has an invalid password proof"));
+        return fail(QCoreApplication::translate("HostProtocol", "viewer login has an invalid password proof"));
     if (!isAsciiDigits(fields.value(10)))
-        return fail(QStringLiteral("viewer login has an invalid claimed ID"));
+        return fail(QCoreApplication::translate("HostProtocol", "viewer login has an invalid claimed ID"));
     const auto id = strictUnsigned(fields.value(10), std::numeric_limits<quint64>::max());
     if (!id.has_value() || *id == 0)
-        return fail(QStringLiteral("viewer login has an invalid claimed ID"));
+        return fail(QCoreApplication::translate("HostProtocol", "viewer login has an invalid claimed ID"));
     const auto width = strictInteger(fields.value(3), 1, std::numeric_limits<qint32>::max());
     const auto height = strictInteger(fields.value(4), 1, std::numeric_limits<qint32>::max());
     if (!width.has_value() || !height.has_value())
-        return fail(QStringLiteral("viewer login has an invalid screen size"));
+        return fail(QCoreApplication::translate("HostProtocol", "viewer login has an invalid screen size"));
     const auto control = strictInteger(fields.value(12), std::numeric_limits<qint16>::min(),
                                        std::numeric_limits<qint16>::max());
     const auto colors = strictInteger(fields.value(16), std::numeric_limits<qint32>::min(),
@@ -403,7 +404,7 @@ std::optional<LoginRequest> parseLogin(const QByteArray &payload, QString *error
     const auto quality = strictInteger(fields.value(17), std::numeric_limits<qint32>::min(),
                                        std::numeric_limits<qint32>::max());
     if (!control.has_value() || !colors.has_value() || !quality.has_value())
-        return fail(QStringLiteral("viewer login has an invalid numeric field"));
+        return fail(QCoreApplication::translate("HostProtocol", "viewer login has an invalid numeric field"));
 
     LoginRequest login;
     login.fields = fields;
@@ -546,20 +547,20 @@ QByteArray initialization(int width, int height, const QString &version,
                           const QVector<HostMonitor> &monitors)
 {
     if (width <= 0 || height <= 0 || width > kMaxDimension || height > kMaxDimension)
-        throwError(ErrorCode::Configuration, QStringLiteral("invalid host screen geometry"));
+        throwError(ErrorCode::Configuration, QCoreApplication::translate("HostProtocol", "invalid host screen geometry"));
     const QStringList components = version.split(QLatin1Char('.'));
     if (components.size() != 3)
-        throwError(ErrorCode::Configuration, QStringLiteral("host version needs three components"));
+        throwError(ErrorCode::Configuration, QCoreApplication::translate("HostProtocol", "host version needs three components"));
     for (const QString &component : components) {
         if (!isAsciiDigits(component)
             || strictInteger(component, 0, std::numeric_limits<qint64>::max()).value_or(-1) < 0) {
-            throwError(ErrorCode::Configuration, QStringLiteral("invalid host version"));
+            throwError(ErrorCode::Configuration, QCoreApplication::translate("HostProtocol", "invalid host version"));
         }
     }
     if (strictInteger(components.at(0), 0, std::numeric_limits<qint64>::max()).value_or(0) < 6)
-        throwError(ErrorCode::Configuration, QStringLiteral("host version must be at least 6.0.0"));
+        throwError(ErrorCode::Configuration, QCoreApplication::translate("HostProtocol", "host version must be at least 6.0.0"));
     if (monitors.size() > 64)
-        throwError(ErrorCode::Resource, QStringLiteral("too many monitor rectangles"));
+        throwError(ErrorCode::Resource, QCoreApplication::translate("HostProtocol", "too many monitor rectangles"));
 
     QString monitorText;
     if (monitors.isEmpty()) {
@@ -570,7 +571,7 @@ QByteArray initialization(int width, int height, const QString &version,
                 || monitor.bottom <= monitor.top || monitor.right > width
                 || monitor.bottom > height) {
                 throwError(ErrorCode::Configuration,
-                           QStringLiteral("monitor rectangle lies outside the host canvas"));
+                           QCoreApplication::translate("HostProtocol", "monitor rectangle lies outside the host canvas"));
             }
             monitorText += QStringLiteral("%1:%2:%3:%4|")
                                .arg(monitor.left)
@@ -598,7 +599,7 @@ QByteArray initialization(int width, int height, const QString &version,
 QByteArray fullFrame(const HostFrame &frame, qint32 sequence)
 {
     if (!frame.isValid())
-        throwError(ErrorCode::Configuration, QStringLiteral("invalid host frame"));
+        throwError(ErrorCode::Configuration, QCoreApplication::translate("HostProtocol", "invalid host frame"));
     const qsizetype rowBytes = static_cast<qsizetype>(frame.width) * 2;
     QByteArray topDown;
     topDown.reserve(frame.rgb555BottomUp.size());
@@ -646,7 +647,7 @@ QByteArray singleCommand(quint8 command)
 QByteArray rgb555FromBgrx(const uchar *source, int width, int height, int stride, bool rgbOrder)
 {
     if (source == nullptr || width <= 0 || height <= 0 || stride < width * 4)
-        throwError(ErrorCode::Configuration, QStringLiteral("invalid captured image geometry"));
+        throwError(ErrorCode::Configuration, QCoreApplication::translate("HostProtocol", "invalid captured image geometry"));
     QByteArray output;
     output.resize(static_cast<qsizetype>(width) * height * 2);
     char *target = output.data();
@@ -672,7 +673,7 @@ QByteArray scaleRgb555(const QByteArray &source, int sourceWidth, int sourceHeig
 {
     if (sourceWidth <= 0 || sourceHeight <= 0 || width <= 0 || height <= 0
         || source.size() != static_cast<qsizetype>(sourceWidth) * sourceHeight * 2) {
-        throwError(ErrorCode::Configuration, QStringLiteral("invalid RGB555 scaling geometry"));
+        throwError(ErrorCode::Configuration, QCoreApplication::translate("HostProtocol", "invalid RGB555 scaling geometry"));
     }
     if (sourceWidth == width && sourceHeight == height)
         return source;

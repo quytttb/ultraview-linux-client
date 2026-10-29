@@ -1,5 +1,6 @@
 #include "protocol/AuthenticationCodec.h"
 
+#include <QCoreApplication>
 #include "core/ErrorTypes.h"
 #include "protocol/Digest.h"
 #include "protocol/RegistrationCodec.h"
@@ -29,10 +30,10 @@ QString AuthenticationCodec::loginNumericSaltDigest(const QString &password, con
                                                     const AnsiCodec &codec)
 {
     if (salt.size() != 8)
-        throwError(ErrorCode::Configuration, QStringLiteral("login salt must contain eight digits"));
+        throwError(ErrorCode::Configuration, QCoreApplication::translate("AuthenticationCodec", "login salt must contain eight digits"));
     for (const QChar unit : salt) {
         if (unit < QLatin1Char('0') || unit > QLatin1Char('9'))
-            throwError(ErrorCode::Configuration, QStringLiteral("login salt must contain eight ASCII digits"));
+            throwError(ErrorCode::Configuration, QCoreApplication::translate("AuthenticationCodec", "login salt must contain eight ASCII digits"));
     }
     return md5HexLower(codec.encode(salt + password));
 }
@@ -43,7 +44,7 @@ LoginPasswordFields AuthenticationCodec::loginPasswordFields(const QString &pass
 {
     if (passwordType == 0) {
         if (!salt.has_value())
-            throwError(ErrorCode::Configuration, QStringLiteral("type 0 login requires an explicit eight-digit salt"));
+            throwError(ErrorCode::Configuration, QCoreApplication::translate("AuthenticationCodec", "type 0 login requires an explicit eight-digit salt"));
         LoginPasswordFields fields;
         fields.salt = *salt;
         fields.primary = loginNumericSaltDigest(password, *salt, codec);
@@ -65,8 +66,8 @@ QStringList AuthenticationCodec::fillLoginFields(const QStringList &fields, cons
 {
     if (fields.size() != 22)
         throwError(ErrorCode::Configuration,
-                   QStringLiteral("login requires exactly 22 fields after its prefix"),
-                   QStringLiteral("got %1").arg(fields.size()));
+                   QCoreApplication::translate("AuthenticationCodec", "login requires exactly 22 fields after its prefix"),
+                   QCoreApplication::translate("AuthenticationCodec", "got %1").arg(fields.size()));
     const LoginPasswordFields auth = loginPasswordFields(password, passwordType, salt, codec);
     QStringList values = fields;
     values[0] = auth.salt;
@@ -77,7 +78,7 @@ QStringList AuthenticationCodec::fillLoginFields(const QStringList &fields, cons
     // caller cannot receive a field list that cannot be encoded.
     for (const QString &value : values) {
         if (containsWireDelimiter(value))
-            throwError(ErrorCode::Configuration, QStringLiteral("login fields cannot contain colon or NUL"));
+            throwError(ErrorCode::Configuration, QCoreApplication::translate("AuthenticationCodec", "login fields cannot contain colon or NUL"));
     }
     return values;
 }
@@ -86,11 +87,11 @@ QByteArray AuthenticationCodec::buildLoginCommand(const QStringList &fields)
 {
     if (fields.size() != 22)
         throwError(ErrorCode::Configuration,
-                   QStringLiteral("login requires exactly 22 fields after its prefix"),
-                   QStringLiteral("got %1").arg(fields.size()));
+                   QCoreApplication::translate("AuthenticationCodec", "login requires exactly 22 fields after its prefix"),
+                   QCoreApplication::translate("AuthenticationCodec", "got %1").arg(fields.size()));
     for (const QString &value : fields) {
         if (containsWireDelimiter(value))
-            throwError(ErrorCode::Configuration, QStringLiteral("login fields cannot contain colon or NUL"));
+            throwError(ErrorCode::Configuration, QCoreApplication::translate("AuthenticationCodec", "login fields cannot contain colon or NUL"));
     }
     return utf16leBytes(QStringLiteral("login:") + fields.join(QLatin1Char(':')));
 }
@@ -106,13 +107,13 @@ QByteArray AuthenticationCodec::buildConnectionRequestCommand(const QStringList 
 {
     if (terms.size() != 17)
         throwError(ErrorCode::Configuration,
-                   QStringLiteral("command8 requires 17 string terms"),
-                   QStringLiteral("got %1").arg(terms.size()));
+                   QCoreApplication::translate("AuthenticationCodec", "command8 requires 17 string terms"),
+                   QCoreApplication::translate("AuthenticationCodec", "got %1").arg(terms.size()));
     if (terms.at(0) != QLatin1String("8"))
-        throwError(ErrorCode::Configuration, QStringLiteral("command8 must begin with 8"));
+        throwError(ErrorCode::Configuration, QCoreApplication::translate("AuthenticationCodec", "command8 must begin with 8"));
     for (const QString &term : terms) {
         if (containsWireDelimiter(term))
-            throwError(ErrorCode::Configuration, QStringLiteral("command8 terms must not contain colon or NUL"));
+            throwError(ErrorCode::Configuration, QCoreApplication::translate("AuthenticationCodec", "command8 terms must not contain colon or NUL"));
     }
     return codec.encode(terms.join(QLatin1Char(':')));
 }
@@ -122,8 +123,8 @@ QStringList AuthenticationCodec::resolveConnectionRequestTerms(const ConnectionR
 {
     if (context.templateTerms.size() != 17)
         throwError(ErrorCode::Configuration,
-                   QStringLiteral("partner request needs seventeen terms"),
-                   QStringLiteral("got %1").arg(context.templateTerms.size()));
+                   QCoreApplication::translate("AuthenticationCodec", "partner request needs seventeen terms"),
+                   QCoreApplication::translate("AuthenticationCodec", "got %1").arg(context.templateTerms.size()));
     QStringList terms = context.templateTerms;
     if (!context.partnerId.isEmpty())
         terms[1] = context.partnerId;
@@ -146,7 +147,7 @@ QString AuthenticationCodec::connectionRequestP2pSuffix(bool enabled, const QStr
     // escaping behaviour.
     for (const QString &value : fields) {
         if (value.contains(QLatin1Char('|')) || containsWireDelimiter(value))
-            throwError(ErrorCode::Configuration, QStringLiteral("P2P suffix fields must not contain wire delimiters"));
+            throwError(ErrorCode::Configuration, QCoreApplication::translate("AuthenticationCodec", "P2P suffix fields must not contain wire delimiters"));
     }
     return fields.join(QLatin1Char('|'));
 }
@@ -174,7 +175,7 @@ QStringList AuthenticationCodec::defaultLoginFields(qint32 controllerId, const Q
 {
     const auto validViewport = [](int value) { return value > 0 && value <= 8192; };
     if (!validViewport(viewportWidth) || !validViewport(viewportHeight))
-        throwError(ErrorCode::Configuration, QStringLiteral("viewport dimensions are outside the modelled range"));
+        throwError(ErrorCode::Configuration, QCoreApplication::translate("AuthenticationCodec", "viewport dimensions are outside the modelled range"));
     // Field order copied from `control_session.ControlSession.connect`; indices in
     // the comments are the 0-based wire positions.
     return QStringList{

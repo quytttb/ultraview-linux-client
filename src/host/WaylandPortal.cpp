@@ -149,7 +149,7 @@ QString portalFailure(const QDBusMessage &reply)
 {
     if (reply.type() == QDBusMessage::ErrorMessage)
         return reply.errorMessage().left(256);
-    return QStringLiteral("the desktop portal did not answer");
+    return QCoreApplication::translate("WaylandPortal", "the desktop portal did not answer");
 }
 
 const spa_pod *buildVideoFormat(uint8_t *buffer, size_t size)
@@ -213,7 +213,9 @@ void onStreamStateChanged(void *data, pw_stream_state, pw_stream_state state, co
         return;
     QMutexLocker locker(&stream->mutex);
     stream->failed = true;
-    stream->error = QString::fromUtf8(error != nullptr ? error : "PipeWire stream error");
+    stream->error = error != nullptr
+        ? QString::fromUtf8(error)
+        : QCoreApplication::translate("WaylandPortal", "PipeWire stream error");
     stream->condition.wakeAll();
 }
 
@@ -280,10 +282,10 @@ public:
     explicit WaylandPortalBackend(QObject *parent = nullptr);
     ~WaylandPortalBackend() override;
 
-    QString name() const override { return QStringLiteral("Wayland portal (PipeWire)"); }
+    QString name() const override { return QCoreApplication::translate("WaylandPortal", "Wayland portal (PipeWire)"); }
     QString detail() const override
     {
-        return QStringLiteral("xdg-desktop-portal RemoteDesktop + ScreenCast");
+        return QCoreApplication::translate("WaylandPortal", "xdg-desktop-portal RemoteDesktop + ScreenCast");
     }
     bool start(QString *error) override;
     void stop() override;
@@ -356,13 +358,13 @@ bool WaylandPortalBackend::start(QString *error)
         return true;
     if (qEnvironmentVariableIsEmpty("WAYLAND_DISPLAY")) {
         if (error)
-            *error = QStringLiteral("No Wayland session: WAYLAND_DISPLAY is not set.");
+            *error = QCoreApplication::translate("WaylandPortal", "No Wayland session: WAYLAND_DISPLAY is not set.");
         return false;
     }
     m_bus = QDBusConnection::sessionBus();
     if (!m_bus.isConnected()) {
         if (error)
-            *error = QStringLiteral("The D-Bus session bus is not available.");
+            *error = QCoreApplication::translate("WaylandPortal", "The D-Bus session bus is not available.");
         return false;
     }
 
@@ -441,7 +443,7 @@ bool WaylandPortalBackend::request(const QString &interface, const QString &meth
                                          this, SLOT(onPortalResponse(QDBusMessage)));
     if (!connected) {
         if (error)
-            *error = QStringLiteral("Cannot listen for the desktop portal's response.");
+            *error = QCoreApplication::translate("WaylandPortal", "Cannot listen for the desktop portal's response.");
         return false;
     }
 
@@ -456,7 +458,7 @@ bool WaylandPortalBackend::request(const QString &interface, const QString &meth
                          QString::fromLatin1(kRequest), QStringLiteral("Response"), this,
                          SLOT(onPortalResponse(QDBusMessage)));
         if (error)
-            *error = QStringLiteral("The desktop portal refused the request: %1")
+            *error = QCoreApplication::translate("WaylandPortal", "The desktop portal refused the request: %1")
                          .arg(portalFailure(reply));
         return false;
     }
@@ -487,14 +489,14 @@ bool WaylandPortalBackend::request(const QString &interface, const QString &meth
                      SLOT(onPortalResponse(QDBusMessage)));
     if (!m_responseReady) {
         if (error)
-            *error = QStringLiteral("The desktop portal did not answer in time.");
+            *error = QCoreApplication::translate("WaylandPortal", "The desktop portal did not answer in time.");
         return false;
     }
     if (m_responseCode != 0) {
         if (error) {
             *error = m_responseCode == 1
-                ? QStringLiteral("The screen sharing permission request was cancelled.")
-                : QStringLiteral("The desktop portal rejected the screen sharing request.");
+                ? QCoreApplication::translate("WaylandPortal", "The screen sharing permission request was cancelled.")
+                : QCoreApplication::translate("WaylandPortal", "The desktop portal rejected the screen sharing request.");
         }
         return false;
     }
@@ -526,7 +528,7 @@ bool WaylandPortalBackend::createSession(QString *error)
     m_sessionPath = objectPath(results.value(QStringLiteral("session_handle")));
     if (m_sessionPath.isEmpty()) {
         if (error)
-            *error = QStringLiteral("The desktop portal returned no session handle.");
+            *error = QCoreApplication::translate("WaylandPortal", "The desktop portal returned no session handle.");
         return false;
     }
     return true;
@@ -578,7 +580,7 @@ bool WaylandPortalBackend::startRemoteDesktop(QString *error)
     const QVariant streamsValue = results.value(QStringLiteral("streams"));
     if (!streamsValue.canConvert<QDBusArgument>()) {
         if (error)
-            *error = QStringLiteral("The desktop portal returned no screen streams.");
+            *error = QCoreApplication::translate("WaylandPortal", "The desktop portal returned no screen streams.");
         return false;
     }
     const QDBusArgument streams = streamsValue.value<QDBusArgument>();
@@ -603,7 +605,7 @@ bool WaylandPortalBackend::startRemoteDesktop(QString *error)
     streams.endArray();
     if (m_streams.empty()) {
         if (error)
-            *error = QStringLiteral("The desktop portal shared no monitor.");
+            *error = QCoreApplication::translate("WaylandPortal", "The desktop portal shared no monitor.");
         return false;
     }
     return true;
@@ -618,7 +620,7 @@ bool WaylandPortalBackend::openPipeWire(QString *error)
     const QDBusMessage reply = m_bus.call(message, QDBus::Block, kPortalSetupTimeoutMs);
     if (reply.type() == QDBusMessage::ErrorMessage) {
         if (error)
-            *error = QStringLiteral("The desktop portal could not open PipeWire: %1")
+            *error = QCoreApplication::translate("WaylandPortal", "The desktop portal could not open PipeWire: %1")
                          .arg(portalFailure(reply));
         return false;
     }
@@ -626,13 +628,13 @@ bool WaylandPortalBackend::openPipeWire(QString *error)
         reply.arguments().value(0).value<QDBusUnixFileDescriptor>();
     if (!descriptor.isValid()) {
         if (error)
-            *error = QStringLiteral("The desktop portal returned no PipeWire file descriptor.");
+            *error = QCoreApplication::translate("WaylandPortal", "The desktop portal returned no PipeWire file descriptor.");
         return false;
     }
     const int duplicate = ::dup(descriptor.fileDescriptor());
     if (duplicate < 0) {
         if (error)
-            *error = QStringLiteral("Cannot duplicate the PipeWire file descriptor.");
+            *error = QCoreApplication::translate("WaylandPortal", "Cannot duplicate the PipeWire file descriptor.");
         return false;
     }
     return startPipeWire(duplicate, error);
@@ -645,7 +647,7 @@ bool WaylandPortalBackend::startPipeWire(int fd, QString *error)
     if (m_loop == nullptr) {
         ::close(fd);
         if (error)
-            *error = QStringLiteral("Cannot create the PipeWire thread loop.");
+            *error = QCoreApplication::translate("WaylandPortal", "Cannot create the PipeWire thread loop.");
         return false;
     }
     pw_thread_loop_lock(m_loop);
@@ -654,14 +656,14 @@ bool WaylandPortalBackend::startPipeWire(int fd, QString *error)
         pw_thread_loop_unlock(m_loop);
         ::close(fd);
         if (error)
-            *error = QStringLiteral("Cannot create the PipeWire context.");
+            *error = QCoreApplication::translate("WaylandPortal", "Cannot create the PipeWire context.");
         return false;
     }
     m_core = pw_context_connect_fd(m_context, fd, nullptr, 0);
     if (m_core == nullptr) {
         pw_thread_loop_unlock(m_loop);
         if (error)
-            *error = QStringLiteral("Cannot connect to the portal's PipeWire server.");
+            *error = QCoreApplication::translate("WaylandPortal", "Cannot connect to the portal's PipeWire server.");
         return false;
     }
 
@@ -674,7 +676,7 @@ bool WaylandPortalBackend::startPipeWire(int fd, QString *error)
         if (state->stream == nullptr) {
             pw_thread_loop_unlock(m_loop);
             if (error)
-                *error = QStringLiteral("Cannot create a PipeWire screen stream.");
+                *error = QCoreApplication::translate("WaylandPortal", "Cannot create a PipeWire screen stream.");
             return false;
         }
         state->events = {};
@@ -695,14 +697,14 @@ bool WaylandPortalBackend::startPipeWire(int fd, QString *error)
         if (result < 0) {
             pw_thread_loop_unlock(m_loop);
             if (error)
-                *error = QStringLiteral("Cannot connect the PipeWire screen stream.");
+                *error = QCoreApplication::translate("WaylandPortal", "Cannot connect the PipeWire screen stream.");
             return false;
         }
     }
     pw_thread_loop_unlock(m_loop);
     if (pw_thread_loop_start(m_loop) < 0) {
         if (error)
-            *error = QStringLiteral("Cannot start the PipeWire thread loop.");
+            *error = QCoreApplication::translate("WaylandPortal", "Cannot start the PipeWire thread loop.");
         return false;
     }
     return true;
@@ -724,7 +726,7 @@ QVector<RawFrame> WaylandPortalBackend::snapshot(QString *error)
             const qint64 remaining = deadline - QDateTime::currentMSecsSinceEpoch();
             if (remaining <= 0) {
                 if (error)
-                    *error = QStringLiteral("PipeWire delivered no screen frames.");
+                    *error = QCoreApplication::translate("WaylandPortal", "PipeWire delivered no screen frames.");
                 return {};
             }
             state->condition.wait(&state->mutex, static_cast<unsigned long>(remaining));
@@ -733,7 +735,7 @@ QVector<RawFrame> WaylandPortalBackend::snapshot(QString *error)
     }
     if (frames.isEmpty()) {
         if (error)
-            *error = QStringLiteral("The portal shared no screen.");
+            *error = QCoreApplication::translate("WaylandPortal", "The portal shared no screen.");
     }
     return frames;
 }
@@ -825,7 +827,7 @@ QVector<HostRect> WaylandPortalBackend::displays(QString *error)
 {
     if (!m_ready) {
         if (error)
-            *error = QStringLiteral("The Wayland portal is not running.");
+            *error = QCoreApplication::translate("WaylandPortal", "The Wayland portal is not running.");
         return {};
     }
     const QVector<RawFrame> frames = snapshot(error);
@@ -838,7 +840,7 @@ QByteArray WaylandPortalBackend::capture(const HostRect &source, QString *error)
 {
     if (!m_ready) {
         if (error)
-            *error = QStringLiteral("The Wayland portal is not running.");
+            *error = QCoreApplication::translate("WaylandPortal", "The Wayland portal is not running.");
         return {};
     }
     const QVector<RawFrame> frames = snapshot(error);

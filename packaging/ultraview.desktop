@@ -2,6 +2,7 @@
 Type=Application
 Name=Ultraview
 Comment=Experimental native controller for UltraViewer partners
+Comment[vi]=Ứng dụng điều khiển gốc cho đối tác UltraViewer (thử nghiệm)
 Exec=ultraview
 Icon=ultraview
 Terminal=false

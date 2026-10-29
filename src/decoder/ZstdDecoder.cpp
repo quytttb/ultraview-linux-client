@@ -1,6 +1,7 @@
 #include "decoder/ZstdDecoder.h"
 
 #include "core/ErrorTypes.h"
+#include <QCoreApplication>
 
 #include <zstd.h>
 
@@ -18,7 +19,7 @@ ZstdDecoder::ZstdDecoder()
     : m_context(ZSTD_createDCtx())
 {
     if (!m_context)
-        throwError(ErrorCode::Resource, QStringLiteral("cannot create a Zstandard decompression context"));
+        throwError(ErrorCode::Resource, QCoreApplication::translate("ZstdDecoder", "cannot create a Zstandard decompression context"));
 }
 
 ZstdDecoder::~ZstdDecoder()
@@ -36,7 +37,7 @@ void ZstdDecoder::setDictionary(const QByteArray &dictionary)
     const size_t result = ZSTD_DCtx_loadDictionary(m_context, m_dictionary.constData(),
                                                    static_cast<size_t>(m_dictionary.size()));
     if (ZSTD_isError(result)) {
-        throwError(ErrorCode::Configuration, QStringLiteral("Zstandard rejected the dictionary"),
+        throwError(ErrorCode::Configuration, QCoreApplication::translate("ZstdDecoder", "Zstandard rejected the dictionary"),
                    zstdErrorText(result));
     }
     m_dictionaryLoaded = !m_dictionary.isEmpty();
@@ -45,7 +46,7 @@ void ZstdDecoder::setDictionary(const QByteArray &dictionary)
 void ZstdDecoder::setMaxOutputBytes(qint64 limit)
 {
     if (limit <= 0 || limit > kDefaultMaxOutputBytes * 16)
-        throwError(ErrorCode::Configuration, QStringLiteral("invalid Zstandard output limit"));
+        throwError(ErrorCode::Configuration, QCoreApplication::translate("ZstdDecoder", "invalid Zstandard output limit"));
     m_maxOutputBytes = limit;
 }
 
@@ -69,20 +70,20 @@ qint64 ZstdDecoder::declaredContentSize(const QByteArray &payload)
 QByteArray ZstdDecoder::decompress(const QByteArray &payload, qint64 expectedSize)
 {
     if (expectedSize <= 0)
-        throwProtocol(QStringLiteral("the screen update declares no pixel bytes"));
+        throwProtocol(QCoreApplication::translate("ZstdDecoder", "the screen update declares no pixel bytes"));
     if (expectedSize > m_maxOutputBytes) {
-        throwResource(QStringLiteral("decoded image exceeds the allocation policy"),
+        throwResource(QCoreApplication::translate("ZstdDecoder", "decoded image exceeds the allocation policy"),
                       QStringLiteral("%1 > %2 bytes").arg(expectedSize).arg(m_maxOutputBytes));
     }
     if (payload.isEmpty())
-        throwProtocol(QStringLiteral("empty Zstandard payload"));
+        throwProtocol(QCoreApplication::translate("ZstdDecoder", "empty Zstandard payload"));
     if (!hasFrameMagic(payload))
-        throwProtocol(QStringLiteral("screen codec is outside the supported Zstandard subset"));
+        throwProtocol(QCoreApplication::translate("ZstdDecoder", "screen codec is outside the supported Zstandard subset"));
 
     // Refuse a bomb before allocating: the frame header is cheap to inspect.
     const qint64 declared = declaredContentSize(payload);
     if (declared > m_maxOutputBytes) {
-        throwResource(QStringLiteral("Zstandard frame declares a size above the allocation policy"),
+        throwResource(QCoreApplication::translate("ZstdDecoder", "Zstandard frame declares a size above the allocation policy"),
                       QStringLiteral("%1 > %2 bytes").arg(declared).arg(m_maxOutputBytes));
     }
 
@@ -102,10 +103,10 @@ QByteArray ZstdDecoder::decompress(const QByteArray &payload, qint64 expectedSiz
                                                 payload.constData(),
                                                 static_cast<size_t>(payload.size()));
     if (ZSTD_isError(produced)) {
-        throwProtocol(QStringLiteral("Zstandard decoding failed"), zstdErrorText(produced));
+        throwProtocol(QCoreApplication::translate("ZstdDecoder", "Zstandard decoding failed"), zstdErrorText(produced));
     }
     if (static_cast<qint64>(produced) != expectedSize) {
-        throwProtocol(QStringLiteral("the decoded image size differs from the declared rectangles"),
+        throwProtocol(QCoreApplication::translate("ZstdDecoder", "the decoded image size differs from the declared rectangles"),
                       QStringLiteral("%1 != %2 bytes").arg(produced).arg(expectedSize));
     }
     return output;

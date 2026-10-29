@@ -1,5 +1,6 @@
 #include "network/ConnectionManager.h"
 
+#include <QCoreApplication>
 #include "protocol/AuthenticationCodec.h"
 #include "protocol/ClipboardCodec.h"
 #include "protocol/ControlCommands.h"
@@ -45,31 +46,31 @@ bool SessionRequest::validate(QString *error) const
     };
 
     if (registrationTerms.size() != 26)
-        return reject(QStringLiteral("the registration profile needs exactly 26 terms (got %1)")
+        return reject(QCoreApplication::translate("ConnectionManager", "the registration profile needs exactly 26 terms (got %1)")
                           .arg(registrationTerms.size()));
     const QString reason = protocol::RegistrationCodec::validateRegistrationTerms(registrationTerms);
     if (!reason.isEmpty())
         return reject(reason);
 
     if (requestTerms.size() != 17)
-        return reject(QStringLiteral("the partner request template needs exactly 17 terms (got %1)")
+        return reject(QCoreApplication::translate("ConnectionManager", "the partner request template needs exactly 17 terms (got %1)")
                           .arg(requestTerms.size()));
     if (!requestTerms.at(16).isEmpty())
-        return reject(QStringLiteral("P2P negotiation is not supported; request term 16 must be empty"));
+        return reject(QCoreApplication::translate("ConnectionManager", "P2P negotiation is not supported; request term 16 must be empty"));
     for (int index = 0; index < requestTerms.size(); ++index) {
         if (requestTerms.at(index).contains(QLatin1Char(':'))
             || requestTerms.at(index).contains(QChar(0))
             || requestTerms.at(index).contains(QLatin1Char('|'))) {
-            return reject(QStringLiteral("request term %1 contains a reserved delimiter").arg(index));
+            return reject(QCoreApplication::translate("ConnectionManager", "request term %1 contains a reserved delimiter").arg(index));
         }
     }
     if (timeoutMs <= 0)
-        return reject(QStringLiteral("the transport timeout must be positive"));
+        return reject(QCoreApplication::translate("ConnectionManager", "the transport timeout must be positive"));
     if (maxFrameBytes == 0 || maxFrameBytes > protocol::kAbsoluteMaxFrameBytes)
-        return reject(QStringLiteral("the frame limit must be between 1 and %1 bytes")
+        return reject(QCoreApplication::translate("ConnectionManager", "the frame limit must be between 1 and %1 bytes")
                           .arg(protocol::kAbsoluteMaxFrameBytes));
     if (!codec.canEncode(password) && passwordType == 0)
-        return reject(QStringLiteral("the password cannot be encoded with the %1 code page").arg(codec.name()));
+        return reject(QCoreApplication::translate("ConnectionManager", "the password cannot be encoded with the %1 code page").arg(codec.name()));
     return true;
 }
 
@@ -97,8 +98,8 @@ ConnectionManager::ConnectionManager(QObject *parent)
     m_phaseTimer->setSingleShot(true);
     connect(m_phaseTimer, &QTimer::timeout, this, [this] {
         fail(ErrorInfo{ErrorCode::Timeout,
-                       QStringLiteral("the connection timed out while %1").arg(sessionStateName(m_state)),
-                       QStringLiteral("phase timeout after %1 ms").arg(m_request.timeoutMs)});
+                       tr("the connection timed out while %1").arg(sessionStateName(m_state)),
+                       tr("phase timeout after %1 ms").arg(m_request.timeoutMs)});
     });
     // Coalesces the rate-limited statistics updates: without it a counter that
     // changed during the throttle window would stay invisible until the next
@@ -241,7 +242,7 @@ void ConnectionManager::start(const ultraview::network::SessionRequest &request)
     QString validationError;
     if (!m_request.validate(&validationError)) {
         setState(SessionState::Connecting);
-        fail(ErrorInfo{ErrorCode::Configuration, QStringLiteral("the session request is invalid"),
+        fail(ErrorInfo{ErrorCode::Configuration, tr("the session request is invalid"),
                        validationError});
         return;
     }
@@ -257,8 +258,8 @@ void ConnectionManager::start(const ultraview::network::SessionRequest &request)
     }
     if (!m_decoder.hasDictionary()) {
         note(ErrorCode::Configuration,
-             QStringLiteral("no screen dictionary installed: compressed RGB555 updates cannot be decoded"),
-             QStringLiteral("supply the 8bit.dat artifact in the settings to receive the full screen"));
+             tr("no screen dictionary installed: compressed RGB555 updates cannot be decoded"),
+             tr("supply the 8bit.dat artifact in the settings to receive the full screen"));
     }
 
     m_registration = new RegistrationTransport(this);
@@ -371,7 +372,7 @@ void ConnectionManager::onRegistrationPayload(const QByteArray &payload)
         ++m_registrationReplies;
         if (m_registrationReplies > kCommand8MaxReplies) {
             fail(ErrorInfo{ErrorCode::Protocol,
-                           QStringLiteral("the server answered the connection request more than four times")});
+                           tr("the server answered the connection request more than four times")});
             return;
         }
         if (payload.startsWith("8:")) {
@@ -391,8 +392,8 @@ void ConnectionManager::onRegistrationPayload(const QByteArray &payload)
         }
         if (m_registrationReplies >= kCommand8MaxReplies) {
             fail(ErrorInfo{ErrorCode::Protocol,
-                           QStringLiteral("the server did not send route information"),
-                           QStringLiteral("%1 replies without a command 8 route").arg(m_registrationReplies)});
+                           tr("the server did not send route information"),
+                           tr("%1 replies without a command 8 route").arg(m_registrationReplies)});
             return;
         }
         // Another unrelated payload; consume it like the reference loop does and
@@ -405,8 +406,8 @@ void ConnectionManager::onRegistrationPayload(const QByteArray &payload)
     // the control path, so it is drained and reported instead of interpreted.
     ++m_ignoredRegistrationPayloads;
     note(ErrorCode::UnsupportedOperation,
-         QStringLiteral("unexpected payload on the registration channel"),
-         QStringLiteral("%1 bytes after the handshake were ignored").arg(payload.size()));
+         tr("unexpected payload on the registration channel"),
+         tr("%1 bytes after the handshake were ignored").arg(payload.size()));
 }
 
 void ConnectionManager::onRegistrationFailed(const ErrorInfo &error)
@@ -417,7 +418,7 @@ void ConnectionManager::onRegistrationFailed(const ErrorInfo &error)
     // losing it does not break the session.
     if (m_drainingRegistration) {
         ++m_ignoredRegistrationPayloads;
-        emit diagnostic(QStringLiteral("registration channel lost after the route; the relay "
+        emit diagnostic(tr("registration channel lost after the route; the relay "
                                        "session is unaffected (%1)")
                             .arg(error.summary()));
         return;
@@ -430,11 +431,11 @@ void ConnectionManager::onRegistrationClosed()
     if (m_terminating)
         return;
     if (m_drainingRegistration) {
-        emit diagnostic(QStringLiteral("registration channel closed by the service after the route; "
+        emit diagnostic(tr("registration channel closed by the service after the route; "
                                        "the relay session is unaffected"));
         return;
     }
-    fail(ErrorInfo{ErrorCode::Network, QStringLiteral("the registration channel was closed by the server")});
+    fail(ErrorInfo{ErrorCode::Network, tr("the registration channel was closed by the server")});
 }
 
 void ConnectionManager::startRelay()
@@ -480,14 +481,14 @@ void ConnectionManager::startRelay()
     endpoint.targetPort = m_route.tcpPort;
 
     if (endpoint.host.isEmpty()) {
-        fail(ErrorInfo{ErrorCode::Protocol, QStringLiteral("the route does not contain a relay host")});
+        fail(ErrorInfo{ErrorCode::Protocol, tr("the route does not contain a relay host")});
         return;
     }
     quint32 address = 0;
     if (!protocol::parseCanonicalIpv4(endpoint.targetIpv4, &address)) {
         fail(ErrorInfo{ErrorCode::Protocol,
-                       QStringLiteral("the route does not contain a usable partner address"),
-                       QStringLiteral("public endpoint field is not a dotted quad")});
+                       tr("the route does not contain a usable partner address"),
+                       tr("public endpoint field is not a dotted quad")});
         return;
     }
 
@@ -546,8 +547,8 @@ void ConnectionManager::onRelayPayload(const QByteArray &payload, bool unicode)
         const std::optional<QString> text = protocol::ClipboardCodec::fromUtf16(payload);
         if (!text.has_value()) {
             note(ErrorCode::Protocol,
-                 QStringLiteral("a UTF-16 session payload has an odd number of bytes"),
-                 QStringLiteral("%1 bytes").arg(payload.size()));
+                 tr("a UTF-16 session payload has an odd number of bytes"),
+                 tr("%1 bytes").arg(payload.size()));
             return;
         }
         handleTextPayload(*text);
@@ -568,7 +569,7 @@ void ConnectionManager::onRelayPayload(const QByteArray &payload, bool unicode)
     // `FormReceiveResult` raises for a packet without a discriminator byte; the
     // native client treats it as a protocol violation of the same severity.
     if (fields.isEmpty() || fields.first().isEmpty()) {
-        fail(ErrorInfo{ErrorCode::Protocol, QStringLiteral("session packet has no discriminator byte")});
+        fail(ErrorInfo{ErrorCode::Protocol, tr("session packet has no discriminator byte")});
         return;
     }
     try {
@@ -598,7 +599,7 @@ void ConnectionManager::handleTextPayload(const QString &text)
         emit typingChanged(text == QStringLiteral("29"));
         return;
     }
-    inform(QStringLiteral("the partner sent an unrecognized text message (%1 characters)")
+    inform(tr("the partner sent an unrecognized text message (%1 characters)")
                .arg(text.size()));
 }
 
@@ -649,8 +650,8 @@ void ConnectionManager::handleCursorShape(const QList<QByteArray> &fields)
 {
     if (fields.size() < 4 || fields.at(1).size() != 4 || fields.at(2).size() != 4) {
         note(ErrorCode::UnsupportedOperation,
-             QStringLiteral("a cursor shape packet is incomplete"),
-             QStringLiteral("%1 fields").arg(fields.size()));
+             tr("a cursor shape packet is incomplete"),
+             tr("%1 fields").arg(fields.size()));
         return;
     }
     const auto readI32 = [](const QByteArray &bytes) {
@@ -663,8 +664,8 @@ void ConnectionManager::handleCursorShape(const QList<QByteArray> &fields)
     const qint32 declared = readI32(fields.at(2));
     if (declared <= 0 || declared > decoder::CursorDecoder::kMaxCurBytes) {
         note(ErrorCode::Resource,
-             QStringLiteral("a cursor shape packet declares an unusable length"),
-             QStringLiteral("%1 bytes").arg(declared));
+             tr("a cursor shape packet declares an unusable length"),
+             tr("%1 bytes").arg(declared));
         return;
     }
     const QByteArray cur = protocol::ZstdCodec::decompress(
@@ -688,8 +689,8 @@ void ConnectionManager::handleCursorPosition(const QList<QByteArray> &fields)
     };
     if (fields.size() < 3 || fields.at(1).size() != 2 || fields.at(2).size() != 2) {
         note(ErrorCode::UnsupportedOperation,
-             QStringLiteral("a pointer position packet is incomplete"),
-             QStringLiteral("%1 fields").arg(fields.size()));
+             tr("a pointer position packet is incomplete"),
+             tr("%1 fields").arg(fields.size()));
         return;
     }
     m_cursorPosition = QPoint(readI16(fields.at(1)), readI16(fields.at(2)));
@@ -750,7 +751,7 @@ void ConnectionManager::handleSessionPacket(const QList<QByteArray> &fields)
     if (kind == 1) {
         if (m_state != SessionState::Connected) {
             fail(ErrorInfo{ErrorCode::Protocol,
-                           QStringLiteral("a screen update arrived before the login acknowledgement")});
+                           tr("a screen update arrived before the login acknowledgement")});
             return;
         }
         handleScreenUpdate(fields);
@@ -768,8 +769,8 @@ void ConnectionManager::handleSessionPacket(const QList<QByteArray> &fields)
             return;
         }
         note(ErrorCode::UnsupportedOperation,
-             QStringLiteral("a cursor selection without a 4-byte hash was not answered"),
-             QStringLiteral("%1 fields").arg(fields.size()));
+             tr("a cursor selection without a 4-byte hash was not answered"),
+             tr("%1 fields").arg(fields.size()));
         return;
     }
 
@@ -782,13 +783,13 @@ void ConnectionManager::handleSessionPacket(const QList<QByteArray> &fields)
         // Legacy clipboard as a multipart payload: the text is the second field.
         if (fields.size() < 2) {
             note(ErrorCode::UnsupportedOperation,
-                 QStringLiteral("a legacy clipboard message carries no text"));
+                  tr("a legacy clipboard message carries no text"));
             return;
         }
         const std::optional<QString> text = protocol::ClipboardCodec::fromUtf16(fields.at(1));
         if (!text.has_value()) {
             note(ErrorCode::Protocol,
-                 QStringLiteral("a legacy clipboard message is not UTF-16LE"));
+                  tr("a legacy clipboard message is not UTF-16LE"));
             return;
         }
         ++m_clipboardUpdates;
@@ -800,7 +801,7 @@ void ConnectionManager::handleSessionPacket(const QList<QByteArray> &fields)
     if (kind == 12) {
         const std::optional<QString> text = protocol::ControlCommands::parseChat(fields);
         if (!text.has_value()) {
-            note(ErrorCode::UnsupportedOperation, QStringLiteral("a chat message could not be decoded"));
+            note(ErrorCode::UnsupportedOperation, tr("a chat message could not be decoded"));
             return;
         }
         ++m_chatMessages;
@@ -817,8 +818,8 @@ void ConnectionManager::handleSessionPacket(const QList<QByteArray> &fields)
 
     if (kind == 27 || kind == 41) {
         inform(kind == 27
-                   ? QStringLiteral("the partner closed the session")
-                   : QStringLiteral("the partner terminated the session"));
+                   ? tr("the partner closed the session")
+                   : tr("the partner terminated the session"));
         stop();
         return;
     }
@@ -837,7 +838,7 @@ void ConnectionManager::handleSessionPacket(const QList<QByteArray> &fields)
         const std::optional<QString> text = protocol::ClipboardCodec::parseModern(fields);
         if (!text.has_value()) {
             note(ErrorCode::UnsupportedOperation,
-                 QStringLiteral("a clipboard message could not be decoded"));
+                 tr("a clipboard message could not be decoded"));
             return;
         }
         ++m_clipboardUpdates;
@@ -850,7 +851,7 @@ void ConnectionManager::handleSessionPacket(const QList<QByteArray> &fields)
         // Audio silence: a byte count in the second field.
         if (fields.size() < 2 || fields.at(1).isEmpty()) {
             note(ErrorCode::UnsupportedOperation,
-                 QStringLiteral("an audio silence packet carries no byte count"));
+                 tr("an audio silence packet carries no byte count"));
             return;
         }
         quint64 count = 0;
@@ -865,7 +866,7 @@ void ConnectionManager::handleSessionPacket(const QList<QByteArray> &fields)
     if (kind == 43) {
         if (fields.size() < 2) {
             note(ErrorCode::UnsupportedOperation,
-                 QStringLiteral("an audio packet carries no payload"));
+                 tr("an audio packet carries no payload"));
             return;
         }
         m_audio->submitEncoded(fields.at(1));
@@ -878,12 +879,12 @@ void ConnectionManager::handleSessionPacket(const QList<QByteArray> &fields)
         // The host changed its tile size (8, 16 or 32 pixels).
         if (fields.size() < 2 || fields.at(1).isEmpty()) {
             note(ErrorCode::UnsupportedOperation,
-                 QStringLiteral("a tile size packet carries no value"));
+                 tr("a tile size packet carries no value"));
             return;
         }
         const int tile = static_cast<quint8>(fields.at(1).at(0));
         if (tile != 8 && tile != 16 && tile != 32) {
-            inform(QStringLiteral("the partner announced an unsupported tile size (%1); "
+            inform(tr("the partner announced an unsupported tile size (%1); "
                                   "the current size is kept")
                        .arg(tile));
             return;
@@ -891,7 +892,7 @@ void ConnectionManager::handleSessionPacket(const QList<QByteArray> &fields)
         decoder::ScreenDecoder::Options options = m_decoder.options();
         options.blockSize = tile;
         m_decoder.setOptions(options);
-        emit diagnostic(QStringLiteral("the partner changed the tile size to %1").arg(tile));
+        emit diagnostic(tr("the partner changed the tile size to %1").arg(tile));
         return;
     }
 
@@ -899,11 +900,11 @@ void ConnectionManager::handleSessionPacket(const QList<QByteArray> &fields)
         if (const std::optional<bool> viewOnly = protocol::ControlCommands::parseViewOnly(fields)) {
             emit viewOnlyChanged(*viewOnly);
             if (*viewOnly)
-                inform(QStringLiteral("the partner put this session into view-only mode"));
+                inform(tr("the partner put this session into view-only mode"));
             return;
         }
         note(ErrorCode::UnsupportedOperation,
-             QStringLiteral("a view-only packet carries no state"));
+             tr("a view-only packet carries no state"));
         return;
     }
 
@@ -911,16 +912,16 @@ void ConnectionManager::handleSessionPacket(const QList<QByteArray> &fields)
         const char *name = kind == 50 ? "Play16BitMicrophoneAudio"
                                       : "PlayMicrophoneEncodedAudio";
         note(ErrorCode::UnsupportedOperation,
-             QStringLiteral("the partner sent microphone audio (%1), which this client does "
+             tr("the partner sent microphone audio (%1), which this client does "
                             "not record")
                  .arg(QString::fromLatin1(name)),
-             QStringLiteral("kind %1: the packet was refused, the session continues").arg(kind));
+             tr("kind %1: the packet was refused, the session continues").arg(kind));
         return;
     }
 
     note(ErrorCode::UnsupportedOperation,
-         QStringLiteral("unknown session packet kind %1 was refused").arg(kind),
-         QStringLiteral("%1 fields").arg(fields.size()));
+         tr("unknown session packet kind %1 was refused").arg(kind),
+         tr("%1 fields").arg(fields.size()));
 }
 
 void ConnectionManager::handleScreenUpdate(const QList<QByteArray> &fields)
@@ -964,7 +965,7 @@ void ConnectionManager::releaseFrames(int count)
 void ConnectionManager::sendRelayPayload(const QByteArray &payload, quint8 flag)
 {
     if (m_relay == nullptr || !m_relay->isReady()) {
-        note(ErrorCode::Network, QStringLiteral("cannot send on the relay channel: it is not connected"));
+        note(ErrorCode::Network, tr("cannot send on the relay channel: it is not connected"));
         return;
     }
     m_relay->sendPayload(payload, flag);
@@ -973,7 +974,7 @@ void ConnectionManager::sendRelayPayload(const QByteArray &payload, quint8 flag)
 void ConnectionManager::sendInput(const QByteArray &payload)
 {
     if (m_terminating || m_state != SessionState::Connected) {
-        note(ErrorCode::Configuration, QStringLiteral("input ignored: the session is not connected"));
+        note(ErrorCode::Configuration, tr("input ignored: the session is not connected"));
         return;
     }
     sendRelayPayload(payload, 0);
@@ -982,7 +983,7 @@ void ConnectionManager::sendInput(const QByteArray &payload)
 void ConnectionManager::sendConnectedCommand(const QByteArray &payload, quint8 flag)
 {
     if (m_terminating || m_state != SessionState::Connected) {
-        inform(QStringLiteral("the command was ignored: the session is not connected"));
+        inform(tr("the command was ignored: the session is not connected"));
         return;
     }
     sendRelayPayload(payload, flag);
@@ -1119,7 +1120,7 @@ void ConnectionManager::onRelayClosed()
         return;
     if (m_state == SessionState::Disconnected || m_state == SessionState::Failed)
         return;
-    fail(ErrorInfo{ErrorCode::Network, QStringLiteral("the partner closed the relay channel")});
+    fail(ErrorInfo{ErrorCode::Network, tr("the partner closed the relay channel")});
 }
 
 void ConnectionManager::publishStatistics(bool force)

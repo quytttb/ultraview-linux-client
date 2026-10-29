@@ -1,5 +1,6 @@
 #include "protocol/ZstdCodec.h"
 
+#include <QCoreApplication>
 #include "core/ErrorTypes.h"
 
 #include <zstd.h>
@@ -37,10 +38,10 @@ QByteArray ZstdCodec::compress(const QByteArray &payload, int level)
 QByteArray ZstdCodec::decompress(const QByteArray &payload, qint64 expectedSize, qint64 limit)
 {
     if (expectedSize < 0)
-        throwProtocol(QStringLiteral("peer message declares a negative length"));
+        throwProtocol(QCoreApplication::translate("ZstdCodec", "peer message declares a negative length"));
     if (expectedSize > limit) {
         throwError(ErrorCode::Resource,
-                   QStringLiteral("peer message is larger than this client accepts"),
+                   QCoreApplication::translate("ZstdCodec", "peer message is larger than this client accepts"),
                    QStringLiteral("%1 bytes requested, limit %2").arg(expectedSize).arg(limit));
     }
     // The frame must not claim more than the caller announced; checking the
@@ -50,7 +51,7 @@ QByteArray ZstdCodec::decompress(const QByteArray &payload, qint64 expectedSize,
     if (declared != ZSTD_CONTENTSIZE_UNKNOWN && declared != ZSTD_CONTENTSIZE_ERROR
         && declared > static_cast<unsigned long long>(limit)) {
         throwError(ErrorCode::Resource,
-                   QStringLiteral("compressed peer message declares an excessive size"),
+                   QCoreApplication::translate("ZstdCodec", "compressed peer message declares an excessive size"),
                    QStringLiteral("%1 bytes, limit %2").arg(declared).arg(limit));
     }
 
@@ -59,11 +60,11 @@ QByteArray ZstdCodec::decompress(const QByteArray &payload, qint64 expectedSize,
                                             payload.constData(),
                                             static_cast<size_t>(payload.size()));
     if (ZSTD_isError(produced)) {
-        throwProtocol(QStringLiteral("a compressed peer message could not be decompressed"),
+        throwProtocol(QCoreApplication::translate("ZstdCodec", "a compressed peer message could not be decompressed"),
                       zstdErrorText(produced));
     }
     if (produced != static_cast<size_t>(expectedSize)) {
-        throwProtocol(QStringLiteral("a compressed peer message has an unexpected length"),
+        throwProtocol(QCoreApplication::translate("ZstdCodec", "a compressed peer message has an unexpected length"),
                       QStringLiteral("%1 bytes decoded, %2 announced").arg(produced).arg(expectedSize));
     }
     return output;
@@ -74,10 +75,10 @@ QByteArray ZstdCodec::decompressFrame(const QByteArray &payload, qint64 limit)
     const unsigned long long declared = ZSTD_getFrameContentSize(payload.constData(),
                                                                 static_cast<size_t>(payload.size()));
     if (declared == ZSTD_CONTENTSIZE_ERROR)
-        throwProtocol(QStringLiteral("a compressed peer message is not a Zstandard frame"));
+        throwProtocol(QCoreApplication::translate("ZstdCodec", "a compressed peer message is not a Zstandard frame"));
     if (declared == ZSTD_CONTENTSIZE_UNKNOWN) {
-        throwProtocol(QStringLiteral("a compressed peer message does not declare its size"),
-                      QStringLiteral("the length must be carried by the message header"));
+        throwProtocol(QCoreApplication::translate("ZstdCodec", "a compressed peer message does not declare its size"),
+                      QCoreApplication::translate("ZstdCodec", "the length must be carried by the message header"));
     }
     return decompress(payload, static_cast<qint64>(declared), limit);
 }

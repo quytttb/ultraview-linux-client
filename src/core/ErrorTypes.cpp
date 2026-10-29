@@ -59,7 +59,7 @@ QString errorCodeDescription(ErrorCode code)
     case ErrorCode::Internal:
         return QCoreApplication::translate("ErrorCode", "Internal error.");
     }
-    return QStringLiteral("Unknown error.");
+    return QCoreApplication::translate("ErrorCode", "Unknown error.");
 }
 
 QString ErrorInfo::summary() const

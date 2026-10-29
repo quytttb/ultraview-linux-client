@@ -1,5 +1,6 @@
 #include "protocol/ControlCommands.h"
 
+#include <QCoreApplication>
 #include "core/ErrorTypes.h"
 #include "protocol/ClipboardCodec.h"
 
@@ -48,11 +49,11 @@ CommandPayload ControlCommands::chat(const QString &text)
 {
     if (text.contains(QLatin1String(kDelimiter))) {
         throwError(ErrorCode::UnsupportedOperation,
-                   QStringLiteral("chat text contains the protocol delimiter"),
-                   QStringLiteral("the host splits chat messages on \"|||\""));
+                   QCoreApplication::translate("ControlCommands", "chat text contains the protocol delimiter"),
+                   QCoreApplication::translate("ControlCommands", "the host splits chat messages on \"|||\""));
     }
     if (text.size() > kMaxChatCodeUnits) {
-        throwError(ErrorCode::Resource, QStringLiteral("chat message is too long"),
+        throwError(ErrorCode::Resource, QCoreApplication::translate("ControlCommands", "chat message is too long"),
                    QStringLiteral("%1 code units, limit %2").arg(text.size()).arg(kMaxChatCodeUnits));
     }
     return utf16Command(QString::fromLatin1("12") + QLatin1String(kDelimiter) + text);
@@ -95,8 +96,8 @@ CommandPayload ControlCommands::quality(int value)
     // The three presets the host documents; anything else is a caller bug, not
     // something to forward blindly to the partner's encoder.
     if (value != 30 && value != 45 && value != 70) {
-        throwError(ErrorCode::Configuration, QStringLiteral("unsupported display quality"),
-                   QStringLiteral("expected 30, 45 or 70"));
+        throwError(ErrorCode::Configuration, QCoreApplication::translate("ControlCommands", "unsupported display quality"),
+                   QCoreApplication::translate("ControlCommands", "expected 30, 45 or 70"));
     }
     return asciiCommand(QString::fromLatin1("31") + QLatin1String(kDelimiter)
                         + QString::number(value));

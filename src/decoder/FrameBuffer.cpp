@@ -1,6 +1,7 @@
 #include "decoder/FrameBuffer.h"
 
 #include "core/ErrorTypes.h"
+#include <QCoreApplication>
 
 #include <QCryptographicHash>
 
@@ -18,7 +19,7 @@ bool FrameBuffer::sizeAllowed(const QSize &size)
 void FrameBuffer::reset(const QSize &size)
 {
     if (!sizeAllowed(size)) {
-        throwResource(QStringLiteral("partner desktop dimensions are outside the allocation limit"),
+        throwResource(QCoreApplication::translate("Decoder", "partner desktop dimensions are outside the allocation limit"),
                       QStringLiteral("%1x%2").arg(size.width()).arg(size.height()));
     }
     // Format_RGB32 matches the recovered 32-bit RGB canvas and gives a fast,

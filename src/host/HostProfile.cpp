@@ -1,5 +1,6 @@
 #include "host/HostProfile.h"
 
+#include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
@@ -71,7 +72,7 @@ QString readSmallFile(const QString &path, QString *error)
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
         if (error)
-            *error = QStringLiteral("cannot read %1: %2").arg(path, file.errorString());
+            *error = QCoreApplication::translate("HostProfile", "cannot read %1: %2").arg(path, file.errorString());
         return {};
     }
     if (file.size() > kMaxProfileBytes) {
@@ -88,7 +89,7 @@ bool writePrivateFile(const QString &path, const QByteArray &data, QString *erro
     QDir directory = info.absoluteDir();
     if (!directory.exists() && !QDir().mkpath(directory.absolutePath())) {
         if (error)
-            *error = QStringLiteral("cannot create %1").arg(directory.absolutePath());
+            *error = QCoreApplication::translate("HostProfile", "cannot create %1").arg(directory.absolutePath());
         return false;
     }
     // Keep the directory private even if it was created by an older build.
@@ -99,13 +100,13 @@ bool writePrivateFile(const QString &path, const QByteArray &data, QString *erro
     QSaveFile file(path);
     if (!file.open(QIODevice::WriteOnly)) {
         if (error)
-            *error = QStringLiteral("cannot open %1 for writing: %2").arg(path, file.errorString());
+            *error = QCoreApplication::translate("HostProfile", "cannot open %1 for writing: %2").arg(path, file.errorString());
         return false;
     }
     file.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
     if (file.write(data) != data.size() || !file.commit()) {
         if (error)
-            *error = QStringLiteral("cannot write %1: %2").arg(path, file.errorString());
+            *error = QCoreApplication::translate("HostProfile", "cannot write %1: %2").arg(path, file.errorString());
         return false;
     }
     QFile::setPermissions(path, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
@@ -325,7 +326,7 @@ HostIdentity HostProfile::loadOrCreateAt(const QString &path, QString *error)
     identity.profilePath = path;
     if (path.isEmpty()) {
         if (error)
-            *error = QStringLiteral("the host profile path is empty");
+            *error = QCoreApplication::translate("HostProfile", "the host profile path is empty");
         return {};
     }
 
@@ -340,14 +341,14 @@ HostIdentity HostProfile::loadOrCreateAt(const QString &path, QString *error)
         }
         if (json.size() > kMaxProfileBytes) {
             if (error)
-                *error = QStringLiteral("the host profile is too large");
+                *error = QCoreApplication::translate("HostProfile", "the host profile is too large");
             return {};
         }
         QJsonParseError parseError;
         const QJsonDocument document = QJsonDocument::fromJson(json.toUtf8(), &parseError);
         if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
             if (error)
-                *error = QStringLiteral("the host profile is not valid JSON; fix or delete %1")
+                *error = QCoreApplication::translate("HostProfile", "the host profile is not valid JSON; fix or delete %1")
                              .arg(path);
             return {};
         }
@@ -357,7 +358,7 @@ HostIdentity HostProfile::loadOrCreateAt(const QString &path, QString *error)
         identity.displayName = object.value(QStringLiteral("display_name")).toString().trimmed();
         if (!validDeviceIdentity(identity.deviceIdentity) || !validPassword(identity.password)) {
             if (error)
-                *error = QStringLiteral("the host profile is invalid; fix or delete %1").arg(path);
+                *error = QCoreApplication::translate("HostProfile", "the host profile is invalid; fix or delete %1").arg(path);
             return {};
         }
     } else {
@@ -387,7 +388,7 @@ HostIdentity HostProfile::loadOrCreateAt(const QString &path, QString *error)
     const QString interfaceName = primaryInterfaceWithAddress(&address);
     if (address.isEmpty()) {
         if (error)
-            *error = QStringLiteral("no active IPv4 network connection is available; connect "
+            *error = QCoreApplication::translate("HostProfile", "no active IPv4 network connection is available; connect "
                                     "this computer to a network and try again");
         return {};
     }

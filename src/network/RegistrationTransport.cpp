@@ -1,5 +1,6 @@
 #include "network/RegistrationTransport.h"
 
+#include <QCoreApplication>
 #include "protocol/RegistrationCodec.h"
 
 namespace ultraview::network {
@@ -47,7 +48,7 @@ void RegistrationTransport::onReady()
     const QByteArray statusLine = header.left(header.indexOf("\r\n"));
     if (!m_options.httpHostHeader.isEmpty() && statusLine != QByteArrayLiteral("HTTP/1.1 200 OK")) {
         const ErrorInfo info{ErrorCode::Protocol,
-                             QStringLiteral("registration tunnel did not return HTTP 200"),
+                             QCoreApplication::translate("RegistrationTransport", "registration tunnel did not return HTTP 200"),
                              QString::fromLatin1(statusLine).left(64)};
         emit failed(info);
         m_channel.abort();
@@ -68,7 +69,7 @@ void RegistrationTransport::onData()
         m_ignoredBytes += chunk.size();
         ++m_ignoredPayloads;
         if (m_ignoredSummary.isEmpty())
-            m_ignoredSummary = QStringLiteral("drained %1 bytes after the handshake").arg(chunk.size());
+            m_ignoredSummary = QCoreApplication::translate("RegistrationTransport", "drained %1 bytes after the handshake").arg(chunk.size());
         return;
     }
     QList<QByteArray> frames;
@@ -81,7 +82,7 @@ void RegistrationTransport::onData()
     }
     for (const QByteArray &frame : frames) {
         if (frame.isEmpty() || static_cast<quint8>(frame.at(0)) != 1) {
-            emit failed(ErrorInfo{ErrorCode::Protocol, QStringLiteral("expected mode1 frame")});
+            emit failed(ErrorInfo{ErrorCode::Protocol, QCoreApplication::translate("RegistrationTransport", "expected mode1 frame")});
             m_channel.abort();
             return;
         }
@@ -100,7 +101,7 @@ void RegistrationTransport::onClosed()
 void RegistrationTransport::sendCommand(const QByteArray &plaintextAnsi)
 {
     if (!m_ready) {
-        emit failed(ErrorInfo{ErrorCode::Internal, QStringLiteral("the registration channel is not connected")});
+        emit failed(ErrorInfo{ErrorCode::Internal, QCoreApplication::translate("RegistrationTransport", "the registration channel is not connected")});
         return;
     }
     QByteArray body;
@@ -114,7 +115,7 @@ void RegistrationTransport::sendCommand(const QByteArray &plaintextAnsi)
         return;
     }
     if (static_cast<quint32>(body.size()) > m_options.maxFrameBytes) {
-        emit failed(ErrorInfo{ErrorCode::Resource, QStringLiteral("outbound frame exceeds limit"),
+        emit failed(ErrorInfo{ErrorCode::Resource, QCoreApplication::translate("RegistrationTransport", "outbound frame exceeds limit"),
                               QStringLiteral("%1 > %2 bytes").arg(body.size()).arg(m_options.maxFrameBytes)});
         return;
     }

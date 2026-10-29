@@ -1,5 +1,6 @@
 #include "input/KeyboardMapper.h"
 
+#include <QCoreApplication>
 #include <QHash>
 #include <Qt>
 
@@ -123,15 +124,15 @@ std::optional<KeyMapping> KeyboardMapper::mapQtKey(int qtKey, Qt::KeyboardModifi
 QString KeyboardMapper::virtualKeyName(quint8 virtualKey)
 {
     if (virtualKey >= 0x30 && virtualKey <= 0x39)
-        return QStringLiteral("Digit %1").arg(
+        return QCoreApplication::translate("Keyboard", "Digit %1").arg(
             QChar(QLatin1Char(static_cast<char>('0' + (virtualKey - 0x30)))));
     if (virtualKey >= 0x41 && virtualKey <= 0x5A)
-        return QStringLiteral("Key %1").arg(
+        return QCoreApplication::translate("Keyboard", "Key %1").arg(
             QChar(QLatin1Char(static_cast<char>('A' + (virtualKey - 0x41)))));
     if (virtualKey >= 0x70 && virtualKey <= 0x87)
         return QStringLiteral("F%1").arg(virtualKey - 0x70 + 1);
     if (virtualKey >= 0x60 && virtualKey <= 0x69)
-        return QStringLiteral("Numpad %1").arg(virtualKey - 0x60);
+        return QCoreApplication::translate("Keyboard", "Numpad %1").arg(virtualKey - 0x60);
     switch (virtualKey) {
     case 0x08:
         return QStringLiteral("Backspace");
@@ -148,15 +149,15 @@ QString KeyboardMapper::virtualKeyName(quint8 virtualKey)
     case 0x13:
         return QStringLiteral("Pause");
     case 0x14:
-        return QStringLiteral("Caps Lock");
+        return QCoreApplication::translate("Keyboard", "Caps Lock");
     case 0x1B:
         return QStringLiteral("Escape");
     case 0x20:
         return QStringLiteral("Space");
     case 0x21:
-        return QStringLiteral("Page Up");
+        return QCoreApplication::translate("Keyboard", "Page Up");
     case 0x22:
-        return QStringLiteral("Page Down");
+        return QCoreApplication::translate("Keyboard", "Page Down");
     case 0x23:
         return QStringLiteral("End");
     case 0x24:
@@ -170,21 +171,21 @@ QString KeyboardMapper::virtualKeyName(quint8 virtualKey)
     case 0x28:
         return QStringLiteral("Down");
     case 0x2C:
-        return QStringLiteral("Print Screen");
+        return QCoreApplication::translate("Keyboard", "Print Screen");
     case 0x2D:
         return QStringLiteral("Insert");
     case 0x2E:
         return QStringLiteral("Delete");
     case 0x5B:
-        return QStringLiteral("Left Windows");
+        return QCoreApplication::translate("Keyboard", "Left Windows");
     case 0x5C:
-        return QStringLiteral("Right Windows");
+        return QCoreApplication::translate("Keyboard", "Right Windows");
     case 0x5D:
         return QStringLiteral("Menu");
     case 0x90:
-        return QStringLiteral("Num Lock");
+        return QCoreApplication::translate("Keyboard", "Num Lock");
     case 0x91:
-        return QStringLiteral("Scroll Lock");
+        return QCoreApplication::translate("Keyboard", "Scroll Lock");
     case 0xBA:
         return QStringLiteral(";");
     case 0xBB:
@@ -211,7 +212,7 @@ QString KeyboardMapper::virtualKeyName(quint8 virtualKey)
         break;
     }
     // Hex digits are upper case, the prefix stays lower case.
-    return QStringLiteral("VK 0x%1").arg(
+    return QCoreApplication::translate("Keyboard", "VK 0x%1").arg(
         QString::number(virtualKey, 16).rightJustified(2, QLatin1Char('0')).toUpper());
 }
 

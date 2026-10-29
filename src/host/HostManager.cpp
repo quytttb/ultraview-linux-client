@@ -8,6 +8,7 @@
 #include "protocol/PacketCodec.h"
 
 #include <QDateTime>
+#include <QCoreApplication>
 #include <QTimer>
 
 #include <algorithm>
@@ -79,7 +80,7 @@ HostManager::HostManager(QObject *parent)
     m_replyTimer->setSingleShot(true);
     connect(m_replyTimer, &QTimer::timeout, this, [this] {
         if (!m_registered)
-            fail(QStringLiteral("UltraViewer did not assign an ID in time. Check the network "
+            fail(tr("UltraViewer did not assign an ID in time. Check the network "
                                 "connection and try again."));
     });
 
@@ -87,7 +88,7 @@ HostManager::HostManager(QObject *parent)
     m_relayAddressTimer->setSingleShot(true);
     connect(m_relayAddressTimer, &QTimer::timeout, this, [this] {
         if (m_relay != nullptr && !m_hasRelayAddress) {
-            endRelay(QStringLiteral("The incoming relay did not provide an address. Ask Windows "
+            endRelay(tr("The incoming relay did not provide an address. Ask Windows "
                                     "to connect again."));
         }
     });
@@ -96,7 +97,7 @@ HostManager::HostManager(QObject *parent)
 HostManager::~HostManager()
 {
     m_terminating = true;
-    cleanup(QStringLiteral("The host stopped sharing."));
+    cleanup(tr("The host stopped sharing."));
 }
 
 void HostManager::start(const HostStartRequest &request)
@@ -105,7 +106,7 @@ void HostManager::start(const HostStartRequest &request)
         return;
     if (m_backend != nullptr || m_registration != nullptr) {
         // A previous failed run might still be releasing its objects.
-        cleanup(QStringLiteral("The host stopped sharing."));
+        cleanup(tr("The host stopped sharing."));
     }
     m_request = request;
     m_terminating = false;
@@ -118,7 +119,7 @@ void HostManager::start(const HostStartRequest &request)
     m_nextKeepaliveMs = 0;
 
     if (!m_request.identity.isValid()) {
-        fail(QStringLiteral("The host profile is incomplete. The host needs a stable identity, "
+        fail(tr("The host profile is incomplete. The host needs a stable identity, "
                             "an 8-digit password and an active IPv4 connection."));
         return;
     }
@@ -126,12 +127,12 @@ void HostManager::start(const HostStartRequest &request)
         m_request.timeoutMs = 8000;
 
     setState(HostState::Starting);
-    setStatus(QStringLiteral("Requesting screen-sharing permission from the desktop…"));
+    setStatus(tr("Requesting screen-sharing permission from the desktop…"));
 
     QString error;
     m_backend = createHostBackend(&error);
     if (!m_backend) {
-        fail(QStringLiteral("Screen sharing is unavailable: %1").arg(error));
+        fail(tr("Screen sharing is unavailable: %1").arg(error));
         return;
     }
     m_backendName = m_backend->name();
@@ -141,16 +142,16 @@ void HostManager::start(const HostStartRequest &request)
     if (m_terminating) {
         // stop() arrived while the portal dialog was open.  The backend call has
         // returned now, so it is safe to tear it down and finish the stop.
-        cleanup(QStringLiteral("The host stopped sharing."));
+        cleanup(tr("The host stopped sharing."));
         m_terminating = false;
         setState(HostState::Stopped);
-        setStatus(QStringLiteral("Not hosting"));
+        setStatus(tr("Not hosting"));
         emit stopped();
         return;
     }
     if (!backendStarted) {
         m_backend.reset();
-        fail(QStringLiteral("Screen sharing could not start: %1").arg(error));
+        fail(tr("Screen sharing could not start: %1").arg(error));
         return;
     }
     if (m_terminating)
@@ -158,12 +159,12 @@ void HostManager::start(const HostStartRequest &request)
 
     const QVector<HostRect> displays = m_backend->displays(&error);
     if (displays.isEmpty()) {
-        fail(QStringLiteral("The shared desktop reported no displays: %1").arg(error));
+        fail(tr("The shared desktop reported no displays: %1").arg(error));
         return;
     }
     const auto layout = HostLayout::build(displays, &error);
     if (!layout.has_value()) {
-        fail(QStringLiteral("The display layout cannot be shared: %1").arg(error));
+        fail(tr("The display layout cannot be shared: %1").arg(error));
         return;
     }
     m_layout = *layout;
@@ -205,7 +206,7 @@ void HostManager::start(const HostStartRequest &request)
     registration->setOptions(options);
 
     setState(HostState::Registering);
-    setStatus(QStringLiteral("Registering this computer with UltraViewer…"));
+    setStatus(tr("Registering this computer with UltraViewer…"));
     registration->start();
 }
 
@@ -222,10 +223,10 @@ void HostManager::stop()
         return;
     m_terminating = true;
     stopTimers();
-    cleanup(QStringLiteral("The host stopped sharing."));
+    cleanup(tr("The host stopped sharing."));
     m_terminating = false;
     setState(HostState::Stopped);
-    setStatus(QStringLiteral("Not hosting"));
+    setStatus(tr("Not hosting"));
     emit stopped();
 }
 
@@ -238,7 +239,7 @@ void HostManager::approve(bool allowControl)
     if (!frame.has_value()) {
         m_session->decline();
         flushActions();
-        setStatus(QStringLiteral("The screen could not be captured; the request was refused. %1")
+        setStatus(tr("The screen could not be captured; the request was refused. %1")
                       .arg(error));
         setState(HostState::Waiting);
         return;
@@ -247,13 +248,13 @@ void HostManager::approve(bool allowControl)
     if (!m_session->approve(*frame, allowControl, now, &error)) {
         m_session->decline();
         flushActions();
-        setStatus(QStringLiteral("The viewer session could not start: %1").arg(error));
+        setStatus(tr("The viewer session could not start: %1").arg(error));
         setState(HostState::Waiting);
         return;
     }
     emit approvalCleared();
     setState(HostState::ViewerStarting);
-    setStatus(QStringLiteral("Sending the first screen frame to the viewer…"));
+    setStatus(tr("Sending the first screen frame to the viewer…"));
     flushActions();
 }
 
@@ -288,13 +289,13 @@ void HostManager::tick()
         QString error;
         const auto frame = captureHostFrame(*m_backend, m_layout, &error);
         if (!frame.has_value()) {
-            m_session->abortViewer(QStringLiteral("Screen capture failed: %1").arg(error));
+            m_session->abortViewer(tr("Screen capture failed: %1").arg(error));
             flushActions();
-            setStatus(QStringLiteral("Screen capture failed: %1").arg(error));
+            setStatus(tr("Screen capture failed: %1").arg(error));
         } else if (!m_session->submitFrame(*frame, now, &error)) {
-            m_session->abortViewer(QStringLiteral("Screen encoding failed: %1").arg(error));
+            m_session->abortViewer(tr("Screen encoding failed: %1").arg(error));
             flushActions();
-            setStatus(QStringLiteral("Screen encoding failed: %1").arg(error));
+            setStatus(tr("Screen encoding failed: %1").arg(error));
         }
         flushActions();
     }
@@ -326,14 +327,14 @@ void HostManager::flushActions(bool allowNetwork)
             break;
         case HostAction::Type::Prompt:
             setState(HostState::WaitingApproval);
-            setStatus(QStringLiteral("A Windows viewer is requesting access. Approve or refuse "
+            setStatus(tr("A Windows viewer is requesting access. Approve or refuse "
                                      "the connection on this computer."));
             emit approvalRequested(action.viewerId, action.viewerName);
             break;
         case HostAction::Type::Connected:
             setState(HostState::Sharing);
-            setStatus(QStringLiteral("Sharing the screen with %1.")
-                          .arg(action.viewerName.isEmpty() ? QStringLiteral("the Windows viewer")
+            setStatus(tr("Sharing the screen with %1.")
+                          .arg(action.viewerName.isEmpty() ? tr("the Windows viewer")
                                                           : action.viewerName));
             emit viewerConnected(action.viewerId, action.viewerName);
             emit controlChanged(m_session->controlAllowed());
@@ -376,7 +377,7 @@ void HostManager::onRegistrationReady()
     if (m_terminating || m_registration == nullptr)
         return;
     m_replyTimer->start(kCommandReplyTimeoutMs);
-    setStatus(QStringLiteral("Waiting for UltraViewer to assign this computer an ID…"));
+    setStatus(tr("Waiting for UltraViewer to assign this computer an ID…"));
 }
 
 void HostManager::onRegistrationPayload(const QByteArray &payload)
@@ -387,7 +388,7 @@ void HostManager::onRegistrationPayload(const QByteArray &payload)
         try {
             m_registrationReply = parseRegistrationReply(payload);
         } catch (const UvException &exception) {
-            fail(QStringLiteral("UltraViewer sent an invalid registration reply."),
+            fail(tr("UltraViewer sent an invalid registration reply."),
                  exception.detail());
             return;
         }
@@ -395,7 +396,7 @@ void HostManager::onRegistrationPayload(const QByteArray &payload)
         m_replyTimer->stop();
         emit registered(m_registrationReply.id, m_registrationReply.publicIp);
         setState(HostState::Waiting);
-        setStatus(QStringLiteral("Waiting for a Windows viewer. This computer is registered."));
+        setStatus(tr("Waiting for a Windows viewer. This computer is registered."));
         m_nextKeepaliveMs = QDateTime::currentMSecsSinceEpoch() + kKeepaliveIntervalMs;
         m_tickTimer->start();
         return;
@@ -407,7 +408,7 @@ void HostManager::onRegistrationPayload(const QByteArray &payload)
         const auto request = parseRelayRequest(payload, m_registrationReply.pingList,
                                                m_registrationReply.pingHostNames);
         if (!request.has_value()) {
-            setStatus(QStringLiteral("Ignored a malformed incoming connection request."));
+            setStatus(tr("Ignored a malformed incoming connection request."));
             return;
         }
         if (m_hasRelayRequest && sameRelayRequest(*request, m_relayRequest)
@@ -418,7 +419,7 @@ void HostManager::onRegistrationPayload(const QByteArray &payload)
             return;
         }
         if (m_session != nullptr && m_session->hasViewer()) {
-            setStatus(QStringLiteral("Another connection request arrived while a viewer is "
+            setStatus(tr("Another connection request arrived while a viewer is "
                                      "connected; it was ignored."));
             return;
         }
@@ -437,7 +438,7 @@ void HostManager::onRegistrationClosed()
 {
     if (m_terminating)
         return;
-    fail(QStringLiteral("The UltraViewer command channel closed. Host mode stopped."));
+    fail(tr("The UltraViewer command channel closed. Host mode stopped."));
 }
 
 void HostManager::startRelay(const RelayRequest &request)
@@ -505,7 +506,7 @@ void HostManager::startRelay(const RelayRequest &request)
     }
 
     setState(HostState::RelayConnecting);
-    setStatus(QStringLiteral("Opening the incoming UltraViewer relay…"));
+    setStatus(tr("Opening the incoming UltraViewer relay…"));
     m_relayAddressTimer->start(kRelayAddressTimeoutMs);
     relay->start(endpoint, policy, m_request.timeoutMs, m_request.maxFrameBytes);
 }
@@ -515,7 +516,7 @@ void HostManager::onRelayReady()
     if (m_relay == nullptr || !m_relay->isReady() || m_terminating)
         return;
     m_relay->sendSystemPayload(QByteArrayLiteral("0"), false);
-    setStatus(QStringLiteral("Waiting for the relay to provide the incoming route…"));
+    setStatus(tr("Waiting for the relay to provide the incoming route…"));
 }
 
 void HostManager::onRelayPayload(const QByteArray &payload, quint32 addressValue, quint16 port,
@@ -525,11 +526,11 @@ void HostManager::onRelayPayload(const QByteArray &payload, quint32 addressValue
         return;
     const auto decoded = peerPayload(payload, unicode);
     if (!decoded.has_value()) {
-        setStatus(QStringLiteral("Ignored an invalid viewer packet."));
+        setStatus(tr("Ignored an invalid viewer packet."));
         return;
     }
     if (addressValue == 0 || port == 0) {
-        setStatus(QStringLiteral("Ignored a viewer packet with an invalid route."));
+        setStatus(tr("Ignored a viewer packet with an invalid route."));
         return;
     }
     m_session->processPeer(*decoded, protocol::formatIpv4(addressValue), port,
@@ -543,7 +544,7 @@ void HostManager::onRelaySystem(const QByteArray &payload)
         return;
     const auto address = parseRelayAddress(payload);
     if (!address.has_value()) {
-        setStatus(QStringLiteral("The relay sent an invalid incoming address."));
+        setStatus(tr("The relay sent an invalid incoming address."));
         return;
     }
     m_hasRelayAddress = true;
@@ -553,21 +554,21 @@ void HostManager::onRelaySystem(const QByteArray &payload)
         m_registration->sendCommand(relayAvailability(m_relayRequest, m_relayAddress));
     if (m_terminating)
         return;
-    setStatus(QStringLiteral("Waiting for the Windows computer to sign in…"));
+    setStatus(tr("Waiting for the Windows computer to sign in…"));
 }
 
 void HostManager::onRelayFailed(const ErrorInfo &error)
 {
     if (m_terminating)
         return;
-    endRelay(QStringLiteral("The incoming relay failed: %1").arg(error.message));
+    endRelay(tr("The incoming relay failed: %1").arg(error.message));
 }
 
 void HostManager::onRelayClosed()
 {
     if (m_terminating)
         return;
-    endRelay(QStringLiteral("The incoming relay disconnected."));
+    endRelay(tr("The incoming relay disconnected."));
 }
 
 void HostManager::endRelay(const QString &reason)
@@ -589,7 +590,7 @@ void HostManager::endRelay(const QString &reason)
     m_relayAddress = {};
     if (m_registered) {
         setState(HostState::Waiting);
-        setStatus(reason + QStringLiteral(" Waiting for another connection."));
+        setStatus(tr("%1 Waiting for another connection.").arg(reason));
     } else {
         fail(reason);
     }
@@ -601,7 +602,7 @@ void HostManager::fail(const QString &message, const QString &detail)
         return;
     m_terminating = true;
     stopTimers();
-    cleanup(QStringLiteral("The host stopped sharing."));
+    cleanup(tr("The host stopped sharing."));
     m_terminating = false;
     setState(HostState::Failed);
     setStatus(message);

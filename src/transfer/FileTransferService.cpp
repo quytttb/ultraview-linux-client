@@ -202,15 +202,15 @@ void FileTransferService::finish(Transfer *transfer, State state, const QString 
     switch (state) {
     case State::Completed:
         emit notice(transfer->direction == Direction::Download
-                        ? QStringLiteral("received \"%1\"").arg(transfer->name)
-                        : QStringLiteral("sent \"%1\"").arg(transfer->name));
+                        ? tr("received \"%1\"").arg(transfer->name)
+                        : tr("sent \"%1\"").arg(transfer->name));
         break;
     case State::Failed:
-        emit notice(QStringLiteral("file transfer of \"%1\" failed: %2")
+        emit notice(tr("file transfer of \"%1\" failed: %2")
                         .arg(transfer->name, error));
         break;
     case State::Cancelled:
-        emit notice(QStringLiteral("file transfer of \"%1\" was cancelled%2")
+        emit notice(tr("file transfer of \"%1\" was cancelled%2")
                         .arg(transfer->name,
                              error.isEmpty() ? QString() : QStringLiteral(": ") + error));
         break;
@@ -231,16 +231,16 @@ QString FileTransferService::offerFile(const QString &localPath, QString *error)
 
     const QFileInfo info(localPath);
     if (!info.exists() || !info.isFile())
-        return reject(QStringLiteral("the file does not exist"));
+        return reject(tr("the file does not exist"));
     if (!info.isReadable())
-        return reject(QStringLiteral("the file is not readable"));
+        return reject(tr("the file is not readable"));
     if (activeCount() >= kMaxActiveTransfers)
-        return reject(QStringLiteral("too many transfers are already active"));
+        return reject(tr("too many transfers are already active"));
     if (info.size() < 0 || info.size() > protocol::FileTransferCodec::kMaxFileBytes)
-        return reject(QStringLiteral("the file is too large for the protocol"));
+        return reject(tr("the file is too large for the protocol"));
     const QString name = info.fileName();
     if (!protocol::FileTransferCodec::isSafeFileName(name))
-        return reject(QStringLiteral("the file name cannot be sent"));
+        return reject(tr("the file name cannot be sent"));
     auto transfer = std::make_unique<Transfer>();
     transfer->id = protocol::FileTransferCodec::newTransferId();
     transfer->name = name;
@@ -251,7 +251,7 @@ QString FileTransferService::offerFile(const QString &localPath, QString *error)
     auto *file = new QFile(transfer->path);
     if (!file->open(QIODevice::ReadOnly)) {
         delete file;
-        return reject(QStringLiteral("the file could not be opened for reading"));
+        return reject(tr("the file could not be opened for reading"));
     }
     transfer->file = file;
 
@@ -265,7 +265,7 @@ QString FileTransferService::offerFile(const QString &localPath, QString *error)
         delete file;
         return reject(exception.message());
     }
-    emit notice(QStringLiteral("offering \"%1\" (%2)").arg(name, sizeText(info.size())));
+    emit notice(tr("offering \"%1\" (%2)").arg(name, sizeText(info.size())));
     report();
     return id;
 }
@@ -279,25 +279,25 @@ void FileTransferService::acceptIncoming(const QString &transferId, bool accept)
     }
     if (!accept) {
         emit outbound(protocol::FileTransferCodec::accept(transferId, false));
-        finish(transfer, State::Cancelled, QStringLiteral("declined"));
+        finish(transfer, State::Cancelled, tr("declined"));
         return;
     }
     if (!ensureIncomingDirectory()) {
         emit outbound(protocol::FileTransferCodec::accept(transferId, false));
-        finish(transfer, State::Failed, QStringLiteral("the download directory is not writable"));
+        finish(transfer, State::Failed, tr("the download directory is not writable"));
         return;
     }
     const QString path = uniqueIncomingPath(transfer->name);
     if (path.isEmpty()) {
         emit outbound(protocol::FileTransferCodec::accept(transferId, false));
-        finish(transfer, State::Failed, QStringLiteral("no free file name in the download directory"));
+        finish(transfer, State::Failed, tr("no free file name in the download directory"));
         return;
     }
     auto *file = new QFile(path);
     if (!file->open(QIODevice::WriteOnly | QIODevice::NewOnly)) {
         delete file;
         emit outbound(protocol::FileTransferCodec::accept(transferId, false));
-        finish(transfer, State::Failed, QStringLiteral("the destination file could not be created"));
+        finish(transfer, State::Failed, tr("the destination file could not be created"));
         return;
     }
     transfer->file = file;
@@ -325,7 +325,7 @@ void FileTransferService::startOrContinue(Transfer *transfer)
     const QByteArray data = transfer->file->read(wanted);
     if (data.isEmpty()) {
         emit outbound(protocol::FileTransferCodec::cancel(transfer->id));
-        finish(transfer, State::Failed, QStringLiteral("the file ended before its announced size"));
+        finish(transfer, State::Failed, tr("the file ended before its announced size"));
         return;
     }
     emit outbound(protocol::FileTransferCodec::chunk(transfer->id, transfer->transferred, data));
@@ -340,7 +340,7 @@ void FileTransferService::cancel(const QString &transferId)
         return;
     if (transfer->state == State::Waiting || transfer->state == State::Transferring)
         emit outbound(protocol::FileTransferCodec::cancel(transferId));
-    finish(transfer, State::Cancelled, QStringLiteral("cancelled locally"));
+    finish(transfer, State::Cancelled, tr("cancelled locally"));
 }
 
 void FileTransferService::cancelAll()
@@ -348,7 +348,7 @@ void FileTransferService::cancelAll()
     for (const auto &transfer : m_transfers) {
         if (transfer->state == State::Waiting || transfer->state == State::Transferring)
             emit outbound(protocol::FileTransferCodec::cancel(transfer->id));
-        finish(transfer.get(), State::Cancelled, QStringLiteral("session ended"));
+        finish(transfer.get(), State::Cancelled, tr("session ended"));
     }
 }
 
@@ -370,7 +370,7 @@ void FileTransferService::handleInbound(const QList<QByteArray> &fields)
         }
         if (activeCount() >= kMaxActiveTransfers) {
             emit outbound(FileTransferCodec::cancel(message.offer.transferId));
-            emit notice(QStringLiteral("refused \"%1\": too many active transfers")
+            emit notice(tr("refused \"%1\": too many active transfers")
                             .arg(message.offer.name));
             return;
         }
@@ -386,7 +386,7 @@ void FileTransferService::handleInbound(const QList<QByteArray> &fields)
         if (m_autoAccept) {
             acceptIncoming(message.offer.transferId, true);
         } else {
-            emit notice(QStringLiteral("the partner offers \"%1\" (%2); accept or decline it "
+            emit notice(tr("the partner offers \"%1\" (%2); accept or decline it "
                                        "in the transfer panel")
                             .arg(name, sizeText(size)));
             report();
@@ -398,7 +398,7 @@ void FileTransferService::handleInbound(const QList<QByteArray> &fields)
         if (transfer == nullptr || transfer->direction != Direction::Upload)
             return;
         if (!message.accepted) {
-            finish(transfer, State::Cancelled, QStringLiteral("the partner declined"));
+            finish(transfer, State::Cancelled, tr("the partner declined"));
             return;
         }
         if (transfer->state != State::Waiting)
@@ -420,14 +420,14 @@ void FileTransferService::handleInbound(const QList<QByteArray> &fields)
         if (message.chunk.offset != transfer->transferred) {
             emit outbound(FileTransferCodec::cancel(message.chunk.transferId));
             finish(transfer, State::Failed,
-                   QStringLiteral("chunk at offset %1 arrived while %2 was expected")
+                   tr("chunk at offset %1 arrived while %2 was expected")
                        .arg(message.chunk.offset)
                        .arg(transfer->transferred));
             return;
         }
         if (transfer->file->write(message.chunk.data) != message.chunk.data.size()) {
             emit outbound(FileTransferCodec::cancel(message.chunk.transferId));
-            finish(transfer, State::Failed, QStringLiteral("the file could not be written"));
+            finish(transfer, State::Failed, tr("the file could not be written"));
             return;
         }
         transfer->transferred += message.chunk.data.size();
@@ -441,7 +441,7 @@ void FileTransferService::handleInbound(const QList<QByteArray> &fields)
     case FileTransferMessage::Kind::Cancel: {
         Transfer *transfer = find(message.transferId);
         if (transfer != nullptr)
-            finish(transfer, State::Cancelled, QStringLiteral("the partner cancelled"));
+            finish(transfer, State::Cancelled, tr("the partner cancelled"));
         return;
     }
     case FileTransferMessage::Kind::Ack: {

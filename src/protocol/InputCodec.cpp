@@ -1,5 +1,6 @@
 #include "protocol/InputCodec.h"
 
+#include <QCoreApplication>
 #include "core/ErrorTypes.h"
 
 namespace ultraview::protocol {
@@ -8,7 +9,7 @@ namespace {
 QString checkedInteger(int value, int low, int high)
 {
     if (value < low || value > high)
-        throwError(ErrorCode::Configuration, QStringLiteral("input value outside supported range"),
+        throwError(ErrorCode::Configuration, QCoreApplication::translate("InputCodec", "input value outside supported range"),
                    QString::number(value));
     return QString::number(value);
 }
@@ -23,7 +24,7 @@ quint16 buttonEvent(MouseButton button, bool down)
     case MouseButton::Middle:
         return down ? InputCodec::kMiddleDown : InputCodec::kMiddleUp;
     }
-    throwError(ErrorCode::Internal, QStringLiteral("unsupported mouse button"));
+    throwError(ErrorCode::Internal, QCoreApplication::translate("InputCodec", "unsupported mouse button"));
 }
 
 QByteArray command8(const QString &suffix)

@@ -13,6 +13,7 @@
 //     backend is available, that the grabbed window shows the patched colour).
 // That is what CI can check without a real UltraViewer partner.
 //
+#include <QCoreApplication>
 #include <QGuiApplication>
 #include <QIcon>
 #include <QImage>
@@ -48,17 +49,17 @@ void registerQmlTypes()
     qmlRegisterType<render::RemoteScreenItem>("Ultraview", 1, 0, "RemoteScreen");
     qmlRegisterType<input::InputController>("Ultraview", 1, 0, "InputController");
     qmlRegisterUncreatableType<models::ConnectionViewModel>(
-        "Ultraview", 1, 0, "ConnectionViewModel", QStringLiteral("provided by the application"));
+        "Ultraview", 1, 0, "ConnectionViewModel", QCoreApplication::translate("Application", "provided by the application"));
     qmlRegisterUncreatableType<models::HostViewModel>(
-        "Ultraview", 1, 0, "HostViewModel", QStringLiteral("provided by the application"));
+        "Ultraview", 1, 0, "HostViewModel", QCoreApplication::translate("Application", "provided by the application"));
     qmlRegisterUncreatableType<models::SettingsModel>("Ultraview", 1, 0, "Settings",
-                                                      QStringLiteral("provided by the application"));
+                                                      QCoreApplication::translate("Application", "provided by the application"));
     qmlRegisterUncreatableType<models::RecentConnectionsModel>(
-        "Ultraview", 1, 0, "RecentConnections", QStringLiteral("provided by the application"));
+        "Ultraview", 1, 0, "RecentConnections", QCoreApplication::translate("Application", "provided by the application"));
     qmlRegisterUncreatableType<SessionManager>("Ultraview", 1, 0, "Session",
-                                               QStringLiteral("provided by the application"));
+                                               QCoreApplication::translate("Application", "provided by the application"));
     qmlRegisterUncreatableType<platform::GlobalMenu>(
-        "Ultraview", 1, 0, "GlobalMenu", QStringLiteral("provided by the application"));
+        "Ultraview", 1, 0, "GlobalMenu", QCoreApplication::translate("Application", "provided by the application"));
 }
 
 QByteArray rgb888Bytes(const QImage &image)
@@ -352,13 +353,17 @@ int main(int argc, char *argv[])
 {
     QGuiApplication application(argc, argv);
     QTranslator translator;
+    // Only Vietnamese is shipped: try the system locale first, then fall back to
+    // Vietnamese so a machine with an untranslated locale still shows Vietnamese.
     if (translator.load(QLocale(), QStringLiteral("ultraview"), QStringLiteral("_"),
-                        QStringLiteral(":/i18n")))
+                        QStringLiteral(":/i18n"))
+        || translator.load(QLocale(QStringLiteral("vi")), QStringLiteral("ultraview"),
+                           QStringLiteral("_"), QStringLiteral(":/i18n")))
         application.installTranslator(&translator);
     QCoreApplication::setOrganizationName(QStringLiteral("ultraview"));
     QCoreApplication::setApplicationName(QStringLiteral("ultraview"));
     QCoreApplication::setApplicationVersion(QStringLiteral(ULTRAVIEW_VERSION));
-    QGuiApplication::setApplicationDisplayName(QStringLiteral("UltraViewer (native Linux client)"));
+    QGuiApplication::setApplicationDisplayName(QCoreApplication::translate("Application", "UltraViewer (native Linux client)"));
     QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/qt/qml/Ultraview/qml/assets/icons/ultraview.svg")));
     // The UI is fully themed in QML; the Basic style keeps Qt from injecting its
     // own look on top of the theme.

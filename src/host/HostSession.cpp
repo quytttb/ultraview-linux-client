@@ -1,5 +1,6 @@
 #include "host/HostSession.h"
 
+#include <QCoreApplication>
 #include "core/ErrorTypes.h"
 
 #include <algorithm>
@@ -183,7 +184,7 @@ void HostSession::processPeer(const QByteArray &payload, const QString &address,
             m_pendingFrame = {};
             QString error;
             if (!sendFrame(frame, nowMs, &error)) {
-                endViewer(QStringLiteral("The host could not encode the first screen frame."));
+                endViewer(QCoreApplication::translate("HostSession", "The host could not encode the first screen frame."));
             }
         }
         return;
@@ -191,7 +192,7 @@ void HostSession::processPeer(const QByteArray &payload, const QString &address,
 
     const QByteArray tag = peerTag(payload);
     if (tag == QByteArrayLiteral("19")) {
-        endViewer(QStringLiteral("The Windows computer disconnected."));
+        endViewer(QCoreApplication::translate("HostSession", "The Windows computer disconnected."));
         return;
     }
     if (tag == QByteArrayLiteral("20")) {
@@ -205,7 +206,7 @@ void HostSession::processPeer(const QByteArray &payload, const QString &address,
         return;
     }
     if (payload == QByteArrayLiteral("32|||1")) {
-        endViewer(QStringLiteral("The Windows viewer requested an unsupported screen color "
+        endViewer(QCoreApplication::translate("HostSession", "The Windows viewer requested an unsupported screen color "
                                  "mode. Use 16-bit color."));
         return;
     }
@@ -239,7 +240,7 @@ void HostSession::onLogin(const QByteArray &payload, const QString &address, qui
         m_actions.append(HostAction::sendPeer(address, port, singleCommand(22)));
         if (locked) {
             m_actions.append(HostAction::status(
-                QStringLiteral("Too many wrong passwords. New connections are refused for 5 "
+                QCoreApplication::translate("HostSession", "Too many wrong passwords. New connections are refused for 5 "
                                "minutes.")));
         }
         return;
@@ -251,7 +252,7 @@ void HostSession::onLogin(const QByteArray &payload, const QString &address, qui
         || hash.isEmpty() || hash.size() > 128) {
         m_actions.append(HostAction::sendPeer(address, port, singleCommand(27)));
         m_actions.append(HostAction::status(
-            QStringLiteral("The Windows viewer needs modern 16-bit screen mode and version "
+            QCoreApplication::translate("HostSession", "The Windows viewer needs modern 16-bit screen mode and version "
                            "6.0.0 or newer.")));
         return;
     }
@@ -262,7 +263,7 @@ void HostSession::onLogin(const QByteArray &payload, const QString &address, qui
             if (m_hasLastFrame) {
                 QString error;
                 if (!initialize(m_lastFrame, m_control, true, nowMs, &error)) {
-                    endViewer(QStringLiteral("The host could not restart the viewer session."));
+                    endViewer(QCoreApplication::translate("HostSession", "The host could not restart the viewer session."));
                 }
             }
         } else if (m_peer.address != address || m_peer.port != port) {
@@ -286,7 +287,7 @@ bool HostSession::approve(const HostFrame &firstFrame, bool allowControl, qint64
 {
     if (m_phase != HostPhase::Approval) {
         if (error)
-            *error = QStringLiteral("The incoming connection is no longer available.");
+            *error = QCoreApplication::translate("HostSession", "The incoming connection is no longer available.");
         return false;
     }
     return initialize(firstFrame, allowControl, true, nowMs, error);
@@ -295,7 +296,7 @@ bool HostSession::approve(const HostFrame &firstFrame, bool allowControl, qint64
 void HostSession::decline()
 {
     if (hasViewer())
-        endViewer(QStringLiteral("The incoming request was declined."));
+        endViewer(QCoreApplication::translate("HostSession", "The incoming request was declined."));
 }
 
 void HostSession::abortViewer(const QString &reason)
@@ -339,7 +340,7 @@ bool HostSession::submitFrame(const HostFrame &frame, qint64 nowMs, QString *err
 void HostSession::tick(qint64 nowMs)
 {
     if (hasViewer() && m_deadlineMs >= 0 && m_deadlineMs <= nowMs) {
-        endViewer(QStringLiteral("The incoming connection timed out. Ask Windows to connect "
+        endViewer(QCoreApplication::translate("HostSession", "The incoming connection timed out. Ask Windows to connect "
                                  "again."));
     }
 }
@@ -366,7 +367,7 @@ bool HostSession::initialize(const HostFrame &frame, bool allowControl, bool res
 {
     if (!frame.isValid()) {
         if (error)
-            *error = QStringLiteral("The captured screen frame is invalid.");
+            *error = QCoreApplication::translate("HostSession", "The captured screen frame is invalid.");
         return false;
     }
     QByteArray init;
@@ -404,7 +405,7 @@ bool HostSession::sendFrame(const HostFrame &frame, qint64 nowMs, QString *error
     }
     if (m_nextSequence == std::numeric_limits<qint32>::max()) {
         if (error)
-            *error = QStringLiteral("The screen frame number is exhausted.");
+            *error = QCoreApplication::translate("HostSession", "The screen frame number is exhausted.");
         return false;
     }
     QByteArray payload;

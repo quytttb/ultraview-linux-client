@@ -1,5 +1,6 @@
 #include "security/CredentialStore.h"
 
+#include <QCoreApplication>
 #include "core/ErrorTypes.h"
 
 #if defined(ULTRAVIEW_HAVE_LIBSECRET)
@@ -45,9 +46,9 @@ bool CredentialStore::isPasswordStorageAvailable()
 QString CredentialStore::backendName()
 {
 #if defined(ULTRAVIEW_HAVE_LIBSECRET)
-    return QStringLiteral("libsecret (GNOME keyring / KWallet)");
+    return QCoreApplication::translate("CredentialStore", "libsecret (GNOME keyring / KWallet)");
 #else
-    return QStringLiteral("unavailable (build without libsecret)");
+    return QCoreApplication::translate("CredentialStore", "unavailable (build without libsecret)");
 #endif
 }
 
@@ -55,7 +56,7 @@ bool CredentialStore::storePassword(const QString &partnerId, const QString &pas
 {
     if (partnerId.isEmpty()) {
         if (error)
-            *error = QStringLiteral("empty partner id");
+            *error = QCoreApplication::translate("CredentialStore", "empty partner id");
         return false;
     }
 #if defined(ULTRAVIEW_HAVE_LIBSECRET)
@@ -68,7 +69,7 @@ bool CredentialStore::storePassword(const QString &partnerId, const QString &pas
                                                "partner", partner.constData(), nullptr) != FALSE;
     if (!ok) {
         if (error)
-            *error = QStringLiteral("the secret service rejected the request");
+            *error = QCoreApplication::translate("CredentialStore", "the secret service rejected the request");
         if (glibError)
             g_error_free(glibError);
         return false;
@@ -77,8 +78,7 @@ bool CredentialStore::storePassword(const QString &partnerId, const QString &pas
 #else
     Q_UNUSED(password);
     if (error) {
-        *error = QStringLiteral(
-            "no platform secret service is available in this build; the password was not stored");
+        *error = QCoreApplication::translate("CredentialStore", "no platform secret service is available in this build; the password was not stored");
     }
     return false;
 #endif
@@ -95,7 +95,7 @@ std::optional<QString> CredentialStore::password(const QString &partnerId, QStri
                                                 "partner", partner.constData(), nullptr);
     if (glibError) {
         if (error)
-            *error = QStringLiteral("the secret service could not be queried");
+            *error = QCoreApplication::translate("CredentialStore", "the secret service could not be queried");
         g_error_free(glibError);
         return std::nullopt;
     }
@@ -119,7 +119,7 @@ bool CredentialStore::forgetPassword(const QString &partnerId, QString *error)
                                                "partner", partner.constData(), nullptr) != FALSE;
     if (!ok) {
         if (error)
-            *error = QStringLiteral("the secret service could not remove the entry");
+            *error = QCoreApplication::translate("CredentialStore", "the secret service could not remove the entry");
         if (glibError)
             g_error_free(glibError);
         return false;
@@ -128,7 +128,7 @@ bool CredentialStore::forgetPassword(const QString &partnerId, QString *error)
 #else
     Q_UNUSED(partnerId);
     if (error)
-        *error = QStringLiteral("no platform secret service is available in this build");
+        *error = QCoreApplication::translate("CredentialStore", "no platform secret service is available in this build");
     return false;
 #endif
 }

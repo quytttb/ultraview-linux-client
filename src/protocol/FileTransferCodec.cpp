@@ -1,5 +1,6 @@
 #include "protocol/FileTransferCodec.h"
 
+#include <QCoreApplication>
 #include "core/ErrorTypes.h"
 
 #include <QRandomGenerator>
@@ -84,11 +85,11 @@ bool FileTransferCodec::isSafeFileName(const QString &name)
 QByteArray FileTransferCodec::offer(const QString &transferId, const QString &name, qint64 size)
 {
     if (!isSafeFileName(name)) {
-        throwError(ErrorCode::Configuration, QStringLiteral("the file name cannot be sent"),
-                   QStringLiteral("only plain file names are accepted"));
+        throwError(ErrorCode::Configuration, QCoreApplication::translate("FileTransferCodec", "the file name cannot be sent"),
+                   QCoreApplication::translate("FileTransferCodec", "only plain file names are accepted"));
     }
     if (size < 0 || size > kMaxFileBytes) {
-        throwError(ErrorCode::Configuration, QStringLiteral("the file size cannot be sent"));
+        throwError(ErrorCode::Configuration, QCoreApplication::translate("FileTransferCodec", "the file size cannot be sent"));
     }
     return textCommand(13, {transferId.toLatin1(), name.toLatin1(), asciiNumber(size)});
 }
@@ -103,9 +104,9 @@ QByteArray FileTransferCodec::chunk(const QString &transferId, qint64 offset,
                                     const QByteArray &data)
 {
     if (offset < 0 || offset > kMaxFileBytes)
-        throwError(ErrorCode::Configuration, QStringLiteral("invalid file transfer offset"));
+        throwError(ErrorCode::Configuration, QCoreApplication::translate("FileTransferCodec", "invalid file transfer offset"));
     if (data.isEmpty() || data.size() > kMaxChunkBytes)
-        throwError(ErrorCode::Configuration, QStringLiteral("invalid file transfer chunk length"),
+        throwError(ErrorCode::Configuration, QCoreApplication::translate("FileTransferCodec", "invalid file transfer chunk length"),
                    QStringLiteral("%1 bytes").arg(data.size()));
     QByteArray payload = textCommand(15, {transferId.toLatin1(), asciiNumber(offset)});
     payload.append(kDelimiter, kDelimiterLength);
@@ -166,19 +167,19 @@ FileTransferMessage FileTransferCodec::parse(const QList<QByteArray> &fields)
         return message;
     if (command == 13) {
         if (fields.size() < 4)
-            malformed(QStringLiteral("file offer is incomplete"));
+            malformed(QCoreApplication::translate("FileTransferCodec", "file offer is incomplete"));
         message.kind = FileTransferMessage::Kind::Offer;
         message.offer.transferId = QString::fromLatin1(fields.at(1));
         message.offer.name = QString::fromLatin1(fields.at(2));
         if (!decodeDouble(fields.at(3), &message.offer.size))
-            malformed(QStringLiteral("file offer carries an invalid size"));
+            malformed(QCoreApplication::translate("FileTransferCodec", "file offer carries an invalid size"));
         if (!isSafeFileName(message.offer.name))
-            malformed(QStringLiteral("file offer carries an unusable file name"));
+            malformed(QCoreApplication::translate("FileTransferCodec", "file offer carries an unusable file name"));
         return message;
     }
     if (command == 14) {
         if (fields.size() < 2)
-            malformed(QStringLiteral("file acceptance is incomplete"));
+            malformed(QCoreApplication::translate("FileTransferCodec", "file acceptance is incomplete"));
         message.kind = FileTransferMessage::Kind::Accept;
         message.transferId = QString::fromLatin1(fields.at(1));
         message.accepted = fields.size() > 2 && !fields.at(2).isEmpty()
@@ -187,29 +188,29 @@ FileTransferMessage FileTransferCodec::parse(const QList<QByteArray> &fields)
     }
     if (command == 15) {
         if (fields.size() < 4)
-            malformed(QStringLiteral("file chunk is incomplete"));
+            malformed(QCoreApplication::translate("FileTransferCodec", "file chunk is incomplete"));
         message.kind = FileTransferMessage::Kind::Chunk;
         message.chunk.transferId = QString::fromLatin1(fields.at(1));
         if (!decodeDouble(fields.at(2), &message.chunk.offset))
-            malformed(QStringLiteral("file chunk carries an invalid offset"));
+            malformed(QCoreApplication::translate("FileTransferCodec", "file chunk carries an invalid offset"));
         message.chunk.data = fields.at(3);
         if (message.chunk.data.isEmpty())
-            malformed(QStringLiteral("file chunk carries no data"));
+            malformed(QCoreApplication::translate("FileTransferCodec", "file chunk carries no data"));
         if (message.chunk.data.size() > kMaxInboundChunkBytes)
-            malformed(QStringLiteral("file chunk is larger than the protocol allows"),
+            malformed(QCoreApplication::translate("FileTransferCodec", "file chunk is larger than the protocol allows"),
                       QStringLiteral("%1 bytes").arg(message.chunk.data.size()));
         return message;
     }
     if (command == 16) {
         if (fields.size() < 2)
-            malformed(QStringLiteral("file cancellation carries no transfer id"));
+            malformed(QCoreApplication::translate("FileTransferCodec", "file cancellation carries no transfer id"));
         message.kind = FileTransferMessage::Kind::Cancel;
         message.transferId = QString::fromLatin1(fields.at(1));
         return message;
     }
     if (command == 21) {
         if (fields.size() < 2)
-            malformed(QStringLiteral("chunk acknowledgement carries no transfer id"));
+            malformed(QCoreApplication::translate("FileTransferCodec", "chunk acknowledgement carries no transfer id"));
         message.kind = FileTransferMessage::Kind::Ack;
         message.transferId = QString::fromLatin1(fields.at(1));
         return message;
@@ -247,16 +248,16 @@ FileTransferMessage FileTransferCodec::parseText(const QByteArray &payload)
 
     if (command == 13) {
         if (fields.size() < 3)
-            malformed(QStringLiteral("text file offer is incomplete"));
+            malformed(QCoreApplication::translate("FileTransferCodec", "text file offer is incomplete"));
         message.kind = FileTransferMessage::Kind::Offer;
         message.offer.transferId = QString::fromLatin1(fields.at(0));
         message.offer.name = QString::fromLatin1(fields.at(1));
         bool sizeOk = false;
         message.offer.size = fields.at(2).toLongLong(&sizeOk);
         if (!sizeOk || message.offer.size < 0 || message.offer.size > kMaxFileBytes)
-            malformed(QStringLiteral("text file offer carries an invalid size"));
+            malformed(QCoreApplication::translate("FileTransferCodec", "text file offer carries an invalid size"));
         if (!isSafeFileName(message.offer.name))
-            malformed(QStringLiteral("text file offer carries an unusable file name"));
+            malformed(QCoreApplication::translate("FileTransferCodec", "text file offer carries an unusable file name"));
         return message;
     }
     if (!fields.isEmpty())

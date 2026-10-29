@@ -1,5 +1,6 @@
 #include "audio/PipeWireAudioSink.h"
 
+#include <QCoreApplication>
 #include <pipewire/pipewire.h>
 #include <spa/param/audio/format-utils.h>
 #include <spa/param/audio/raw.h>
@@ -256,7 +257,7 @@ bool PipeWireAudioSink::isRunning() const
 
 QString PipeWireAudioSink::description() const
 {
-    return m_impl->running ? QStringLiteral("PipeWire") : QStringLiteral("PipeWire (not running)");
+    return m_impl->running ? QStringLiteral("PipeWire") : QCoreApplication::translate("AudioSink", "PipeWire (not running)");
 }
 
 } // namespace ultraview::audio

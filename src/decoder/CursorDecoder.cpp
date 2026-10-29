@@ -1,6 +1,7 @@
 #include "decoder/CursorDecoder.h"
 
 #include "core/ErrorTypes.h"
+#include <QCoreApplication>
 
 #include <QList>
 #include <QVector>
@@ -13,7 +14,7 @@ namespace {
 quint16 readU16(const QByteArray &data, qsizetype offset)
 {
     if (offset < 0 || offset + 2 > data.size())
-        throwProtocol(QStringLiteral("cursor resource is truncated"));
+        throwProtocol(QCoreApplication::translate("Decoder", "cursor resource is truncated"));
     return static_cast<quint16>(static_cast<quint8>(data.at(offset))
                                 | (static_cast<quint16>(static_cast<quint8>(data.at(offset + 1))) << 8));
 }
@@ -26,7 +27,7 @@ qint16 readI16(const QByteArray &data, qsizetype offset)
 quint32 readU32(const QByteArray &data, qsizetype offset)
 {
     if (offset < 0 || offset + 4 > data.size())
-        throwProtocol(QStringLiteral("cursor resource is truncated"));
+        throwProtocol(QCoreApplication::translate("Decoder", "cursor resource is truncated"));
     quint32 value = 0;
     for (int index = 3; index >= 0; --index)
         value = (value << 8) | static_cast<quint8>(data.at(offset + index));
@@ -38,12 +39,12 @@ qint32 readI32(const QByteArray &data, qsizetype offset)
     return static_cast<qint32>(readU32(data, offset));
 }
 
-void requireRange(qsizetype offset, qsizetype length, qsizetype available, const char *what)
+void requireRange(qsizetype offset, qsizetype length, qsizetype available, const QString &what)
 {
     if (offset < 0 || length < 0 || offset + length > available) {
-        throwProtocol(QStringLiteral("cursor resource is truncated"),
+        throwProtocol(QCoreApplication::translate("Decoder", "cursor resource is truncated"),
                       QStringLiteral("%1 needs bytes %2..%3 of %4")
-                          .arg(QString::fromLatin1(what))
+                          .arg(what)
                           .arg(offset)
                           .arg(offset + length)
                           .arg(available));
@@ -63,12 +64,12 @@ QList<DirectoryEntry> readDirectory(const QByteArray &data)
 {
     requireRange(0, 6, data.size(), "ICONDIR");
     if (readU16(data, 0) != 0)
-        throwProtocol(QStringLiteral("cursor resource has a non-zero reserved field"));
+        throwProtocol(QCoreApplication::translate("Decoder", "cursor resource has a non-zero reserved field"));
     if (readU16(data, 2) != 2)
-        throwProtocol(QStringLiteral("the resource is an icon, not a cursor"));
+        throwProtocol(QCoreApplication::translate("Decoder", "the resource is an icon, not a cursor"));
     const int count = readU16(data, 4);
     if (count <= 0 || count > 64)
-        throwProtocol(QStringLiteral("cursor resource has an unusable image count"),
+        throwProtocol(QCoreApplication::translate("Decoder", "cursor resource has an unusable image count"),
                       QString::number(count));
     requireRange(6, qsizetype(count) * 16, data.size(), "ICONDIRENTRY table");
 
@@ -95,9 +96,9 @@ QList<DirectoryEntry> readDirectory(const QByteArray &data)
 RemoteCursor CursorDecoder::decode(const QByteArray &data, qint32 hash)
 {
     if (data.size() < 6)
-        throwProtocol(QStringLiteral("cursor resource is empty"));
+        throwProtocol(QCoreApplication::translate("Decoder", "cursor resource is empty"));
     if (data.size() > kMaxCurBytes)
-        throwError(ErrorCode::Resource, QStringLiteral("cursor resource is too large"));
+        throwError(ErrorCode::Resource, QCoreApplication::translate("Decoder", "cursor resource is too large"));
 
     const QList<DirectoryEntry> entries = readDirectory(data);
     // The vendor ships a single image; pick the first entry that fits the
@@ -111,15 +112,15 @@ RemoteCursor CursorDecoder::decode(const QByteArray &data, qint32 hash)
         }
     }
     if (selected == nullptr)
-        throwProtocol(QStringLiteral("cursor resource has no usable image"));
+        throwProtocol(QCoreApplication::translate("Decoder", "cursor resource has no usable image"));
 
     const qsizetype base = static_cast<qsizetype>(selected->imageOffset);
     const qsizetype length = static_cast<qsizetype>(selected->bytesInResource);
-    requireRange(base, length, data.size(), "cursor image data");
+    requireRange(base, length, data.size(), QCoreApplication::translate("Decoder", "cursor image data"));
 
     const quint32 headerSize = readU32(data, base);
     if (headerSize < 12 || headerSize > 124 || headerSize > static_cast<quint32>(length))
-        throwProtocol(QStringLiteral("cursor image has an unsupported bitmap header"),
+        throwProtocol(QCoreApplication::translate("Decoder", "cursor image has an unsupported bitmap header"),
                       QString::number(headerSize));
 
     const bool core = headerSize == 12;
@@ -145,10 +146,10 @@ RemoteCursor CursorDecoder::decode(const QByteArray &data, qint32 hash)
     }
 
     if (width <= 0 || height <= 0 || width > kMaxCursorSize || height > kMaxCursorSize)
-        throwProtocol(QStringLiteral("cursor image has an unsupported size"),
+        throwProtocol(QCoreApplication::translate("Decoder", "cursor image has an unsupported size"),
                       QStringLiteral("%1x%2").arg(width).arg(height));
     if (bits != 1 && bits != 4 && bits != 8 && bits != 16 && bits != 24 && bits != 32)
-        throwProtocol(QStringLiteral("cursor image has an unsupported bit depth"),
+        throwProtocol(QCoreApplication::translate("Decoder", "cursor image has an unsupported bit depth"),
                       QString::number(bits));
 
     const qsizetype paletteEntrySize = core ? 3 : 4;
@@ -157,7 +158,7 @@ RemoteCursor CursorDecoder::decode(const QByteArray &data, qint32 hash)
         paletteCount = colorsUsed != 0 ? static_cast<qsizetype>(colorsUsed)
                                        : (qsizetype(1) << bits);
         if (paletteCount > (qsizetype(1) << bits))
-            throwProtocol(QStringLiteral("cursor palette is larger than the bit depth allows"));
+            throwProtocol(QCoreApplication::translate("Decoder", "cursor palette is larger than the bit depth allows"));
     }
 
     const qsizetype xorStride = ((qsizetype(width) * bits + 31) / 32) * 4;
@@ -182,7 +183,7 @@ RemoteCursor CursorDecoder::decode(const QByteArray &data, qint32 hash)
             palette.append(qRgb(red, green, blue));
         }
         if (palette.isEmpty())
-            throwProtocol(QStringLiteral("cursor palette is empty"));
+            throwProtocol(QCoreApplication::translate("Decoder", "cursor palette is empty"));
     }
 
     // 32 bpp resources either carry a real alpha channel or leave it at zero and
@@ -202,7 +203,7 @@ RemoteCursor CursorDecoder::decode(const QByteArray &data, qint32 hash)
 
     QImage image(width, height, QImage::Format_ARGB32);
     if (image.isNull())
-        throwError(ErrorCode::Resource, QStringLiteral("cursor image could not be allocated"));
+        throwError(ErrorCode::Resource, QCoreApplication::translate("Decoder", "cursor image could not be allocated"));
 
     for (int row = 0; row < height; ++row) {
         // DIB rows are bottom-up unless the height was negative.
@@ -255,7 +256,7 @@ RemoteCursor CursorDecoder::decode(const QByteArray &data, qint32 hash)
                 const int mask = (1 << bitsPerPixel) - 1;
                 const int index = (static_cast<quint8>(data.at(byteIndex)) >> shift) & mask;
                 if (index >= palette.size())
-                    throwProtocol(QStringLiteral("cursor pixel uses a palette entry that is missing"));
+                    throwProtocol(QCoreApplication::translate("Decoder", "cursor pixel uses a palette entry that is missing"));
                 const QRgb colour = palette.at(index);
                 red = qRed(colour);
                 green = qGreen(colour);

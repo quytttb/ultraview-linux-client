@@ -1,5 +1,6 @@
 #include "protocol/PacketCodec.h"
 
+#include <QCoreApplication>
 #include "core/ErrorTypes.h"
 
 #include <QList>
@@ -34,7 +35,7 @@ void FrameStream::setMaxFrameBytes(quint32 limit)
 {
     if (limit == 0 || limit > kAbsoluteMaxFrameBytes)
         throwError(ErrorCode::Configuration,
-                   QStringLiteral("frame limit must be between 1 and %1 bytes")
+                   QCoreApplication::translate("PacketCodec", "frame limit must be between 1 and %1 bytes")
                        .arg(kAbsoluteMaxFrameBytes));
     m_maxFrameBytes = limit;
 }
@@ -80,7 +81,7 @@ QList<QByteArray> FrameStream::feed(const QByteArray &chunk)
             // buffered bytes can never form a frame we would deliver. Drop them
             // instead of letting the buffer grow until the limit is reached.
             m_buffer.clear();
-            throwResource(QStringLiteral("inbound frame exceeds the configured limit"),
+            throwResource(QCoreApplication::translate("PacketCodec", "inbound frame exceeds the configured limit"),
                           QStringLiteral("%1 > %2 bytes").arg(length).arg(m_maxFrameBytes));
         }
         const qint64 needed = qint64{length} + kLengthPrefixBytes;
@@ -105,7 +106,7 @@ QByteArray encodeTransportFrame(const QByteArray &body)
     // The reference writes Int32 and rejects bodies above 0x7fffffff - 4.
     constexpr qint64 kMaxManagedLength = 0x7fffffffLL - 4;
     if (body.size() > kMaxManagedLength)
-        throwResource(QStringLiteral("frame exceeds the checked managed allocation size"),
+        throwResource(QCoreApplication::translate("PacketCodec", "frame exceeds the checked managed allocation size"),
                       QStringLiteral("%1 bytes").arg(body.size()));
     QByteArray out;
     out.reserve(kLengthPrefixBytes + body.size());
@@ -165,7 +166,7 @@ QByteArray encodeRelayFrame(const QByteArray &payload, const QString &ipv4, quin
     quint32 address = 0;
     if (!parseCanonicalIpv4(ipv4, &address))
         throwError(ErrorCode::Configuration,
-                   QStringLiteral("expected four decimal IPv4 octets"), ipv4);
+                   QCoreApplication::translate("PacketCodec", "expected four decimal IPv4 octets"), ipv4);
 
     QByteArray body;
     body.reserve(8 + payload.size());
@@ -185,12 +186,12 @@ TransportBody decodeTransportBody(const QByteArray &body)
 {
     TransportBody result;
     if (body.isEmpty())
-        throwProtocol(QStringLiteral("empty transport body"));
+        throwProtocol(QCoreApplication::translate("PacketCodec", "empty transport body"));
 
     const quint8 kind = static_cast<quint8>(body.at(0));
     if (kind == 0x00) {
         if (body.size() < 8)
-            throwProtocol(QStringLiteral("truncated relay header"),
+            throwProtocol(QCoreApplication::translate("PacketCodec", "truncated relay header"),
                           QStringLiteral("%1 bytes").arg(body.size()));
         result.kind = TransportBody::Kind::Relay;
         result.flag = body.at(1) != 0;
@@ -234,7 +235,7 @@ QByteArray encodeByteArrayFields(const QList<QByteArray> &fields)
     for (const QByteArray &field : fields) {
         total += 4 + field.size();
         if (total > kAbsoluteMaxFrameBytes)
-            throwResource(QStringLiteral("field array exceeds the frame limit"),
+            throwResource(QCoreApplication::translate("PacketCodec", "field array exceeds the frame limit"),
                           QStringLiteral("%1 bytes").arg(total));
     }
     QByteArray out;
@@ -255,19 +256,19 @@ QList<QByteArray> decodeByteArrayFields(const QByteArray &payload, int expectedC
     const qint64 size = payload.size();
     while (offset < size) {
         if (size - offset < kLengthPrefixBytes)
-            throwProtocol(QStringLiteral("truncated field length"));
+            throwProtocol(QCoreApplication::translate("PacketCodec", "truncated field length"));
         const quint32 length = readLittleEndianUInt32(payload.constData() + offset);
         offset += kLengthPrefixBytes;
         // `length > len(payload) - offset` in the reference; both sides are
         // checked integers here, so no overflow is possible.
         if (qint64{length} > size - offset)
-            throwProtocol(QStringLiteral("truncated field value"));
+            throwProtocol(QCoreApplication::translate("PacketCodec", "truncated field value"));
         fields.append(payload.mid(static_cast<int>(offset), static_cast<int>(length)));
         offset += length;
     }
     if (expectedCount >= 0 && fields.size() != expectedCount)
-        throwProtocol(QStringLiteral("unexpected field count"),
-                      QStringLiteral("expected %1, got %2").arg(expectedCount).arg(fields.size()));
+        throwProtocol(QCoreApplication::translate("PacketCodec", "unexpected field count"),
+                      QCoreApplication::translate("PacketCodec", "expected %1, got %2").arg(expectedCount).arg(fields.size()));
     return fields;
 }
 

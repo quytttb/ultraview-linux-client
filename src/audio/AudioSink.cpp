@@ -1,5 +1,6 @@
 #include "audio/AudioPlayer.h"
 
+#include <QCoreApplication>
 #include "audio/G722Decoder.h"
 
 #ifdef ULTRAVIEW_HAVE_PIPEWIRE_AUDIO
@@ -24,7 +25,7 @@ public:
     bool isRunning() const override { return m_running; }
     QString description() const override
     {
-        return QStringLiteral("no audio output (built without PipeWire)");
+        return QCoreApplication::translate("AudioSink", "no audio output (built without PipeWire)");
     }
 
 private:

@@ -1,6 +1,7 @@
 #include "decoder/TileCache.h"
 
 #include "core/ErrorTypes.h"
+#include <QCoreApplication>
 #include "decoder/FrameBuffer.h"
 #include <cstring>
 
@@ -34,7 +35,7 @@ TileCache::TileCache(int limit)
 void TileCache::setLimit(int limit)
 {
     if (limit < 1)
-        throwError(ErrorCode::Configuration, QStringLiteral("cache limit must be positive"));
+        throwError(ErrorCode::Configuration, QCoreApplication::translate("Decoder", "cache limit must be positive"));
     m_limit = limit;
     evictToLimit();
 }
@@ -69,7 +70,7 @@ void TileCache::addIfAbsent(qint32 key, CachedTile tile)
     if (m_index.contains(key))
         return;
     if (tile.image.isNull() || tile.image.sizeInBytes() > kMaxCacheBytes - m_bytes)
-        throwResource(QStringLiteral("tile cache exceeds memory budget"));
+        throwResource(QCoreApplication::translate("Decoder", "tile cache exceeds memory budget"));
     m_bytes += tile.image.sizeInBytes();
     m_entries.push_back(Entry{key, std::move(tile)});
     auto iterator = m_entries.end();
@@ -111,19 +112,19 @@ QByteArray TileCache::serializeItem(qint32 width, qint32 height, qint32 rectHash
 TileCache::ItemHeader TileCache::parseItem(const QByteArray &payload)
 {
     if (payload.size() < 16)
-        throwProtocol(QStringLiteral("truncated cache header"));
+        throwProtocol(QCoreApplication::translate("Decoder", "truncated cache header"));
     ItemHeader header;
     header.width = readInt32(payload, 0);
     header.height = readInt32(payload, 4);
     header.rectHash = readInt32(payload, 8);
     const qint32 size = readInt32(payload, 12);
     if (size < 0 || payload.size() != qint64{16} + size)
-        throwProtocol(QStringLiteral("invalid cache payload length"));
+        throwProtocol(QCoreApplication::translate("Decoder", "invalid cache payload length"));
     // Stricter than the reference's CachedItem.parse, which accepts a zero-sized
     // header: such an entry can never be a tile, and decodeTile() would reject it
     // one step later anyway.
     if (header.width <= 0 || header.height <= 0)
-        throwProtocol(QStringLiteral("invalid cached tile dimensions"));
+        throwProtocol(QCoreApplication::translate("Decoder", "invalid cached tile dimensions"));
     header.data = payload.mid(16);
     return header;
 }
@@ -146,14 +147,14 @@ QByteArray TileCache::encodeTile(const QImage &image)
 QImage TileCache::decodeTile(qint32 width, qint32 height, const QByteArray &payload)
 {
     if (!FrameBuffer::sizeAllowed(QSize(width, height)))
-        throwProtocol(QStringLiteral("invalid cached tile dimensions"));
+        throwProtocol(QCoreApplication::translate("Decoder", "invalid cached tile dimensions"));
     const qint64 expected = qint64{width} * qint64{height} * 3;
     if (expected != payload.size())
-        throwProtocol(QStringLiteral("cached tile payload has an unexpected size"),
+        throwProtocol(QCoreApplication::translate("Decoder", "cached tile payload has an unexpected size"),
                       QStringLiteral("%1 != %2").arg(payload.size()).arg(expected));
     QImage image(width, height, QImage::Format_RGB888);
     if (image.isNull())
-        throwResource(QStringLiteral("cannot allocate a cached tile"));
+        throwResource(QCoreApplication::translate("Decoder", "cannot allocate a cached tile"));
     for (int row = 0; row < height; ++row)
         std::memcpy(image.scanLine(row), payload.constData() + qint64{row} * width * 3,
                     static_cast<size_t>(width) * 3);
@@ -179,12 +180,12 @@ TileCache TileCache::fromSerialized(const QByteArray &data, int limit)
     int offset = 0;
     while (offset < data.size()) {
         if (data.size() - offset < 8)
-            throwProtocol(QStringLiteral("truncated cache outer header"));
+            throwProtocol(QCoreApplication::translate("Decoder", "truncated cache outer header"));
         const qint32 key = readInt32(data, offset);
         const qint32 size = readInt32(data, offset + 4);
         offset += 8;
         if (size < 0 || size > data.size() - offset || cache.contains(key))
-            throwProtocol(QStringLiteral("invalid cache entry size or duplicate key"));
+            throwProtocol(QCoreApplication::translate("Decoder", "invalid cache entry size or duplicate key"));
         const ItemHeader header = parseItem(data.mid(offset, size));
         offset += size;
         CachedTile tile;

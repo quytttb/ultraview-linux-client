@@ -231,9 +231,11 @@ Read [NOTICE.md](NOTICE.md) before redistribution. No proprietary dictionary,
 real partner secrets, or upstream runtime is installed by this project.
 # Language / Ngôn ngữ
 
-The interface uses Vietnamese when the system language is Vietnamese; otherwise
-it defaults to English. To update the Vietnamese catalog after changing UI text,
-run `lupdate qml src -ts translations/ultraview_vi.ts -no-obsolete`, translate
-the new entries, then run `lrelease translations/ultraview_vi.ts -qm
-translations/ultraview_vi.qm`. Commit both files; the compiled catalog is embedded
-so Qt Linguist tools are not needed to build the application.
+The interface is fully translated into Vietnamese. It follows the system
+language when a matching catalog exists and falls back to Vietnamese otherwise,
+so `ultraview_vi.qm` is what the application shows. To update the catalog after
+changing UI text, run `lupdate qml src -ts translations/ultraview_vi.ts
+-no-obsolete`, translate the new entries, then run `lrelease
+translations/ultraview_vi.ts -qm translations/ultraview_vi.qm`. Commit both
+files; the compiled catalog is embedded so Qt Linguist tools are not needed to
+build the application.

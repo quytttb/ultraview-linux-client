@@ -1,5 +1,6 @@
 #include "protocol/P2pCodec.h"
 
+#include <QCoreApplication>
 #include "core/ErrorTypes.h"
 #include "protocol/Digest.h"
 #include "protocol/PacketCodec.h"
@@ -29,24 +30,24 @@ const EVP_CIPHER *aes256Cbc()
 {
     static CipherPtr cached{EVP_CIPHER_fetch(nullptr, "AES-256-CBC", nullptr)};
     if (!cached)
-        throwError(ErrorCode::Internal, QStringLiteral("OpenSSL has no AES-256-CBC implementation"));
+        throwError(ErrorCode::Internal, QCoreApplication::translate("P2pCodec", "OpenSSL has no AES-256-CBC implementation"));
     return cached.get();
 }
 
 QByteArray aesCrypt(bool encrypt, const QByteArray &input, const QByteArray &key, const QByteArray &iv)
 {
     if (input.size() > kAbsoluteMaxFrameBytes)
-        throwResource(QStringLiteral("P2P crypto input exceeds limit"));
+        throwResource(QCoreApplication::translate("P2pCodec", "P2P crypto input exceeds limit"));
     CipherContextPtr ctx{EVP_CIPHER_CTX_new()};
     if (!ctx)
-        throwError(ErrorCode::Internal, QStringLiteral("EVP_CIPHER_CTX_new failed"));
+        throwError(ErrorCode::Internal, QCoreApplication::translate("P2pCodec", "EVP_CIPHER_CTX_new failed"));
     const uchar *keyBytes = reinterpret_cast<const uchar *>(key.constData());
     const uchar *ivBytes = reinterpret_cast<const uchar *>(iv.constData());
     const bool initOk = encrypt
         ? EVP_EncryptInit_ex(ctx.get(), aes256Cbc(), nullptr, keyBytes, ivBytes) == 1
         : EVP_DecryptInit_ex(ctx.get(), aes256Cbc(), nullptr, keyBytes, ivBytes) == 1;
     if (!initOk)
-        throwError(ErrorCode::Internal, QStringLiteral("AES init failed"));
+        throwError(ErrorCode::Internal, QCoreApplication::translate("P2pCodec", "AES init failed"));
     EVP_CIPHER_CTX_set_padding(ctx.get(), 1);
 
     const int blockSize = EVP_CIPHER_CTX_get_block_size(ctx.get());
@@ -59,15 +60,15 @@ QByteArray aesCrypt(bool encrypt, const QByteArray &input, const QByteArray &key
         ? EVP_EncryptUpdate(ctx.get(), outPtr, &produced, in, static_cast<int>(input.size())) == 1
         : EVP_DecryptUpdate(ctx.get(), outPtr, &produced, in, static_cast<int>(input.size())) == 1;
     if (!updateOk)
-        throwProtocol(QStringLiteral("P2P cipher operation failed"));
+        throwProtocol(QCoreApplication::translate("P2pCodec", "P2P cipher operation failed"));
     int finalised = 0;
     const bool finalOk = encrypt
         ? EVP_EncryptFinal_ex(ctx.get(), outPtr + produced, &finalised) == 1
         : EVP_DecryptFinal_ex(ctx.get(), outPtr + produced, &finalised) == 1;
     if (!finalOk) {
         if (encrypt)
-            throwError(ErrorCode::Internal, QStringLiteral("P2P encryption finalisation failed"));
-        throwProtocol(QStringLiteral("P2P ciphertext has invalid PKCS#7 padding"));
+            throwError(ErrorCode::Internal, QCoreApplication::translate("P2pCodec", "P2P encryption finalisation failed"));
+        throwProtocol(QCoreApplication::translate("P2pCodec", "P2P ciphertext has invalid PKCS#7 padding"));
     }
     out.resize(produced + finalised);
     return out;
@@ -81,7 +82,7 @@ QByteArray P2pCodec::deriveAesKey(const QString &password)
     // replacement fallback for other input is intentionally not approximated.
     for (const QChar unit : password) {
         if (unit.unicode() > 0x7F)
-            throwError(ErrorCode::Configuration, QStringLiteral("P2P password must be ASCII"));
+            throwError(ErrorCode::Configuration, QCoreApplication::translate("P2pCodec", "P2P password must be ASCII"));
     }
     const QByteArray ascii = password.toLatin1();
     // MD5 copied at offset 0 and again at offset 15 into a zeroed 32-byte key.
@@ -101,7 +102,7 @@ QByteArray P2pCodec::encryptBody(const QByteArray &plaintext, const QString &pas
     if (iv.has_value()) {
         initialisationVector = *iv;
         if (initialisationVector.size() != 16)
-            throwError(ErrorCode::Configuration, QStringLiteral("P2P IV must contain 16 bytes"));
+            throwError(ErrorCode::Configuration, QCoreApplication::translate("P2pCodec", "P2P IV must contain 16 bytes"));
     } else {
         std::array<quint32, 4> randomWords{};
         QRandomGenerator::system()->fillRange(randomWords.data(), randomWords.size());
@@ -114,7 +115,7 @@ QByteArray P2pCodec::encryptBody(const QByteArray &plaintext, const QString &pas
 QByteArray P2pCodec::decryptBody(const QByteArray &body, const QString &password)
 {
     if (body.size() < 32 || (body.size() - 16) % 16 != 0)
-        throwProtocol(QStringLiteral("P2P body needs IV16 and complete ciphertext blocks"));
+        throwProtocol(QCoreApplication::translate("P2pCodec", "P2P body needs IV16 and complete ciphertext blocks"));
     const QByteArray iv = body.left(16);
     return aesCrypt(false, body.mid(16), deriveAesKey(password), iv);
 }
@@ -136,7 +137,7 @@ QByteArray P2pCodec::encodeFrame(const QByteArray &payload, bool unicodeBytes,
     if (encryptionPassword.has_value()) {
         body = encryptBody(body, *encryptionPassword, iv);
     } else if (iv.has_value()) {
-        throwError(ErrorCode::Configuration, QStringLiteral("an IV requires enabled P2P encryption"));
+        throwError(ErrorCode::Configuration, QCoreApplication::translate("P2pCodec", "an IV requires enabled P2P encryption"));
     }
     return encodeTransportFrame(body);
 }
@@ -146,7 +147,7 @@ P2pCodec::DecodedBody P2pCodec::decodeBody(const QByteArray &body,
 {
     QByteArray decoded = encryptionPassword.has_value() ? decryptBody(body, *encryptionPassword) : body;
     if (decoded.isEmpty())
-        throwProtocol(QStringLiteral("P2P body requires an encoding flag"));
+        throwProtocol(QCoreApplication::translate("P2pCodec", "P2P body requires an encoding flag"));
     DecodedBody result;
     result.unicodeBytes = static_cast<quint8>(decoded.at(0)) > 0;
     result.payload = decoded.mid(1);

@@ -1,5 +1,6 @@
 #include "protocol/AnsiCodec.h"
 
+#include <QCoreApplication>
 #include "core/ErrorTypes.h"
 
 #include <array>
@@ -100,20 +101,20 @@ QByteArray AnsiCodec::encode(const QString &text) const
             break; // handled below
         case Kind::Ascii:
             if (code > 0x7F)
-                throwProtocol(QStringLiteral("character is outside ASCII"),
+                throwProtocol(QCoreApplication::translate("AnsiCodec", "character is outside ASCII"),
                               QStringLiteral("U+%1").arg(static_cast<uint>(code), 4, 16, QLatin1Char('0')));
             out.append(static_cast<char>(code));
             continue;
         case Kind::Latin1:
             if (code > 0xFF)
-                throwProtocol(QStringLiteral("character is outside latin1"),
+                throwProtocol(QCoreApplication::translate("AnsiCodec", "character is outside latin1"),
                               QStringLiteral("U+%1").arg(static_cast<uint>(code), 4, 16, QLatin1Char('0')));
             out.append(static_cast<char>(code));
             continue;
         case Kind::Cp1252: {
             const std::optional<quint8> mapped = unicodeToCp1252(code);
             if (!mapped.has_value())
-                throwProtocol(QStringLiteral("character is not representable in cp1252"),
+                throwProtocol(QCoreApplication::translate("AnsiCodec", "character is not representable in cp1252"),
                               QStringLiteral("U+%1").arg(static_cast<uint>(code), 4, 16, QLatin1Char('0')));
             out.append(static_cast<char>(*mapped));
             continue;
@@ -125,7 +126,7 @@ QByteArray AnsiCodec::encode(const QString &text) const
         out = text.toUtf8();
         // Strictness: refuse conversions that lost information (lone surrogates).
         if (QString::fromUtf8(out) != text)
-            throwProtocol(QStringLiteral("text cannot be encoded as strict UTF-8"));
+            throwProtocol(QCoreApplication::translate("AnsiCodec", "text cannot be encoded as strict UTF-8"));
     }
     return out;
 }
@@ -152,25 +153,25 @@ QString AnsiCodec::decode(const QByteArray &bytes) const
                 length = 4;
                 code = lead & 0x07;
             } else {
-                throwProtocol(QStringLiteral("invalid UTF-8 lead byte"),
-                              QStringLiteral("offset %1").arg(index));
+                throwProtocol(QCoreApplication::translate("AnsiCodec", "invalid UTF-8 lead byte"),
+                              QCoreApplication::translate("AnsiCodec", "offset %1").arg(index));
             }
             if (index + length > bytes.size())
-                throwProtocol(QStringLiteral("truncated UTF-8 sequence"));
+                throwProtocol(QCoreApplication::translate("AnsiCodec", "truncated UTF-8 sequence"));
             for (int extra = 1; extra < length; ++extra) {
                 const quint8 continuation = static_cast<quint8>(bytes.at(index + extra));
                 if ((continuation & 0xC0) != 0x80)
-                    throwProtocol(QStringLiteral("invalid UTF-8 continuation byte"));
+                    throwProtocol(QCoreApplication::translate("AnsiCodec", "invalid UTF-8 continuation byte"));
                 code = (code << 6) | (continuation & 0x3F);
             }
             if (length == 2 && code < 0x80)
-                throwProtocol(QStringLiteral("overlong UTF-8 sequence"));
+                throwProtocol(QCoreApplication::translate("AnsiCodec", "overlong UTF-8 sequence"));
             if (length == 3 && code < 0x800)
-                throwProtocol(QStringLiteral("overlong UTF-8 sequence"));
+                throwProtocol(QCoreApplication::translate("AnsiCodec", "overlong UTF-8 sequence"));
             if (length == 4 && code < 0x10000)
-                throwProtocol(QStringLiteral("overlong UTF-8 sequence"));
+                throwProtocol(QCoreApplication::translate("AnsiCodec", "overlong UTF-8 sequence"));
             if (code > 0x10FFFF || (code >= 0xD800 && code <= 0xDFFF))
-                throwProtocol(QStringLiteral("invalid UTF-8 code point"));
+                throwProtocol(QCoreApplication::translate("AnsiCodec", "invalid UTF-8 code point"));
             if (code > 0xFFFF) {
                 const char32_t adjusted = code - 0x10000;
                 text.append(QChar(static_cast<char16_t>(0xD800 + (adjusted >> 10))));
@@ -189,7 +190,7 @@ QString AnsiCodec::decode(const QByteArray &bytes) const
         for (const char raw : bytes) {
             const quint8 byte = static_cast<quint8>(raw);
             if (m_kind == Kind::Ascii && byte > 0x7F)
-                throwProtocol(QStringLiteral("byte is outside ASCII"),
+                throwProtocol(QCoreApplication::translate("AnsiCodec", "byte is outside ASCII"),
                               QStringLiteral("0x%1").arg(byte, 2, 16, QLatin1Char('0')));
             text.append(QChar(byte));
         }
@@ -202,7 +203,7 @@ QString AnsiCodec::decode(const QByteArray &bytes) const
             const quint8 byte = static_cast<quint8>(raw);
             const std::optional<char32_t> mapped = cp1252ToUnicode(byte);
             if (!mapped.has_value())
-                throwProtocol(QStringLiteral("byte 0x%1 is undefined in cp1252")
+                throwProtocol(QCoreApplication::translate("AnsiCodec", "byte 0x%1 is undefined in cp1252")
                                   .arg(byte, 2, 16, QLatin1Char('0')),
                               bytesToHexPreview(bytes));
             text.append(QChar(static_cast<char16_t>(*mapped)));
@@ -210,7 +211,7 @@ QString AnsiCodec::decode(const QByteArray &bytes) const
         return text;
     }
     }
-    throwProtocol(QStringLiteral("unsupported codec"));
+    throwProtocol(QCoreApplication::translate("AnsiCodec", "unsupported codec"));
 }
 
 bool AnsiCodec::canEncode(const QString &text) const

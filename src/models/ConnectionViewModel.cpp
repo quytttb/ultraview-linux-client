@@ -129,7 +129,7 @@ ConnectionViewModel::ConnectionViewModel(QObject *parent)
     // The log starts with the build identity: a report from an older running
     // binary can then be told apart from the installed package.
     appendLog(QStringLiteral("info"),
-              QStringLiteral("Ultraview %1 started (Qt %2, %3)")
+              QCoreApplication::translate("Connection", "Ultraview %1 started (Qt %2, %3)")
                   .arg(QCoreApplication::applicationVersion(), QString::fromLatin1(qVersion()),
                        QSysInfo::prettyProductName()));
 
@@ -191,6 +191,31 @@ void ConnectionViewModel::setPassword(const QString &password)
 QString ConnectionViewModel::stateName() const
 {
     return sessionStateName(m_session->state());
+}
+
+QString ConnectionViewModel::stateDisplayName() const
+{
+    switch (m_session->state()) {
+    case SessionState::Disconnected:
+        return tr("Disconnected");
+    case SessionState::Connecting:
+        return tr("Connecting");
+    case SessionState::Registering:
+        return tr("Registering");
+    case SessionState::RequestingPartner:
+        return tr("Requesting partner");
+    case SessionState::RelayConnecting:
+        return tr("Connecting to relay");
+    case SessionState::Authenticating:
+        return tr("Authenticating");
+    case SessionState::Connected:
+        return tr("Connected");
+    case SessionState::Disconnecting:
+        return tr("Disconnecting");
+    case SessionState::Failed:
+        return tr("Failed");
+    }
+    return stateName();
 }
 
 int ConnectionViewModel::stateCode() const
@@ -411,62 +436,62 @@ void ConnectionViewModel::clearNotice()
 QVariantList ConnectionViewModel::statisticsRows() const
 {
     QVariantList rows;
-    rows.append(row(QStringLiteral("State"), stateName()));
-    rows.append(row(QStringLiteral("Partner"), m_partnerId.isEmpty() ? QStringLiteral("—") : m_partnerId));
-    rows.append(row(QStringLiteral("Controller id"),
+    rows.append(row(tr("State"), stateDisplayName()));
+    rows.append(row(tr("Partner"), m_partnerId.isEmpty() ? QStringLiteral("—") : m_partnerId));
+    rows.append(row(tr("Controller id"),
                     m_statistics.clientId != 0 ? QString::number(m_statistics.clientId) : QStringLiteral("—")));
-    rows.append(row(QStringLiteral("Desktop"), desktopSizeText()));
-    rows.append(row(QStringLiteral("Route"), routeText()));
-    rows.append(row(QStringLiteral("Registration endpoint"),
+    rows.append(row(tr("Desktop"), desktopSizeText()));
+    rows.append(row(tr("Route"), routeText()));
+    rows.append(row(tr("Registration endpoint"),
                     m_statistics.registrationPeer.isEmpty() ? QStringLiteral("—")
                                                             : m_statistics.registrationPeer));
-    rows.append(row(QStringLiteral("Relay endpoint"),
+    rows.append(row(tr("Relay endpoint"),
                     m_statistics.relayPeer.isEmpty() ? QStringLiteral("—") : m_statistics.relayPeer));
-    rows.append(row(QStringLiteral("Tunnel"),
+    rows.append(row(tr("Tunnel"),
                     m_statistics.relayProtocol.isEmpty() ? QStringLiteral("—") : m_statistics.relayProtocol));
     rows.append(row(QStringLiteral("TLS"), m_settings->tlsModeName()));
-    rows.append(row(QStringLiteral("Sent (registration)"), formatBytes(m_statistics.registrationBytesSent)));
-    rows.append(row(QStringLiteral("Received (registration)"),
+    rows.append(row(tr("Sent (registration)"), formatBytes(m_statistics.registrationBytesSent)));
+    rows.append(row(tr("Received (registration)"),
                     formatBytes(m_statistics.registrationBytesReceived)));
-    rows.append(row(QStringLiteral("Sent (relay)"), formatBytes(m_statistics.relayBytesSent)));
-    rows.append(row(QStringLiteral("Received (relay)"), formatBytes(m_statistics.relayBytesReceived)));
-    rows.append(row(QStringLiteral("Screen updates decoded"), QString::number(m_statistics.updatesDecoded)));
-    rows.append(row(QStringLiteral("Frames shown"), QString::number(m_statistics.framesPublished)));
-    rows.append(row(QStringLiteral("Compressed rectangles"), QString::number(m_statistics.rgb555Tiles)));
-    rows.append(row(QStringLiteral("JPEG atlas rectangles"), QString::number(m_statistics.atlasTiles)));
-    rows.append(row(QStringLiteral("Cache references"), QString::number(m_statistics.cacheReferences)));
-    rows.append(row(QStringLiteral("Cache additions"), QString::number(m_statistics.cacheAdditions)));
-    rows.append(row(QStringLiteral("Scroll copies"), QString::number(m_statistics.scrollCopies)));
-    rows.append(row(QStringLiteral("Size follow-ups"), QString::number(m_statistics.sizeFollowUps)));
-    rows.append(row(QStringLiteral("Ignored registration payloads"),
+    rows.append(row(tr("Sent (relay)"), formatBytes(m_statistics.relayBytesSent)));
+    rows.append(row(tr("Received (relay)"), formatBytes(m_statistics.relayBytesReceived)));
+    rows.append(row(tr("Screen updates decoded"), QString::number(m_statistics.updatesDecoded)));
+    rows.append(row(tr("Frames shown"), QString::number(m_statistics.framesPublished)));
+    rows.append(row(tr("Compressed rectangles"), QString::number(m_statistics.rgb555Tiles)));
+    rows.append(row(tr("JPEG atlas rectangles"), QString::number(m_statistics.atlasTiles)));
+    rows.append(row(tr("Cache references"), QString::number(m_statistics.cacheReferences)));
+    rows.append(row(tr("Cache additions"), QString::number(m_statistics.cacheAdditions)));
+    rows.append(row(tr("Scroll copies"), QString::number(m_statistics.scrollCopies)));
+    rows.append(row(tr("Size follow-ups"), QString::number(m_statistics.sizeFollowUps)));
+    rows.append(row(tr("Ignored registration payloads"),
                     QString::number(m_statistics.ignoredRegistrationPayloads)));
-    rows.append(row(QStringLiteral("Refused/unsupported packets"),
+    rows.append(row(tr("Refused/unsupported packets"),
                     QString::number(m_statistics.unsupportedNotices)));
-    rows.append(row(QStringLiteral("Screen dictionary"),
-                    m_dictionaryLoaded ? m_settings->dictionaryStatus() : QStringLiteral("not loaded")));
+    rows.append(row(tr("Screen dictionary"),
+                    m_dictionaryLoaded ? m_settings->dictionaryStatus() : tr("not loaded")));
     if (!m_statistics.tlsWarning.isEmpty())
-        rows.append(row(QStringLiteral("TLS warning"), m_statistics.tlsWarning));
+        rows.append(row(tr("TLS warning"), m_statistics.tlsWarning));
     return rows;
 }
 
 QString ConnectionViewModel::diagnostics() const
 {
     QStringList lines;
-    lines.append(QStringLiteral("UltraViewer native Linux client %1").arg(QStringLiteral(ULTRAVIEW_VERSION)));
-    lines.append(QStringLiteral("Qt %1").arg(QString::fromLatin1(qVersion())));
-    lines.append(QStringLiteral("Host %1").arg(QSysInfo::machineHostName()));
-    lines.append(QStringLiteral("Registration profile: %1")
+    lines.append(QCoreApplication::translate("Connection", "UltraViewer native Linux client %1").arg(QStringLiteral(ULTRAVIEW_VERSION)));
+    lines.append(QCoreApplication::translate("Connection", "Qt %1").arg(QString::fromLatin1(qVersion())));
+    lines.append(QCoreApplication::translate("Connection", "Host %1").arg(QSysInfo::machineHostName()));
+    lines.append(QCoreApplication::translate("Connection", "Registration profile: %1")
                      .arg(m_settings->registrationProfilePath().isEmpty()
-                              ? QStringLiteral("not set")
+                              ? QCoreApplication::translate("Connection", "not set")
                               : m_settings->registrationProfilePath()));
-    lines.append(QStringLiteral("Partner template: %1")
+    lines.append(QCoreApplication::translate("Connection", "Partner template: %1")
                      .arg(m_settings->partnerTemplatePath().isEmpty()
-                              ? QStringLiteral("not set")
+                              ? QCoreApplication::translate("Connection", "not set")
                               : m_settings->partnerTemplatePath()));
-    lines.append(QStringLiteral("Screen dictionary: %1").arg(m_settings->dictionaryStatus()));
-    lines.append(QStringLiteral("TLS mode: %1").arg(m_settings->tlsModeName()));
+    lines.append(QCoreApplication::translate("Connection", "Screen dictionary: %1").arg(m_settings->dictionaryStatus()));
+    lines.append(QCoreApplication::translate("Connection", "TLS mode: %1").arg(m_settings->tlsModeName()));
     if (m_settings->endpointOverrideActive())
-        lines.append(QStringLiteral("Endpoint overrides are active"));
+        lines.append(QCoreApplication::translate("Connection", "Endpoint overrides are active"));
     lines.append(QString());
     for (const QVariant &value : statisticsRows()) {
         const QVariantMap map = value.toMap();
@@ -474,7 +499,7 @@ QString ConnectionViewModel::diagnostics() const
                                                   map.value(QStringLiteral("value")).toString()));
     }
     lines.append(QString());
-    lines.append(QStringLiteral("Passwords are never included in this report."));
+    lines.append(QCoreApplication::translate("Connection", "Passwords are never included in this report."));
     return lines.join(QLatin1Char('\n'));
 }
 
@@ -604,7 +629,7 @@ void ConnectionViewModel::connectNow()
     const QString policyWarning = tlsWarning();
     appendLog(policyWarning.isEmpty() ? QStringLiteral("info") : QStringLiteral("warning"),
               policyWarning.isEmpty()
-                  ? QStringLiteral("TLS: chain and host name verification enabled")
+                  ? QCoreApplication::translate("Connection", "TLS: chain and host name verification enabled")
                   : policyWarning);
 
     const bool hasDictionary = !request.screenDictionary.isEmpty();
@@ -659,7 +684,7 @@ void ConnectionViewModel::onStateChanged(SessionState state)
         emit passwordChanged();
         m_credentials->clearSessionPasswords();
     }
-    appendLog(QStringLiteral("info"), QStringLiteral("State: %1").arg(stateName()));
+    appendLog(QStringLiteral("info"), QCoreApplication::translate("Connection", "State: %1").arg(stateName()));
     emit stateChanged();
     emit statusTextChanged();
 }
@@ -667,7 +692,7 @@ void ConnectionViewModel::onStateChanged(SessionState state)
 void ConnectionViewModel::onConnected(const QSize &size)
 {
     appendLog(QStringLiteral("info"),
-              QStringLiteral("Connected: partner desktop %1x%2").arg(size.width()).arg(size.height()));
+              QCoreApplication::translate("Connection", "Connected: partner desktop %1x%2").arg(size.width()).arg(size.height()));
     m_errorText.clear();
     emit errorTextChanged();
     emit statusTextChanged();

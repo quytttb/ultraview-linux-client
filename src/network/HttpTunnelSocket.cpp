@@ -67,11 +67,11 @@ void HttpTunnelSocket::armTimer(int timeoutMs)
 void HttpTunnelSocket::start(const TunnelRequest &request)
 {
     if (m_socket) {
-        fail(ErrorCode::Internal, QStringLiteral("the channel is already in use"));
+        fail(ErrorCode::Internal, tr("the channel is already in use"));
         return;
     }
     if (request.host.isEmpty()) {
-        fail(ErrorCode::Configuration, QStringLiteral("empty tunnel host"));
+        fail(ErrorCode::Configuration, tr("empty tunnel host"));
         return;
     }
     m_request = request;
@@ -158,14 +158,14 @@ void HttpTunnelSocket::processHeader()
     const qsizetype end = m_headerBuffer.indexOf("\r\n\r\n");
     if (end < 0) {
         if (m_headerBuffer.size() >= kMaxHttpHeaderBytes) {
-            fail(ErrorCode::Protocol, QStringLiteral("HTTP header exceeds limit"),
+            fail(ErrorCode::Protocol, tr("HTTP header exceeds limit"),
                  QStringLiteral("%1 bytes").arg(m_headerBuffer.size()));
         }
         return;
     }
     const qsizetype cut = end + 4;
     if (cut > kMaxHttpHeaderBytes) {
-        fail(ErrorCode::Protocol, QStringLiteral("HTTP header exceeds limit"));
+        fail(ErrorCode::Protocol, tr("HTTP header exceeds limit"));
         return;
     }
     m_responseHeader = m_headerBuffer.left(cut);
@@ -193,7 +193,7 @@ void HttpTunnelSocket::onReadyRead()
     if (m_phase != Phase::Ready)
         return;
     if (m_buffer.size() + chunk.size() > m_request.readBufferLimit) {
-        fail(ErrorCode::Resource, QStringLiteral("the peer sent more buffered data than the limit allows"),
+        fail(ErrorCode::Resource, tr("the peer sent more buffered data than the limit allows"),
              QStringLiteral("%1 bytes").arg(m_request.readBufferLimit));
         return;
     }
@@ -207,7 +207,7 @@ void HttpTunnelSocket::onError()
         return;
     const auto error = m_socket->error();
     const QString text = m_socket->errorString();
-    fail(classifySocketError(error), QStringLiteral("socket error"), text);
+    fail(classifySocketError(error), tr("socket error"), text);
 }
 
 void HttpTunnelSocket::onSslErrors(const QList<QSslError> &errors)
@@ -226,7 +226,7 @@ void HttpTunnelSocket::onSslErrors(const QList<QSslError> &errors)
     // the names the peer certificate actually carries (no secret material).
     QString detail = descriptions.join(QStringLiteral("; "));
     if (!m_peerName.isEmpty())
-        detail += QStringLiteral("; verified name: %1").arg(m_peerName);
+        detail += tr("; verified name: %1").arg(m_peerName);
     if (m_socket) {
         const QSslCertificate certificate = m_socket->peerCertificate();
         if (!certificate.isNull()) {
@@ -235,16 +235,16 @@ void HttpTunnelSocket::onSslErrors(const QList<QSslError> &errors)
             for (auto it = alternativeNames.constBegin(); it != alternativeNames.constEnd(); ++it) {
                 const QString kind = it.key() == QSsl::DnsEntry
                     ? QStringLiteral("DNS")
-                    : (it.key() == QSsl::IpAddressEntry ? QStringLiteral("IP") : QStringLiteral("other"));
+                    : (it.key() == QSsl::IpAddressEntry ? QStringLiteral("IP") : tr("other"));
                 names.append(QStringLiteral("%1:%2").arg(kind, it.value()));
             }
-            detail += QStringLiteral("; peer certificate: %1; subject alternative names: %2")
+            detail += tr("; peer certificate: %1; subject alternative names: %2")
                           .arg(security::TlsPolicy::describePeerCertificate(certificate),
-                               names.isEmpty() ? QStringLiteral("none")
+                               names.isEmpty() ? tr("none")
                                                : names.join(QStringLiteral(", ")));
         }
     }
-    fail(ErrorCode::Tls, QStringLiteral("TLS certificate verification failed"), detail);
+    fail(ErrorCode::Tls, tr("TLS certificate verification failed"), detail);
 }
 
 void HttpTunnelSocket::onDisconnected()
@@ -261,19 +261,19 @@ void HttpTunnelSocket::onDisconnected()
         emit closed();
     }
     if (!wasReady && !m_failed)
-        emit failed(ErrorInfo{ErrorCode::Network, QStringLiteral("the peer closed the connection")});
+        emit failed(ErrorInfo{ErrorCode::Network, tr("the peer closed the connection")});
 }
 
 void HttpTunnelSocket::onTimeout()
 {
     QString phaseName;
     switch (m_phase) {
-    case Phase::Connecting: phaseName = QStringLiteral("connect"); break;
-    case Phase::Handshaking: phaseName = QStringLiteral("TLS handshake"); break;
-    case Phase::Header: phaseName = QStringLiteral("HTTP tunnel header"); break;
-    default: phaseName = QStringLiteral("channel"); break;
+    case Phase::Connecting: phaseName = tr("connect"); break;
+    case Phase::Handshaking: phaseName = tr("TLS handshake"); break;
+    case Phase::Header: phaseName = tr("HTTP tunnel header"); break;
+    default: phaseName = tr("channel"); break;
     }
-    fail(ErrorCode::Timeout, QStringLiteral("the channel timed out"), phaseName);
+    fail(ErrorCode::Timeout, tr("the channel timed out"), phaseName);
 }
 
 void HttpTunnelSocket::fail(ErrorCode code, const QString &message, const QString &detail)
@@ -311,7 +311,7 @@ void HttpTunnelSocket::write(const QByteArray &data)
     if (!m_socket || m_phase != Phase::Ready || data.isEmpty())
         return;
     if (m_socket->bytesToWrite() + data.size() > m_request.readBufferLimit) {
-        fail(ErrorCode::Resource, QStringLiteral("outbound channel buffer exceeds limit"));
+        fail(ErrorCode::Resource, tr("outbound channel buffer exceeds limit"));
         return;
     }
     m_socket->write(data);
@@ -320,7 +320,7 @@ void HttpTunnelSocket::write(const QByteArray &data)
 QString HttpTunnelSocket::peerDescription() const
 {
     if (!m_socket)
-        return QStringLiteral("closed");
+        return tr("closed");
     const QHostAddress address = m_socket->peerAddress();
     return QStringLiteral("%1:%2").arg(address.toString()).arg(m_socket->peerPort());
 }

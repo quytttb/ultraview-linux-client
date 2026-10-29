@@ -1,5 +1,6 @@
 #include "audio/AudioPlayer.h"
 
+#include <QCoreApplication>
 #include "audio/G722Decoder.h"
 #include "core/ErrorTypes.h"
 
@@ -20,7 +21,7 @@ AudioPlayer::~AudioPlayer() = default;
 
 QString AudioPlayer::outputDescription() const
 {
-    return m_sink != nullptr ? m_sink->description() : QStringLiteral("no audio output");
+    return m_sink != nullptr ? m_sink->description() : QCoreApplication::translate("AudioPlayer", "no audio output");
 }
 
 bool AudioPlayer::hasOutput() const
@@ -60,7 +61,7 @@ bool AudioPlayer::ensureStarted()
     const bool started = m_sink->start(G722Decoder::kSampleRate, G722Decoder::kChannels);
     if (!started && !m_noticeSent) {
         m_noticeSent = true;
-        emit notice(QStringLiteral("the partner streams audio but no audio output is available "
+        emit notice(QCoreApplication::translate("AudioPlayer", "the partner streams audio but no audio output is available "
                                    "(%1); the session continues without sound")
                         .arg(m_sink->description()));
     }

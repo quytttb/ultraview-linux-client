@@ -1,5 +1,6 @@
 #include "host/HostBackend.h"
 
+#include <QCoreApplication>
 #include "core/ErrorTypes.h"
 
 #include <QProcessEnvironment>
@@ -57,12 +58,12 @@ std::optional<HostLayout> HostLayout::build(const QVector<HostRect> &displays, Q
     }
     if (valid.isEmpty()) {
         if (error)
-            *error = QStringLiteral("The desktop did not report a usable display.");
+            *error = QCoreApplication::translate("HostBackend", "The desktop did not report a usable display.");
         return std::nullopt;
     }
     if (valid.size() > 64) {
         if (error)
-            *error = QStringLiteral("Too many displays to share.");
+            *error = QCoreApplication::translate("HostBackend", "Too many displays to share.");
         return std::nullopt;
     }
 
@@ -80,7 +81,7 @@ std::optional<HostLayout> HostLayout::build(const QVector<HostRect> &displays, Q
         || right > std::numeric_limits<qint32>::max()
         || bottom > std::numeric_limits<qint32>::max()) {
         if (error)
-            *error = QStringLiteral("The desktop geometry is outside the supported range.");
+            *error = QCoreApplication::translate("HostBackend", "The desktop geometry is outside the supported range.");
         return std::nullopt;
     }
 
@@ -136,7 +137,7 @@ std::optional<HostLayout> HostLayout::build(const QVector<HostRect> &displays, Q
     layout.id = id;
     if (!layout.isValid()) {
         if (error)
-            *error = QStringLiteral("The desktop layout cannot be represented in the "
+            *error = QCoreApplication::translate("HostBackend", "The desktop layout cannot be represented in the "
                                     "UltraViewer canvas.");
         return std::nullopt;
     }
@@ -148,7 +149,7 @@ std::optional<HostFrame> captureHostFrame(HostBackend &backend, const HostLayout
 {
     if (!layout.isValid()) {
         if (error)
-            *error = QStringLiteral("The host screen layout is invalid.");
+            *error = QCoreApplication::translate("HostBackend", "The host screen layout is invalid.");
         return std::nullopt;
     }
     const QByteArray captured = backend.capture(layout.source, error);
@@ -156,7 +157,7 @@ std::optional<HostFrame> captureHostFrame(HostBackend &backend, const HostLayout
         * layout.source.height * 2;
     if (captured.size() != expected) {
         if (error)
-            *error = QStringLiteral("The captured screen has an unexpected size.");
+            *error = QCoreApplication::translate("HostBackend", "The captured screen has an unexpected size.");
         return std::nullopt;
     }
     HostFrame frame;
@@ -178,7 +179,7 @@ std::optional<HostFrame> captureHostFrame(HostBackend &backend, const HostLayout
     }
     if (!frame.isValid()) {
         if (error)
-            *error = QStringLiteral("The captured screen frame is invalid.");
+            *error = QCoreApplication::translate("HostBackend", "The captured screen frame is invalid.");
         return std::nullopt;
     }
     return frame;
@@ -195,11 +196,11 @@ std::unique_ptr<HostBackend> createHostBackend(QString *error)
 #endif
     if (forced == QLatin1String("x11")) {
         if (error)
-            *error = QStringLiteral("The X11 host backend is not available in this build.");
+            *error = QCoreApplication::translate("HostBackend", "The X11 host backend is not available in this build.");
         return nullptr;
     }
     if (error)
-        *error = QStringLiteral("Host screen capture is unavailable. A Wayland session with "
+        *error = QCoreApplication::translate("HostBackend", "Host screen capture is unavailable. A Wayland session with "
                                 "xdg-desktop-portal and PipeWire is required by this build.");
     return nullptr;
 }

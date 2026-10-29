@@ -1,5 +1,6 @@
 #include "protocol/ClipboardCodec.h"
 
+#include <QCoreApplication>
 #include "core/ErrorTypes.h"
 #include "protocol/Digest.h"
 #include "protocol/ZstdCodec.h"
@@ -59,8 +60,8 @@ ClipboardCodec::Upload ClipboardCodec::buildLegacy(const QString &text)
 {
     if (text.contains(QLatin1String(kDelimiter))) {
         throwError(ErrorCode::UnsupportedOperation,
-                   QStringLiteral("clipboard text contains the protocol delimiter"),
-                   QStringLiteral("the legacy clipboard encoding cannot carry \"|||\""));
+                   QCoreApplication::translate("ClipboardCodec", "clipboard text contains the protocol delimiter"),
+                   QCoreApplication::translate("ClipboardCodec", "the legacy clipboard encoding cannot carry \"|||\""));
     }
     Upload upload;
     upload.payload = toUtf16(QString::fromLatin1("5") + QLatin1String(kDelimiter) + text);
@@ -72,16 +73,16 @@ ClipboardCodec::Upload ClipboardCodec::buildModern(const QString &text)
 {
     if (text.isEmpty())
         throwError(ErrorCode::UnsupportedOperation,
-                   QStringLiteral("the modern clipboard encoding cannot carry empty text"));
+                   QCoreApplication::translate("ClipboardCodec", "the modern clipboard encoding cannot carry empty text"));
     const QByteArray utf16 = toUtf16(text);
     if (utf16.size() > kMaxClipboardBytes) {
         throwError(ErrorCode::Resource,
-                   QStringLiteral("clipboard text is too large to send"),
+                   QCoreApplication::translate("ClipboardCodec", "clipboard text is too large to send"),
                    QStringLiteral("%1 bytes, limit %2").arg(utf16.size()).arg(kMaxClipboardBytes));
     }
     const QByteArray compressed = ZstdCodec::compress(utf16);
     if (compressed.isEmpty())
-        throwError(ErrorCode::Internal, QStringLiteral("clipboard text could not be compressed"));
+        throwError(ErrorCode::Internal, QCoreApplication::translate("ClipboardCodec", "clipboard text could not be compressed"));
 
     Upload upload;
     upload.payload = modernHeader(utf16.size()) + compressed;
@@ -126,17 +127,17 @@ std::optional<QString> ClipboardCodec::parseModern(const QList<QByteArray> &fiel
     if (!isModernCommand(fields))
         return std::nullopt;
     if (fields.size() < 3)
-        throwProtocol(QStringLiteral("clipboard message carries no text"),
+        throwProtocol(QCoreApplication::translate("ClipboardCodec", "clipboard message carries no text"),
                       QStringLiteral("%1 fields").arg(fields.size()));
 
     quint64 declared = 0;
     if (!readLittleEndian(fields.at(1), &declared))
-        throwProtocol(QStringLiteral("clipboard message has a malformed length field"));
+        throwProtocol(QCoreApplication::translate("ClipboardCodec", "clipboard message has a malformed length field"));
     const QByteArray utf16 = ZstdCodec::decompress(fields.at(2), static_cast<qint64>(declared),
                                                   kMaxClipboardBytes);
     const std::optional<QString> text = fromUtf16(utf16);
     if (!text.has_value())
-        throwProtocol(QStringLiteral("clipboard message does not contain UTF-16 text"));
+        throwProtocol(QCoreApplication::translate("ClipboardCodec", "clipboard message does not contain UTF-16 text"));
     return *text;
 }
 

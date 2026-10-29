@@ -82,6 +82,7 @@ public:
     bool hasPassword() const { return !m_password.isEmpty(); }
 
     QString stateName() const;
+    QString stateDisplayName() const;
     int stateCode() const;
     bool isConnected() const { return m_session->isConnected(); }
     bool isBusy() const;

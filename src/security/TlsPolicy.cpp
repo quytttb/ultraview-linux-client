@@ -1,5 +1,6 @@
 #include "security/TlsPolicy.h"
 
+#include <QCoreApplication>
 #include "core/ErrorTypes.h"
 
 #include <QFile>
@@ -29,12 +30,12 @@ QSslConfiguration TlsPolicy::configurationFor() const
     if (!m_additionalCaFile.isEmpty()) {
         QFile file(m_additionalCaFile);
         if (!file.open(QIODevice::ReadOnly)) {
-            throwError(ErrorCode::Tls, QStringLiteral("cannot read the additional CA bundle"),
+            throwError(ErrorCode::Tls, QCoreApplication::translate("TlsPolicy", "cannot read the additional CA bundle"),
                        m_additionalCaFile);
         }
         const QList<QSslCertificate> extra = QSslCertificate::fromData(file.readAll(), QSsl::Pem);
         if (extra.isEmpty())
-            throwError(ErrorCode::Tls, QStringLiteral("the additional CA bundle contains no certificate"),
+            throwError(ErrorCode::Tls, QCoreApplication::translate("TlsPolicy", "the additional CA bundle contains no certificate"),
                        m_additionalCaFile);
         append(extra);
     }
@@ -86,12 +87,10 @@ QString TlsPolicy::warningText() const
     case Mode::VerifyPeer:
         return {};
     case Mode::VerifyPeerAllowHostMismatch:
-        return QStringLiteral(
-            "The server certificate is checked, but its host name is not. Only use this for "
+        return QCoreApplication::translate("TlsPolicy", "The server certificate is checked, but its host name is not. Only use this for "
             "troubleshooting: someone who intercepts the connection may not be detected.");
     case Mode::AcceptAnyCertificate:
-        return QStringLiteral(
-            "Server verification is DISABLED. Someone who intercepts the connection can read or "
+        return QCoreApplication::translate("TlsPolicy", "Server verification is DISABLED. Someone who intercepts the connection can read or "
             "change your screen, keystrokes and password. Only use this for troubleshooting.");
     }
     return {};
@@ -119,12 +118,12 @@ TlsPolicy TlsPolicy::fromSettingsValue(const QString &value)
 QString TlsPolicy::describePeerCertificate(const QSslCertificate &certificate)
 {
     if (certificate.isNull())
-        return QStringLiteral("no certificate");
+        return QCoreApplication::translate("TlsPolicy", "no certificate");
     const QStringList names = certificate.subjectInfo(QSslCertificate::CommonName);
     const QStringList altNames = certificate.subjectAlternativeNames().values().isEmpty()
         ? QStringList()
         : QStringList{QString::number(certificate.subjectAlternativeNames().count())};
-    return QStringLiteral("subject CN=%1, issuer CN=%2, valid until %3")
+    return QCoreApplication::translate("TlsPolicy", "subject CN=%1, issuer CN=%2, valid until %3")
         .arg(names.join(QLatin1Char(',')),
              certificate.issuerInfo(QSslCertificate::CommonName).join(QLatin1Char(',')),
              certificate.expiryDate().toString(Qt::ISODate));
