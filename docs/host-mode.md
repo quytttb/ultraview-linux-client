@@ -281,6 +281,14 @@ union rectangle; pointer coordinates select the monitor under the cursor. The
 backend sends pointer motion/button/axis and keyboard keysym/keycode notifications
 through the portal session. Portal setup calls time out after 30 seconds.
 
+The portal reports each stream's size in logical (compositor) pixels, while
+PipeWire delivers frames at the physical buffer size; for example, a 1920×1080
+frame can belong to a 1536×864 logical stream at scale 1.25. The capture canvas
+and viewer layout use the physical frame pixels, and pointer coordinates are
+converted back to the logical stream space before the notification is sent.
+Every `RemoteDesktop.Notify*` method takes `(session, options, ...)`; the options
+dictionary must be the second argument.
+
 The runtime dependencies are `xdg-desktop-portal`, a portal backend such as
 `xdg-desktop-portal-kde` (GNOME and wlroots backends are alternatives) and a
 PipeWire server. The `.deb` recommends them. Builds that must ship host support

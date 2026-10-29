@@ -111,7 +111,8 @@ struct StreamState {
 
 struct PortalStream {
     quint32 node = 0;
-    std::optional<QPoint> position;
+    // Logical (compositor) size reported by the portal; PipeWire frames arrive
+    // at the physical buffer size.  Input coordinates use the logical space.
     std::optional<QSize> size;
     std::unique_ptr<StreamState> state;
 };
@@ -123,26 +124,13 @@ QString objectPath(const QVariant &value)
     return value.toString();
 }
 
-QPoint variantPoint(const QVariant &value, bool *ok)
-{
-    *ok = false;
-    QPoint point;
-    if (value.canConvert<QDBusArgument>()) {
-        const QDBusArgument argument = value.value<QDBusArgument>();
-        argument.beginStructure();
-        int x = 0;
-        int y = 0;
-        argument >> x >> y;
-        argument.endStructure();
-        point = QPoint(x, y);
-        *ok = true;
-    }
-    return point;
-}
-
 QSize variantSize(const QVariant &value, bool *ok)
 {
     *ok = false;
+    if (value.metaType() == QMetaType::fromType<QSize>()) {
+        *ok = true;
+        return value.toSize();
+    }
     QSize size;
     if (value.canConvert<QDBusArgument>()) {
         const QDBusArgument argument = value.value<QDBusArgument>();
@@ -598,16 +586,12 @@ bool WaylandPortalBackend::startRemoteDesktop(QString *error)
     while (!streams.atEnd()) {
         streams.beginStructure();
         quint32 node = 0;
-        QVariant propertiesValue;
-        streams >> node >> propertiesValue;
+        QVariantMap properties;
+        streams >> node >> properties;
         streams.endStructure();
-        const QVariantMap properties = qdbus_cast<QVariantMap>(propertiesValue);
         auto stream = std::make_unique<PortalStream>();
         stream->node = node;
         bool ok = false;
-        stream->position = variantPoint(properties.value(QStringLiteral("position")), &ok);
-        if (!ok)
-            stream->position.reset();
         stream->size = variantSize(properties.value(QStringLiteral("size")), &ok);
         if (!ok)
             stream->size.reset();
@@ -756,22 +740,25 @@ QVector<RawFrame> WaylandPortalBackend::snapshot(QString *error)
 
 QVector<HostRect> WaylandPortalBackend::streamRects(const QVector<RawFrame> &frames)
 {
+    // The portal reports each stream's size in logical (compositor) pixels,
+    // while PipeWire delivers frames at the physical buffer size.  The viewer
+    // canvas and the composed capture use the physical pixels; pointer
+    // coordinates are converted back to the logical stream space in inject().
     QVector<HostRect> rects;
     qint32 nextX = 0;
     for (size_t index = 0; index < m_streams.size()
          && static_cast<qsizetype>(index) < frames.size(); ++index) {
         const PortalStream &stream = *m_streams.at(index);
         const RawFrame &frame = frames.at(static_cast<qsizetype>(index));
-        const int width = stream.size.has_value() && stream.size->width() > 0
-            ? stream.size->width()
-            : frame.width;
-        const int height = stream.size.has_value() && stream.size->height() > 0
-            ? stream.size->height()
-            : frame.height;
-        const int x = stream.position.has_value() ? stream.position->x() : nextX;
-        const int y = stream.position.has_value() ? stream.position->y() : 0;
-        nextX = std::max(nextX, x + width);
-        rects.append(HostRect{x, y, width, height});
+        const int width = frame.width > 0
+            ? frame.width
+            : (stream.size.has_value() ? stream.size->width() : 0);
+        const int height = frame.height > 0
+            ? frame.height
+            : (stream.size.has_value() ? stream.size->height() : 0);
+        rects.append(HostRect{nextX, 0, width, height});
+        if (width > 0)
+            nextX += width;
     }
     return rects;
 }
@@ -875,23 +862,25 @@ void WaylandPortalBackend::notify(const QString &method, const QVariantList &arg
 void WaylandPortalBackend::sendMotion(quint32 node, double x, double y)
 {
     m_lastStream = node;
+    // Every RemoteDesktop notify method takes (session, options, ...); the
+    // options dictionary must not be omitted or shifted after the first value.
     notify(QStringLiteral("NotifyPointerMotionAbsolute"),
-           {QVariant::fromValue(QDBusObjectPath(m_sessionPath)), QVariant::fromValue<quint32>(node),
-            x, y, QVariantMap()});
+           {QVariant::fromValue(QDBusObjectPath(m_sessionPath)), QVariantMap(),
+            QVariant::fromValue<quint32>(node), x, y});
 }
 
 void WaylandPortalBackend::sendButton(qint32 code, bool pressed)
 {
     notify(QStringLiteral("NotifyPointerButton"),
-           {QVariant::fromValue(QDBusObjectPath(m_sessionPath)), code,
-            QVariant::fromValue<quint32>(pressed ? 1u : 0u), QVariantMap()});
+           {QVariant::fromValue(QDBusObjectPath(m_sessionPath)), QVariantMap(), code,
+            QVariant::fromValue<quint32>(pressed ? 1u : 0u)});
 }
 
 void WaylandPortalBackend::sendAxis(qint32 steps)
 {
     notify(QStringLiteral("NotifyPointerAxisDiscrete"),
-           {QVariant::fromValue(QDBusObjectPath(m_sessionPath)), QVariant::fromValue<quint32>(0),
-            -steps, QVariantMap()});
+           {QVariant::fromValue(QDBusObjectPath(m_sessionPath)), QVariantMap(),
+            QVariant::fromValue<quint32>(0), -steps});
 }
 
 void WaylandPortalBackend::sendKey(const PortalKey &key, bool pressed)
@@ -899,12 +888,12 @@ void WaylandPortalBackend::sendKey(const PortalKey &key, bool pressed)
     const quint32 state = pressed ? 1u : 0u;
     if (key.kind == PortalKey::Kind::Keysym) {
         notify(QStringLiteral("NotifyKeyboardKeysym"),
-               {QVariant::fromValue(QDBusObjectPath(m_sessionPath)), key.value,
-                QVariant::fromValue<quint32>(state), QVariantMap()});
+               {QVariant::fromValue(QDBusObjectPath(m_sessionPath)), QVariantMap(), key.value,
+                QVariant::fromValue<quint32>(state)});
     } else {
         notify(QStringLiteral("NotifyKeyboardKeycode"),
-               {QVariant::fromValue(QDBusObjectPath(m_sessionPath)), key.value,
-                QVariant::fromValue<quint32>(state), QVariantMap()});
+               {QVariant::fromValue(QDBusObjectPath(m_sessionPath)), QVariantMap(), key.value,
+                QVariant::fromValue<quint32>(state)});
     }
 }
 
@@ -935,9 +924,25 @@ void WaylandPortalBackend::inject(const HostInputEvent &event, const HostLayout 
             if (chosen < 0)
                 chosen = 0;
             const HostRect &rect = rects.at(chosen);
-            const double x = std::clamp(source.x() - rect.x, 0, std::max(0, rect.width - 1));
-            const double y = std::clamp(source.y() - rect.y, 0, std::max(0, rect.height - 1));
-            sendMotion(m_streams.at(static_cast<size_t>(chosen))->node, x, y);
+            const PortalStream &stream = *m_streams.at(static_cast<size_t>(chosen));
+            // The portal takes coordinates in the stream's logical space.  The
+            // capture canvas and HostRect are in physical pixels; KWin applies
+            // the output scale itself, so divide by the per-stream scale here.
+            const double scale = stream.size.has_value() && stream.size->width() > 0
+                    && rect.width > 0
+                ? static_cast<double>(rect.width) / stream.size->width()
+                : 1.0;
+            const double logicalWidth = stream.size.has_value() && stream.size->width() > 0
+                ? stream.size->width()
+                : rect.width;
+            const double logicalHeight = stream.size.has_value() && stream.size->height() > 0
+                ? stream.size->height()
+                : rect.height;
+            const double x = std::clamp((source.x() - rect.x) / scale, 0.0,
+                                        std::max(0.0, logicalWidth - 1));
+            const double y = std::clamp((source.y() - rect.y) / scale, 0.0,
+                                        std::max(0.0, logicalHeight - 1));
+            sendMotion(stream.node, x, y);
             break;
         }
         case PointerAction::Kind::Button: {

@@ -560,13 +560,24 @@ Neither step proves server acceptance or a working session.
   viewer. The probe printed only the profile path, identity length and assigned
   ID, never the password. The identity was moved to the application's own
   profile path, so the Host page and a later session use the same registration.
+- Live pointer injection was then checked against the portal's own capture with
+  the cursor embedded, rather than by asking the user to judge: absolute moves to
+  (300,300), (1600,800) and (960,540) appeared at exactly those physical pixels
+  in the captured frames. Two live-only defects were fixed on the way: every
+  `RemoteDesktop.Notify*` call needs the options dictionary as its second
+  argument, and pointer coordinates must be divided by the stream's physical to
+  logical scale (`Start` reported 1536×864 for a 1920×1080 buffer at scale 1.25).
+  The stream properties are now read directly as a `QVariantMap`; the previous
+  `QVariant` extraction returned an empty map and silently fell back to the
+  physical size. A Shift press/release was sent through the same keyboard path,
+  but its effect was not independently observed.
 - Not validated: a real Windows UltraViewer viewer controlling this host, whether
   the viewer accepts the displayed ID/password and reaches local approval, the
   approval/refusal dialog against a real viewer, the wrong-password lockout over
-  the relay, portal pointer/keyboard injection actually moving the local desktop,
-  control/view-only switching, and stop/cleanup during a live viewer session. No
-  host password or profile is written by the test suite or the package, and the
-  live ID/address are not recorded here.
+  the relay, keyboard injection actually reaching applications, control/view-only
+  switching, and stop/cleanup during a live viewer session. No host password or
+  profile is written by the test suite or the package, and the live ID/address
+  are not recorded here.
 
 This record describes the checked local build, not a vendor-certified release or
 a claim that all recovered/undocumented protocol features were implemented.
