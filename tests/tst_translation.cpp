@@ -14,10 +14,22 @@ class TranslationTest : public QObject
 {
     Q_OBJECT
 private slots:
+    void initTestCase();
     void vietnamese();
     void languageCodes();
     void languageSelection();
+
+private:
+    QTemporaryDir m_configDir;
 };
+
+void TranslationTest::initTestCase()
+{
+    QVERIFY(m_configDir.isValid());
+    // QSettings may cache the XDG location on first use, before languageSelection.
+    // Set its path explicitly before any test creates a settings-backed model.
+    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, m_configDir.path());
+}
 
 void TranslationTest::vietnamese()
 {
@@ -53,10 +65,6 @@ void TranslationTest::languageCodes()
 
 void TranslationTest::languageSelection()
 {
-    QTemporaryDir home;
-    QVERIFY(home.isValid());
-    qputenv("XDG_CONFIG_HOME", home.path().toUtf8());
-
     ultraview::models::SettingsModel settings;
     // Following the system language is the default, and it is what this process
     // started with.

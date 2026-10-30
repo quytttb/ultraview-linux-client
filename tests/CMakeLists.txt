@@ -38,7 +38,7 @@ foreach(test IN LISTS UV_TEST_SOURCES)
     add_test(NAME ${test} COMMAND ${test})
     set_tests_properties(${test} PROPERTIES
         # No display is required; the render item test still needs a QGuiApplication.
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/test-config/${test}"
         TIMEOUT 180)
 endforeach()
 
@@ -58,7 +58,7 @@ endif()
 # offscreen platform plugin. Worker integration is tested separately in tst_session.
 add_test(NAME app_self_test COMMAND ultraview --self-test --mock-frames 3)
 set_tests_properties(app_self_test PROPERTIES
-    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/test-config/app-self-test"
     TIMEOUT 180)
 
 # The live-connect probe must refuse before any network I/O when the client has no
@@ -78,5 +78,5 @@ set_tests_properties(app_connect_probe_unconfigured PROPERTIES
 add_test(NAME app_self_test_themed
     COMMAND ultraview --self-test --mock-frames 1)
 set_tests_properties(app_self_test_themed PROPERTIES
-    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_PLATFORMTHEME=kde"
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_PLATFORMTHEME=kde;XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/test-config/app-self-test-themed"
     TIMEOUT 180)
