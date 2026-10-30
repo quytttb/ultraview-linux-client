@@ -116,6 +116,7 @@ endif()
 add_library(ultraview_core STATIC
     src/core/ErrorTypes.cpp
     src/core/SessionState.cpp
+    src/core/Language.cpp
     src/core/SessionManager.cpp
 
     src/protocol/AnsiCodec.cpp

@@ -166,7 +166,7 @@
         <translation>do ứng dụng cung cấp</translation>
     </message>
     <message>
-        <location filename="../src/app/main.cpp" line="366"/>
+        <location filename="../src/app/main.cpp" line="364"/>
         <source>UltraViewer (native Linux client)</source>
         <translation>UltraViewer (ứng dụng Linux gốc)</translation>
     </message>
@@ -2509,118 +2509,138 @@
         <translation>Các giá trị mặc định giống ứng dụng UltraViewer gốc. Chỉ thay đổi khi kết nối không ổn định.</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="346"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="344"/>
+        <source>Interface language</source>
+        <translation>Ngôn ngữ giao diện</translation>
+    </message>
+    <message>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="353"/>
+        <source>System language</source>
+        <translation>Theo hệ thống</translation>
+    </message>
+    <message>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="371"/>
+        <source>Restart the application to apply the new language.</source>
+        <translation>Khởi động lại ứng dụng để áp dụng ngôn ngữ mới.</translation>
+    </message>
+    <message>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="375"/>
+        <source>Restart now</source>
+        <translation>Khởi động lại ngay</translation>
+    </message>
+    <message>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="383"/>
         <source>Fit the screen (black bars)</source>
         <translation>Vừa màn hình (có viền đen)</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="347"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="384"/>
         <source>Fill the window (crop the edges)</source>
         <translation>Lấp đầy cửa sổ (cắt mép)</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="348"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="385"/>
         <source>Stretch to the window</source>
         <translation>Kéo giãn theo cửa sổ</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="355"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="392"/>
         <source>Smooth scaling</source>
         <translation>Làm mịn khi thay đổi kích thước</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="361"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="398"/>
         <source>Hide my pointer while controlling the partner</source>
         <translation>Ẩn con trỏ của tôi khi điều khiển đối tác</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="377"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="414"/>
         <source>Login screen width: %1</source>
         <translation>Chiều rộng màn hình khi đăng nhập: %1</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="387"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="424"/>
         <source>Login screen height: %1</source>
         <translation>Chiều cao màn hình khi đăng nhập: %1</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="396"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="433"/>
         <source>The original client sends 1280×720 at login; the partner&apos;s real screen size is read from its answer.</source>
         <translation>Ứng dụng gốc gửi kích thước 1280×720 khi đăng nhập; kích thước thực tế của đối tác được lấy từ phản hồi.</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="417"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="454"/>
         <source>These overrides are active: the app is not using UltraViewer&apos;s normal servers.</source>
         <translation>Các thiết lập thay thế đang có hiệu lực: ứng dụng không dùng máy chủ thông thường của UltraViewer.</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="419"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="456"/>
         <source>Leave all fields empty to use UltraViewer&apos;s normal servers.</source>
         <translation>Để trống tất cả các trường để sử dụng máy chủ thông thường của UltraViewer.</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="428"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="465"/>
         <source>Login server</source>
         <translation>Máy chủ đăng nhập</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="432"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="469"/>
         <source>functions3.ultraviewer.net</source>
         <translation>functions3.ultraviewer.net</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="436"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="473"/>
         <source>Login port</source>
         <translation>Cổng đăng nhập</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="446"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="483"/>
         <source>Login host header</source>
         <translation>Host header đăng nhập</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="453"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="490"/>
         <source>Login certificate name</source>
         <translation>Tên chứng chỉ đăng nhập</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="457"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="494"/>
         <source>registration host (default)</source>
         <translation>máy chủ đăng ký (mặc định)</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="461"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="498"/>
         <source>Screen server</source>
         <translation>Máy chủ màn hình</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="465"/>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="483"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="502"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="520"/>
         <source>route value</source>
         <translation>giá trị định tuyến</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="469"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="506"/>
         <source>Screen server port</source>
         <translation>Cổng máy chủ màn hình</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="479"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="516"/>
         <source>Screen host header</source>
         <translation>Host header màn hình</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="487"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="524"/>
         <source>Screen certificate name</source>
         <translation>Tên chứng chỉ màn hình</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="491"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="528"/>
         <source>registration certificate name (default)</source>
         <translation>tên chứng chỉ đăng ký (mặc định)</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="501"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="538"/>
         <source>Only for private test servers or offline testing. Leave empty for normal use.</source>
         <translation>Chỉ dùng cho máy chủ thử nghiệm riêng hoặc kiểm thử ngoại tuyến. Để trống khi sử dụng bình thường.</translation>
     </message>
@@ -3823,47 +3843,47 @@
 <context>
     <name>ultraview::models::SettingsModel</name>
     <message>
-        <location filename="../src/models/SettingsModel.cpp" line="213"/>
+        <location filename="../src/models/SettingsModel.cpp" line="270"/>
         <source>Verified (chain and host name)</source>
         <translation>Đã xác minh (chuỗi chứng chỉ và tên máy chủ)</translation>
     </message>
     <message>
-        <location filename="../src/models/SettingsModel.cpp" line="215"/>
+        <location filename="../src/models/SettingsModel.cpp" line="272"/>
         <source>Verified chain, host name not checked</source>
         <translation>Đã xác minh chuỗi chứng chỉ, chưa kiểm tra tên máy chủ</translation>
     </message>
     <message>
-        <location filename="../src/models/SettingsModel.cpp" line="217"/>
+        <location filename="../src/models/SettingsModel.cpp" line="274"/>
         <source>Any certificate accepted (insecure)</source>
         <translation>Chấp nhận mọi chứng chỉ (không an toàn)</translation>
     </message>
     <message>
-        <location filename="../src/models/SettingsModel.cpp" line="219"/>
+        <location filename="../src/models/SettingsModel.cpp" line="276"/>
         <source>unknown</source>
         <translation>không rõ</translation>
     </message>
     <message>
-        <location filename="../src/models/SettingsModel.cpp" line="424"/>
+        <location filename="../src/models/SettingsModel.cpp" line="481"/>
         <source>no screen dictionary is configured</source>
         <translation>chưa cấu hình từ điển màn hình</translation>
     </message>
     <message>
-        <location filename="../src/models/SettingsModel.cpp" line="427"/>
+        <location filename="../src/models/SettingsModel.cpp" line="484"/>
         <source>cannot read the screen dictionary: %1</source>
         <translation>không thể đọc từ điển màn hình: %1</translation>
     </message>
     <message>
-        <location filename="../src/models/SettingsModel.cpp" line="430"/>
+        <location filename="../src/models/SettingsModel.cpp" line="487"/>
         <source>the screen dictionary file is empty</source>
         <translation>tệp từ điển màn hình trống</translation>
     </message>
     <message>
-        <location filename="../src/models/SettingsModel.cpp" line="439"/>
+        <location filename="../src/models/SettingsModel.cpp" line="496"/>
         <source>no dictionary configured</source>
         <translation>chưa cấu hình từ điển</translation>
     </message>
     <message>
-        <location filename="../src/models/SettingsModel.cpp" line="442"/>
+        <location filename="../src/models/SettingsModel.cpp" line="499"/>
         <source>the configured dictionary file is not readable</source>
         <translation>không thể đọc tệp từ điển đã cấu hình</translation>
     </message>

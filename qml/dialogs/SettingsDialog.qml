@@ -340,6 +340,43 @@ Dialog {
                     width: parent.width
                     spacing: Theme.spacing
 
+                    Label {
+                        text: qsTr("Interface language")
+                        color: Theme.text
+                        font.pixelSize: Theme.fontHeading
+                        font.weight: Font.DemiBold
+                    }
+
+                    AppComboBox {
+                        Layout.fillWidth: true
+                        model: [
+                            qsTr("System language"),
+                            "Tiếng Việt",
+                            "English"
+                        ]
+                        currentIndex: controller.settings.languageIndex
+                        onActivated: (index) => controller.settings.setLanguageIndex(index)
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        visible: controller.settings.language !== controller.settings.appliedLanguage
+                        spacing: Theme.spacingSmall
+
+                        Label {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            color: Theme.warning
+                            font.pixelSize: Theme.fontSmall
+                            text: qsTr("Restart the application to apply the new language.")
+                        }
+
+                        AppButton {
+                            text: qsTr("Restart now")
+                            onClicked: controller.settings.restartApplication()
+                        }
+                    }
+
                     AppComboBox {
                         Layout.fillWidth: true
                         model: [

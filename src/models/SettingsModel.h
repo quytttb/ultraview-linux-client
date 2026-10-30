@@ -17,6 +17,7 @@
 #include <QObject>
 #include <QString>
 
+#include "core/Language.h"
 #include "network/ConnectionManager.h"
 #include "protocol/PacketCodec.h"
 #include "security/CredentialStore.h"
@@ -56,6 +57,9 @@ class SettingsModel : public QObject {
     Q_PROPERTY(QString relayHttpHostOverride READ relayHttpHostOverride WRITE setRelayHttpHostOverride NOTIFY endpointsChanged)
     Q_PROPERTY(QString relayPeerNameOverride READ relayPeerNameOverride WRITE setRelayPeerNameOverride NOTIFY endpointsChanged)
     Q_PROPERTY(bool endpointOverrideActive READ endpointOverrideActive NOTIFY endpointsChanged)
+    Q_PROPERTY(QString language READ language WRITE setLanguage NOTIFY languageChanged)
+    Q_PROPERTY(QString appliedLanguage READ appliedLanguage CONSTANT)
+    Q_PROPERTY(int languageIndex READ languageIndex NOTIFY languageChanged)
 
 public:
     explicit SettingsModel(QObject *parent = nullptr);
@@ -150,6 +154,19 @@ public:
     /// The decoder options derived from the settings.
     decoder::ScreenDecoder::Options decoderOptions() const;
 
+    // --- interface language -------------------------------------------------
+    /// Stored code: "system", "vi" or "en".
+    QString language() const { return m_language; }
+    void setLanguage(const QString &code);
+    /// Code the running process was started with; the UI offers a restart when
+    /// it differs from `language`.
+    QString appliedLanguage() const { return m_appliedLanguage; }
+    /// Combo box order: 0 system, 1 Vietnamese, 2 English.
+    Q_INVOKABLE int languageIndex() const;
+    Q_INVOKABLE void setLanguageIndex(int index);
+    /// Saves the settings, then re-runs the application with the same arguments.
+    Q_INVOKABLE void restartApplication();
+
     /// Persist the current values.
     Q_INVOKABLE void save();
     Q_INVOKABLE void reload();
@@ -166,6 +183,7 @@ signals:
     void viewChanged();
     void featuresChanged();
     void endpointsChanged();
+    void languageChanged();
 
 private:
     void load();
@@ -196,6 +214,8 @@ private:
     int m_relayPortOverride = 0;
     QString m_relayHttpHostOverride;
     QString m_relayPeerNameOverride;
+    QString m_language = QString::fromLatin1(localization::kDefaultLanguage);
+    QString m_appliedLanguage;
 };
 
 } // namespace ultraview::models

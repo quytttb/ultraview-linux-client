@@ -26,11 +26,11 @@
 #include <QFile>
 #include <QTimer>
 #include <QTranslator>
-#include <QLocale>
 
 #include <cstdio>
 #include <memory>
 
+#include "core/Language.h"
 #include "core/SessionManager.h"
 #include "core/SessionState.h"
 #include "models/ConnectionViewModel.h"
@@ -352,13 +352,11 @@ int runConnectAttempt(ultraview::models::ConnectionViewModel *controller, const 
 int main(int argc, char *argv[])
 {
     QGuiApplication application(argc, argv);
+    // The language choice is read before any UI exists.  Vietnamese ships with the
+    // application, English is the source language, and "system" follows the desktop
+    // locale (English when no catalog matches).
     QTranslator translator;
-    // Only Vietnamese is shipped: try the system locale first, then fall back to
-    // Vietnamese so a machine with an untranslated locale still shows Vietnamese.
-    if (translator.load(QLocale(), QStringLiteral("ultraview"), QStringLiteral("_"),
-                        QStringLiteral(":/i18n"))
-        || translator.load(QLocale(QStringLiteral("vi")), QStringLiteral("ultraview"),
-                           QStringLiteral("_"), QStringLiteral(":/i18n")))
+    if (ultraview::localization::installTranslator(translator))
         application.installTranslator(&translator);
     QCoreApplication::setOrganizationName(QStringLiteral("ultraview"));
     QCoreApplication::setApplicationName(QStringLiteral("ultraview"));

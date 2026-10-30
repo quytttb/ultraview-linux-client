@@ -2,9 +2,11 @@
 
 #include "core/ErrorTypes.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QProcess>
 #include <QSettings>
 #include <QStandardPaths>
 
@@ -39,6 +41,7 @@ constexpr auto kRelayHostKey = "endpoints/relayHost";
 constexpr auto kRelayPortKey = "endpoints/relayPort";
 constexpr auto kRelayHttpHostKey = "endpoints/relayHttpHost";
 constexpr auto kRelayPeerKey = "endpoints/relayPeerName";
+constexpr auto kLanguageKey = "ui/language";
 
 QSettings settings()
 {
@@ -52,6 +55,7 @@ SettingsModel::SettingsModel(QObject *parent)
     : QObject(parent)
 {
     load();
+    m_appliedLanguage = m_language;
 }
 
 SettingsModel::~SettingsModel() = default;
@@ -85,6 +89,8 @@ void SettingsModel::load()
     m_relayPortOverride = store.value(kRelayPortKey, 0).toInt();
     m_relayHttpHostOverride = store.value(kRelayHttpHostKey).toString();
     m_relayPeerNameOverride = store.value(kRelayPeerKey).toString();
+    m_language = localization::normalizeLanguageCode(
+        store.value(kLanguageKey, QString::fromLatin1(localization::kDefaultLanguage)).toString());
 }
 
 void SettingsModel::save()
@@ -116,6 +122,7 @@ void SettingsModel::save()
     store.setValue(kRelayPortKey, m_relayPortOverride);
     store.setValue(kRelayHttpHostKey, m_relayHttpHostOverride);
     store.setValue(kRelayPeerKey, m_relayPeerNameOverride);
+    store.setValue(kLanguageKey, m_language);
     store.sync();
 }
 
@@ -132,6 +139,7 @@ void SettingsModel::reload()
     emit registrationProfilePathChanged();
     emit partnerTemplatePathChanged();
     emit dictionaryPathChanged();
+    emit languageChanged();
 }
 
 void SettingsModel::resetToDefaults()
@@ -158,8 +166,57 @@ void SettingsModel::resetToDefaults()
     m_relayPortOverride = 0;
     m_relayHttpHostOverride.clear();
     m_relayPeerNameOverride.clear();
+    m_language = QString::fromLatin1(localization::kDefaultLanguage);
     save();
     reload();
+}
+
+int SettingsModel::languageIndex() const
+{
+    if (m_language == QLatin1String(localization::kSystemLanguage))
+        return 0;
+    if (m_language == QLatin1String(localization::kEnglishLanguage))
+        return 2;
+    return 1;
+}
+
+void SettingsModel::setLanguageIndex(int index)
+{
+    switch (index) {
+    case 0:
+        setLanguage(QString::fromLatin1(localization::kSystemLanguage));
+        break;
+    case 2:
+        setLanguage(QString::fromLatin1(localization::kEnglishLanguage));
+        break;
+    default:
+        setLanguage(QString::fromLatin1(localization::kVietnameseLanguage));
+        break;
+    }
+}
+
+void SettingsModel::setLanguage(const QString &code)
+{
+    const QString normalized = localization::normalizeLanguageCode(code);
+    if (m_language == normalized)
+        return;
+    m_language = normalized;
+    // Persist immediately: the restart button and a normal relaunch must agree
+    // even when the dialog is closed without pressing Save.
+    QSettings store = settings();
+    store.setValue(kLanguageKey, m_language);
+    store.sync();
+    emit languageChanged();
+}
+
+void SettingsModel::restartApplication()
+{
+    save();
+    QStringList arguments = QCoreApplication::arguments();
+    if (!arguments.isEmpty())
+        arguments.removeFirst();
+    if (QProcess::startDetached(QCoreApplication::applicationFilePath(), arguments))
+        QCoreApplication::quit();
 }
 
 void SettingsModel::setRegistrationProfilePath(const QString &path)
