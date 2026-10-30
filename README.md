@@ -160,10 +160,10 @@ QMAKE=/usr/bin/qmake6 bash packaging/build-appimage.sh build
 ```
 
 See [packaging](docs/packaging.md) for prerequisites, limits and smoke checks.
-The latest published `.deb` is v0.2.3; local builds 0.2.4–0.3.0 were generated,
+The latest published `.deb` is v0.2.3; local builds 0.2.4–0.3.1 were generated,
 extracted and self-tested on this host, and each extracted/installed binary passed
 the QML self-test. The current local artifact is
-`build/packages/ultraview_0.3.0_amd64.deb`, which depends on the distribution's
+`build/packages/ultraview_0.3.1_amd64.deb`, which depends on the distribution's
 PipeWire client library for partner computer sound.
 The local `.deb` can target this distribution only; building here does not make
 it compatible with older Ubuntu glibc/Qt. The AppImage recipe is supplied, but an
