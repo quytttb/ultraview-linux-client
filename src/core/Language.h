@@ -19,9 +19,9 @@ inline constexpr auto kSystemLanguage = "system";
 inline constexpr auto kVietnameseLanguage = "vi";
 inline constexpr auto kEnglishLanguage = "en";
 
-/// Code used when the user never chose a language: the app is Vietnamese by
-/// default, matching the shipped catalog.
-inline constexpr auto kDefaultLanguage = kVietnameseLanguage;
+/// Code used when the user never chose a language: follow the desktop locale,
+/// which is English unless the system language is Vietnamese.
+inline constexpr auto kDefaultLanguage = kSystemLanguage;
 
 /// Maps arbitrary stored/system values onto "system", "vi" or "en".  Unknown
 /// values fall back to "system".

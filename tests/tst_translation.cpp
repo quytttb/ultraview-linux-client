@@ -58,30 +58,31 @@ void TranslationTest::languageSelection()
     qputenv("XDG_CONFIG_HOME", home.path().toUtf8());
 
     ultraview::models::SettingsModel settings;
-    // Vietnamese is the shipped default, and it is what this process started with.
-    QCOMPARE(settings.language(), QStringLiteral("vi"));
-    QCOMPARE(settings.languageIndex(), 1);
-    QCOMPARE(settings.appliedLanguage(), QStringLiteral("vi"));
+    // Following the system language is the default, and it is what this process
+    // started with.
+    QCOMPARE(settings.language(), QStringLiteral("system"));
+    QCOMPARE(settings.languageIndex(), 0);
+    QCOMPARE(settings.appliedLanguage(), QStringLiteral("system"));
 
     settings.setLanguageIndex(2);
     QCOMPARE(settings.language(), QStringLiteral("en"));
     QCOMPARE(settings.languageIndex(), 2);
     // The running process keeps its language until it is restarted.
-    QCOMPARE(settings.appliedLanguage(), QStringLiteral("vi"));
+    QCOMPARE(settings.appliedLanguage(), QStringLiteral("system"));
 
     // The choice is persisted immediately, before the Save button is pressed.
     QSettings store(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("ultraview"),
                     QStringLiteral("client"));
     QCOMPARE(store.value(QStringLiteral("ui/language")).toString(), QStringLiteral("en"));
 
-    settings.setLanguageIndex(0);
-    QCOMPARE(settings.language(), QStringLiteral("system"));
-    QCOMPARE(settings.languageIndex(), 0);
-
-    // Reset restores the Vietnamese default.
-    settings.resetToDefaults();
+    settings.setLanguageIndex(1);
     QCOMPARE(settings.language(), QStringLiteral("vi"));
     QCOMPARE(settings.languageIndex(), 1);
+
+    // Reset restores the system default.
+    settings.resetToDefaults();
+    QCOMPARE(settings.language(), QStringLiteral("system"));
+    QCOMPARE(settings.languageIndex(), 0);
 }
 
 QTEST_MAIN(TranslationTest)

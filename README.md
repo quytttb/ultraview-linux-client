@@ -234,8 +234,9 @@ real partner secrets, or upstream runtime is installed by this project.
 The interface is fully translated into Vietnamese, and English is the source
 language. Settings → Display → Interface language selects **System language**
 (follows the desktop locale, English when no catalog matches), **Tiếng Việt** or
-**English**. The choice is stored in `ui/language` and applied when the
-application starts, so the dialog offers a restart button after a change. To
+**English**; the default is **System language**. The choice is stored in
+`ui/language` and applied when the application starts, so the dialog offers a
+restart button after a change. To
 update the catalog after changing UI text, run `lupdate qml src -ts
 translations/ultraview_vi.ts -no-obsolete`, translate the new entries, then run
 `lrelease translations/ultraview_vi.ts -qm translations/ultraview_vi.qm`. Commit
