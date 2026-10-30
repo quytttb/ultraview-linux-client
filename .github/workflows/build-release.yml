@@ -1,8 +1,8 @@
 name: Build Release
 
 # Tagged releases: build the .deb from the tag, run the suite as the gate and
-# publish the package with checksums as a GitHub Release.  A manual run only
-# accepts an existing tag whose version matches CMakeLists.txt.
+# publish the package with checksums as a GitHub Release. Manual runs update
+# CMakeLists.txt, test the result and create a new version commit and tag.
 on:
   push:
     tags:
@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing release tag (e.g. v0.2.2)"
+        description: "New release tag (e.g. v0.4.0); updates the project version"
         required: true
         type: string
 
@@ -30,10 +30,16 @@ jobs:
     steps:
       - name: Resolve tag and version
         id: meta
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            TAG="${{ inputs.tag }}"
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            TAG="$INPUT_TAG"
+            if [[ "$GITHUB_REF" != refs/heads/main ]]; then
+              echo '::error::Manual releases must run on main.'; exit 1
+            fi
           else
             TAG="${GITHUB_REF_NAME}"
           fi
@@ -54,7 +60,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ needs.prepare.outputs.tag }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || format('refs/tags/{0}', needs.prepare.outputs.tag) }}
+
+      - name: Set version for manual release
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            echo "::error::Tag $TAG already exists; choose a new version."; exit 1
+          fi
+          sed -i -E "s/^( *VERSION )[0-9]+\.[0-9]+\.[0-9]+/\1${TAG#v}/" CMakeLists.txt
 
       - name: Verify the tag matches the project version
         env:
@@ -128,6 +145,33 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout tested source
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Commit version and create tag
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+          TESTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TESTED_SHA" || { echo '::error::main changed during the build; run again.'; exit 1; }
+          sed -i -E "s/^( *VERSION )[0-9]+\.[0-9]+\.[0-9]+/\1${TAG#v}/" CMakeLists.txt
+          version=$(sed -nE 's/^ *VERSION ([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' CMakeLists.txt | head -1)
+          test "$version" = "${TAG#v}"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if ! git diff --quiet -- CMakeLists.txt; then
+            git add CMakeLists.txt
+            git commit -m "chore(release): $TAG"
+          fi
+          git tag "$TAG"
+          git push --atomic origin HEAD:refs/heads/main "refs/tags/$TAG"
+
       - name: Download the package
         uses: actions/download-artifact@v8
         with:
