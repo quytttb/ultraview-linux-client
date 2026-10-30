@@ -89,26 +89,15 @@ dependencies still works, but cannot suppress compositor shortcuts.
 
 ## Configure and connect
 
-1. Open **Settings → Profiles**. Supply your own registration JSON: `terms`
-   (26 strings) and explicit `ansi_codec` (`cp1252` normally). The exact schema is
-   described in [protocol](docs/protocol.md). A scaffold can be created from the UI,
-   but it is **not** a valid installation identity: machine-specific values must
-   come from your authorized, working reference profile. Automatic Linux
-   fingerprint generation is unresolved; no identity is invented here.
-2. Select your legally obtained **`8bit.dat`** dictionary. It is not included.
-   The synthetic test dictionary is not a vendor-dictionary replacement.
-3. Optionally select a partner JSON with `request_terms` (17 strings),
-   `password_type` and an empty `password`; prefer entering the password in the
-   application. The client fills the ID and authentication fields. Leave request
-   term 16 empty: P2P is not supported. Without this file the reference-derived
-   relay template is used.
-4. Leave **Security → Verify the server (recommended)** selected. Registration and
+1. The client uses its bundled screen dictionary and creates a private registration
+   identity automatically. You can select a different dictionary in **Settings → Account**.
+2. Leave **Security → Verify the server (recommended)** selected. Registration and
    relay both authenticate UltraViewer's service certificate name (or an explicit
    controlled override); the route hostname is an HTTP tunnel field, not a
    certificate name. Verification failure is a real failure, not an invitation to
    bypass TLS. The two unsafe modes require an explicit settings selection and
    show persistent warnings. Do not use them on untrusted networks.
-5. Enter the authorized partner's ID/password and click **Connect**. Input only
+3. Enter the authorized partner's ID/password and click **Connect**. Input only
    transmits while connected and enabled. Click the viewer for keyboard focus.
    Disconnect or focus loss releases held keys/buttons on a best-effort basis.
    **Full screen** in the viewer hides the application chrome; move the pointer to

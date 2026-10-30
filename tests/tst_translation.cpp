@@ -1,14 +1,17 @@
 #include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QSettings>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QTranslator>
 
 #include "core/Language.h"
+#include "decoder/ZstdDecoder.h"
 #include "models/ConnectionViewModel.h"
 #include "models/HostViewModel.h"
 #include "models/SettingsModel.h"
 #include "platform/GlobalMenu.h"
+#include <zstd.h>
 
 class TranslationTest : public QObject
 {
@@ -18,6 +21,8 @@ private slots:
     void vietnamese();
     void languageCodes();
     void languageSelection();
+    void connectDoesNotRequireProfile();
+    void bundledDictionary();
 
 private:
     QTemporaryDir m_configDir;
@@ -57,6 +62,10 @@ void TranslationTest::languageCodes()
     QCOMPARE(normalizeLanguageCode(QStringLiteral("en")), QStringLiteral("en"));
     QCOMPARE(normalizeLanguageCode(QStringLiteral("en_US")), QStringLiteral("en"));
     QCOMPARE(normalizeLanguageCode(QStringLiteral("fr_FR")), QStringLiteral("system"));
+    using ultraview::localization::preferredUiLanguage;
+    QCOMPARE(preferredUiLanguage({QStringLiteral("en-US"), QStringLiteral("vi-VN")}), QStringLiteral("en"));
+    QCOMPARE(preferredUiLanguage({QStringLiteral("vi-VN"), QStringLiteral("en-US")}), QStringLiteral("vi"));
+    QCOMPARE(preferredUiLanguage({QStringLiteral("fr-FR")}), QStringLiteral("en"));
 
     // English is the source language, so no catalog is installed for it.
     QTranslator english;
@@ -91,6 +100,41 @@ void TranslationTest::languageSelection()
     settings.resetToDefaults();
     QCOMPARE(settings.language(), QStringLiteral("system"));
     QCOMPARE(settings.languageIndex(), 0);
+}
+
+void TranslationTest::connectDoesNotRequireProfile()
+{
+    ultraview::models::ConnectionViewModel controller;
+    controller.setPartnerId(QStringLiteral("123456789"));
+    QVERIFY(controller.settingsObject()->registrationProfilePath().isEmpty());
+    QVERIFY(controller.canConnect());
+}
+
+void TranslationTest::bundledDictionary()
+{
+    ultraview::models::SettingsModel settings;
+    settings.resetToDefaults();
+    QString error;
+    const QByteArray dictionary = settings.loadDictionary(&error);
+    QVERIFY2(!dictionary.isEmpty(), qPrintable(error));
+    QCOMPARE(QCryptographicHash::hash(dictionary, QCryptographicHash::Sha256).toHex(),
+             QByteArray("9aa45789d9ff9d329a623a685d57b67e33c777019de9ce1f273f21860e4bfe6b"));
+    const QByteArray pixels(4096, '\x42');
+    QByteArray compressed(static_cast<qsizetype>(ZSTD_compressBound(pixels.size())), Qt::Uninitialized);
+    ZSTD_CCtx *context = ZSTD_createCCtx();
+    QVERIFY(context);
+    const size_t size = ZSTD_compress_usingDict(context, compressed.data(), compressed.size(),
+                                                pixels.constData(), pixels.size(),
+                                                dictionary.constData(), dictionary.size(), 3);
+    ZSTD_freeCCtx(context);
+    QVERIFY(!ZSTD_isError(size));
+    compressed.resize(static_cast<qsizetype>(size));
+    ultraview::decoder::ZstdDecoder decoder;
+    decoder.setDictionary(dictionary);
+    QCOMPARE(decoder.decompress(compressed, pixels.size()), pixels);
+    settings.setDictionaryPath(QStringLiteral("/nonexistent/dictionary"));
+    QVERIFY(settings.loadDictionary(&error).isEmpty());
+    QVERIFY(!error.isEmpty());
 }
 
 QTEST_MAIN(TranslationTest)

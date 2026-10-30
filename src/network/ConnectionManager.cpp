@@ -45,12 +45,23 @@ bool SessionRequest::validate(QString *error) const
         return false;
     };
 
-    if (registrationTerms.size() != 26)
-        return reject(QCoreApplication::translate("ConnectionManager", "the registration profile needs exactly 26 terms (got %1)")
+    if (registrationTerms.size() != 26 && registrationTerms.size() != 28)
+        return reject(QCoreApplication::translate("ConnectionManager", "registration needs 26 or 28 terms (got %1)")
                           .arg(registrationTerms.size()));
-    const QString reason = protocol::RegistrationCodec::validateRegistrationTerms(registrationTerms);
-    if (!reason.isEmpty())
-        return reject(reason);
+    if (registrationTerms.size() == 26) {
+        const QString reason = protocol::RegistrationCodec::validateRegistrationTerms(registrationTerms);
+        if (!reason.isEmpty())
+            return reject(reason);
+    } else {
+        if (registrationTerms.first() != QLatin1String("3"))
+            return reject(QStringLiteral("Invalid registration command"));
+        for (const QString &term : registrationTerms) {
+            for (const QChar ch : term) {
+                if (ch.unicode() < 32 || ch.unicode() > 126 || ch == QLatin1Char(':'))
+                    return reject(QStringLiteral("Invalid registration field"));
+            }
+        }
+    }
 
     if (requestTerms.size() != 17)
         return reject(QCoreApplication::translate("ConnectionManager", "the partner request template needs exactly 17 terms (got %1)")
@@ -107,6 +118,9 @@ ConnectionManager::ConnectionManager(QObject *parent)
     m_statisticsTimer = new QTimer(this);
     m_statisticsTimer->setSingleShot(true);
     connect(m_statisticsTimer, &QTimer::timeout, this, [this] { publishStatistics(true); });
+    m_stopTimer = new QTimer(this);
+    m_stopTimer->setSingleShot(true);
+    connect(m_stopTimer, &QTimer::timeout, this, &ConnectionManager::finishStop);
 
     // Remote computer sound.  Decoding stays in this thread; the sink buffers, so
     // a stalled audio device never blocks the session.
@@ -169,6 +183,7 @@ void ConnectionManager::disarmPhaseTimeout()
 void ConnectionManager::teardown()
 {
     disarmPhaseTimeout();
+    m_stopTimer->stop();
     if (m_statisticsTimer != nullptr)
         m_statisticsTimer->stop();
     if (m_registration != nullptr) {
@@ -211,6 +226,7 @@ void ConnectionManager::start(const ultraview::network::SessionRequest &request)
         teardown();
 
     m_terminating = false;
+    m_stopping = false;
     m_failureReported = false;
     m_loginAcknowledged = false;
     m_drainingRegistration = false;
@@ -303,7 +319,30 @@ void ConnectionManager::resetSessionFeatures()
 
 void ConnectionManager::stop()
 {
+    if (m_stopping)
+        return;
     m_terminating = true;
+    m_stopping = true;
+    if (m_state == SessionState::Connected && m_relay != nullptr && m_relay->isReady()) {
+        const protocol::CommandPayload command = protocol::ControlCommands::disconnectNotice();
+        m_relay->sendPayload(command.payload, command.flag);
+        if (m_relay->isReady()) {
+            connect(m_relay, &RelayTransport::closed, this, &ConnectionManager::finishStop,
+                    Qt::QueuedConnection);
+            // Never block the UI indefinitely when the peer or network is stuck.
+            m_stopTimer->start(1000);
+            m_relay->closeGracefully();
+            return;
+        }
+    }
+    finishStop();
+}
+
+void ConnectionManager::finishStop()
+{
+    if (!m_stopping)
+        return;
+    m_stopping = false;
     teardown();
     m_request.clearSecrets();
     setState(SessionState::Disconnected);
@@ -317,7 +356,9 @@ void ConnectionManager::onRegistrationReady()
         return;
     QByteArray command;
     try {
-        command = protocol::RegistrationCodec::buildRegistrationCommand(m_request.registrationTerms, m_codec);
+        command = m_request.registrationTerms.size() == 28
+            ? m_request.registrationTerms.join(QLatin1Char(':')).toLatin1()
+            : protocol::RegistrationCodec::buildRegistrationCommand(m_request.registrationTerms, m_codec);
     } catch (const UvException &exception) {
         fail(exception);
         return;
@@ -334,6 +375,10 @@ void ConnectionManager::onRegistrationPayload(const QByteArray &payload)
         return;
 
     if (m_state == SessionState::Registering) {
+        // The service can send unrelated messages before the command 3 reply,
+        // particularly for a newly created identity. Keep the original timeout.
+        if (!payload.startsWith("3:"))
+            return;
         protocol::Command3Identity identity;
         try {
             identity = protocol::RegistrationCodec::parseCommand3Identity(payload, m_codec);

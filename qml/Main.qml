@@ -323,5 +323,8 @@ ApplicationWindow {
     onActiveChanged: {
         if (!active)
             controller.input.releaseAll()
+        else if (controller.connected && !settingsDialog.opened && !aboutDialog.opened
+                 && !logDialog.opened && !hostApprovalDialog.opened)
+            viewerPage.focusRemoteScreen()
     }
 }

@@ -47,6 +47,8 @@ public:
     void start(const Endpoint &endpoint, const security::TlsPolicy &policy, int timeoutMs,
                quint32 maxFrameBytes);
     void stop();
+    /// Flush queued traffic and close asynchronously.
+    void closeGracefully();
 
     /// Wrap `payload` in a relay frame addressed to the partner endpoint.
     /// `flag` is 1 for UTF-16LE payloads (the login frame) and 0 for ASCII.

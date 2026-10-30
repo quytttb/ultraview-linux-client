@@ -218,27 +218,6 @@ Item {
                 }
             }
 
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Theme.spacingSmall
-
-                AppButton {
-                    Layout.alignment: Qt.AlignVCenter
-                    text: qsTr("Create profile templates")
-                    iconSource: Icon.folder
-                    onClicked: controller.ensureProfileTemplates()
-                }
-
-                Label {
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignVCenter
-                    wrapMode: Text.WordWrap
-                    color: Theme.textFaint
-                    font.pixelSize: Theme.fontSmall
-                    text: qsTr("Templates are written to the application configuration directory; "
-                               + "fill in the registration values in the settings.")
-                }
-            }
         }
     }
 }

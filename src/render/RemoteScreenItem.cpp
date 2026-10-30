@@ -7,6 +7,8 @@
 #include <QSGTexture>
 
 #include <cstring>
+#include <algorithm>
+#include <utility>
 
 namespace ultraview::render {
 namespace {
@@ -14,6 +16,15 @@ namespace {
 /// Bounded number of patches that may wait for the scene graph.  Beyond that the
 /// whole mirror is re-uploaded on the next frame instead of queueing more.
 constexpr int kMaxTexturePatches = 32;
+constexpr int kTextureTileSize = 256;
+
+// Keep nodes alive across resizes: the scene graph may still hold dirty
+// notifications for nodes removed during the same synchronization pass.
+struct ScreenNode : QSGNode {
+    QSGNode *tiles = nullptr;
+    QVector<QSGSimpleTextureNode *> tileNodes;
+    QSize canvasSize;
+};
 
 } // namespace
 
@@ -301,64 +312,72 @@ QSGNode *RemoteScreenItem::updateCursorNode(QSGNode *root, QSGSimpleTextureNode 
 QSGNode *RemoteScreenItem::updatePaintNode(QSGNode *node, UpdatePaintNodeData *data)
 {
     Q_UNUSED(data);
-    QSGNode *root = node;
     if (m_mirror.isNull()) {
         // Returning null tells the scene graph to drop (and delete) the node.
         return nullptr;
     }
-    QSGSimpleTextureNode *textureNode = nullptr;
-    QSGSimpleTextureNode *cursorNode = nullptr;
+    auto *root = static_cast<ScreenNode *>(node);
     if (root == nullptr) {
-        root = new QSGNode;
-        textureNode = new QSGSimpleTextureNode();
-        textureNode->setOwnsTexture(true);
-        root->appendChildNode(textureNode);
-    } else {
-        // The cursor node is optional and managed by `updateCursorNode`; it is
-        // appended after this one once it owns a texture.
-        textureNode = static_cast<QSGSimpleTextureNode *>(root->firstChild());
-        cursorNode = static_cast<QSGSimpleTextureNode *>(textureNode->nextSibling());
+        root = new ScreenNode;
+        root->tiles = new QSGNode;
+        root->appendChildNode(root->tiles);
     }
+    auto *cursorNode = static_cast<QSGSimpleTextureNode *>(root->tiles->nextSibling());
+    QQuickWindow *quickWindow = window();
+    if (quickWindow == nullptr)
+        return root;
 
-    // The texture is created from the mirror whenever it changed since the last
-    // frame.  Only the public QtQuick API is used (`createTextureFromImage`);
-    // partial GPU uploads would require Qt's private RHI headers, so patches are
-    // coalesced into one re-upload per frame instead (see docs/architecture.md).
-    const bool needsUpload = m_forceUpload || m_textureReset || !m_texturePending.isEmpty()
-        || textureNode->texture() == nullptr
-        || textureNode->texture()->textureSize() != m_mirror.size();
-    if (needsUpload) {
-        if (QQuickWindow *quickWindow = window()) {
-            if (QSGTexture *uploaded = quickWindow->createTextureFromImage(
-                    m_mirror, QQuickWindow::TextureIsOpaque)) {
-                textureNode->setTexture(uploaded); // ownership transfers (setOwnsTexture(true))
-                m_textureReset = false;
-                m_forceUpload = false;
-                m_texturePending.clear();
+    const bool fullUpload = m_forceUpload || m_textureReset || root->canvasSize != m_mirror.size();
+    const QRectF content = contentRect();
+    const qreal scaleX = content.width() / m_mirror.width();
+    const qreal scaleY = content.height() / m_mirror.height();
+    int index = 0;
+    for (int y = 0; y < m_mirror.height(); y += kTextureTileSize) {
+        for (int x = 0; x < m_mirror.width(); x += kTextureTileSize, ++index) {
+            const QRect tile(x, y, std::min(kTextureTileSize, m_mirror.width() - x),
+                             std::min(kTextureTileSize, m_mirror.height() - y));
+            // Adjacent pixels provide the filtering border, avoiding seams when
+            // linear scaling samples across a tile boundary.
+            const QRect textureRect = tile.adjusted(-1, -1, 1, 1).intersected(m_mirror.rect());
+            QSGSimpleTextureNode *tileNode = index < root->tileNodes.size()
+                ? root->tileNodes.at(index) : nullptr;
+            bool dirty = fullUpload || tileNode == nullptr;
+            for (const QRect &patch : std::as_const(m_texturePending))
+                dirty = dirty || patch.intersects(textureRect);
+            if (dirty) {
+                QSGTexture *texture = quickWindow->createTextureFromImage(
+                    m_mirror.copy(textureRect), QQuickWindow::TextureIsOpaque);
+                if (texture == nullptr) {
+                    m_forceUpload = true;
+                    return root;
+                }
+                if (tileNode == nullptr) {
+                    tileNode = new QSGSimpleTextureNode;
+                    tileNode->setOwnsTexture(true);
+                    tileNode->setTexture(texture);
+                    root->tiles->appendChildNode(tileNode);
+                    root->tileNodes.append(tileNode);
+                } else {
+                    tileNode->setTexture(texture);
+                }
+                texture->setHorizontalWrapMode(QSGTexture::ClampToEdge);
+                texture->setVerticalWrapMode(QSGTexture::ClampToEdge);
             }
-            // No texture yet (no RHI backend): the bookkeeping is kept so the next
-            // frame retries; the pending list stays bounded by kMaxTexturePatches.
+            if (tileNode != nullptr) {
+                tileNode->setFiltering(m_smooth ? QSGTexture::Linear : QSGTexture::Nearest);
+                tileNode->setSourceRect(QRectF(tile.x() - textureRect.x(), tile.y() - textureRect.y(),
+                                               tile.width(), tile.height()));
+                tileNode->setRect(QRectF(content.x() + x * scaleX, content.y() + y * scaleY,
+                                         tile.width() * scaleX, tile.height() * scaleY));
+            }
         }
     }
-
-    if (QSGTexture *texture = textureNode->texture()) {
-        textureNode->setFiltering(m_smooth ? QSGTexture::Linear : QSGTexture::Nearest);
-        texture->setHorizontalWrapMode(QSGTexture::ClampToEdge);
-        texture->setVerticalWrapMode(QSGTexture::ClampToEdge);
-    } else {
-        // Never return an untextured QSGSimpleTextureNode.  The scene graph owns
-        // this node tree and deletes it when null is returned; deleting it here
-        // would leave a stale dirty notification behind.
-        return nullptr;
-    }
-
-    const QRectF content = contentRect();
-    textureNode->setRect(content.isEmpty() ? QRectF(0, 0, width(), height()) : content);
-
-    // contentRect already expresses the crop transform. Sample the entire
-    // texture and let the viewport clip overflow; cropping the source as well
-    // would apply the transform twice and disagree with pointer mapping.
-    textureNode->setSourceRect(QRectF(0, 0, m_mirror.width(), m_mirror.height()));
+    for (int i = index; i < root->tileNodes.size(); ++i)
+        root->tileNodes.at(i)->setRect(QRectF());
+    root->canvasSize = m_mirror.size();
+    m_textureReset = false;
+    m_forceUpload = false;
+    m_texturePending.clear();
     updateCursorNode(root, cursorNode);
     return root;
 }

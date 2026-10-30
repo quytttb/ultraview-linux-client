@@ -288,6 +288,7 @@ private:
     void publishStatistics(bool force);
     void sendRelayPayload(const QByteArray &payload, quint8 flag);
     void teardown();
+    void finishStop();
 
     SessionRequest m_request;
     protocol::AnsiCodec m_codec = protocol::AnsiCodec::cp1252();
@@ -297,6 +298,7 @@ private:
     RelayTransport *m_relay = nullptr;
     QTimer *m_phaseTimer = nullptr;
     QTimer *m_statisticsTimer = nullptr;
+    QTimer *m_stopTimer = nullptr;
 
     protocol::TargetRoute m_route;
     qint32 m_clientId = 0;
@@ -306,6 +308,7 @@ private:
     bool m_loginAcknowledged = false;
     bool m_drainingRegistration = false;
     bool m_terminating = false;
+    bool m_stopping = false;
     bool m_failureReported = false;
     QSize m_desktopSize;
 

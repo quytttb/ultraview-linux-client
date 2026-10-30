@@ -97,8 +97,7 @@ Dialog {
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
             text: qsTr("An independent, native Linux controller that speaks the recovered "
-                       + "UltraViewer wire protocol. It contains no code or data from the original "
-                       + "Windows program.")
+                       + "UltraViewer wire protocol.")
             color: Theme.text
             font.pixelSize: Theme.fontNormal
         }
@@ -108,8 +107,7 @@ Dialog {
             wrapMode: Text.WordWrap
             text: qsTr("Refused on purpose: BitBlt screen operations, audio playback and P2P "
                        + "transports are not implemented and are reported instead of being silently "
-                       + "ignored. The 8bit.dat screen dictionary and the registration profile must be "
-                       + "supplied by the user; they are not part of this project.")
+                       + "ignored. A screen dictionary is included with the application.")
             color: Theme.textMuted
             font.pixelSize: Theme.fontSmall
         }

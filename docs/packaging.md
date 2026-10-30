@@ -4,13 +4,12 @@
 
 The allowlisted CMake install contains `bin/ultraview`, desktop/icon files,
 `README.md`, `NOTICE.md`, `LICENSE` (installed as `share/doc/ultraview/copyright`)
-and these documents. The app's own QML is embedded in
-its resources. Qt runtime QML modules/plugins remain runtime dependencies unless
+and these documents. The app's QML and the vendor-derived screen dictionary are
+embedded in its resources. Qt runtime QML modules/plugins remain runtime dependencies unless
 explicitly bundled by a deployment tool.
 
 There is **no install rule** for `reference/`, `tools/`, `tests/`, the test TLS
-key, synthetic test dictionary or any user profile. Proprietary `8bit.dat` is
-absent from this project. Do not replace this allowlist with a recursive copy of
+key, synthetic test dictionary or any user profile. Do not replace this allowlist with a recursive copy of
 the workspace. Do not publish the reference-containing source tree without
 resolving upstream's missing license.
 

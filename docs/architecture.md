@@ -88,9 +88,9 @@ viewing a falsely authoritative screen. There is no automatic reconnect loop.
    QQuickFramebufferObject. GUI-thread submissions update its private mirror;
    Qt synchronizes the GUI and render threads during Scene Graph synchronization.
    Textures are created only inside `updatePaintNode()`.
-5. Public Qt `createTextureFromImage()` uploads the **whole mirror** once per
-   changed render frame. Dirty-region GPU uploads are not implemented: those
-   would require a different public texture abstraction or private RHI APIs.
+5. The mirror is split into 256×256 textures using public Qt APIs. Only tiles
+   intersecting a changed rectangle are re-uploaded; a reset or resolution change
+   uploads every tile.
    The renderer bounds pending rectangle bookkeeping at 32 and falls back to a
    full upload. A size change requires a full-frame patch, and every patch must
    fit completely. Rejected nonempty submissions return their credit.

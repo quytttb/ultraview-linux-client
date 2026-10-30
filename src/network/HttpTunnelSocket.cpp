@@ -129,8 +129,22 @@ void HttpTunnelSocket::abort()
         emit closed();
 }
 
+void HttpTunnelSocket::closeGracefully()
+{
+    if (m_socket == nullptr || m_phase != Phase::Ready) {
+        abort();
+        return;
+    }
+    m_timer->stop();
+    setPhase(Phase::Closing);
+    m_socket->disconnectFromHost();
+}
+
 void HttpTunnelSocket::onConnected()
 {
+    // Input events and screen acknowledgements are small, latency-sensitive
+    // writes. Avoid holding them behind TCP's Nagle/delayed-ACK interaction.
+    m_socket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
     // TCP is up; the TLS handshake is driven by Qt right after this signal.
     setPhase(Phase::Handshaking);
     armTimer(m_request.handshakeTimeoutMs);
@@ -254,7 +268,7 @@ void HttpTunnelSocket::onDisconnected()
         return;
     // A peer that disappears mid-handshake is a failure; one that disappears after
     // ready() is a normal end of session and is reported through closed().
-    const bool wasReady = (m_phase == Phase::Ready);
+    const bool wasReady = (m_phase == Phase::Ready || m_phase == Phase::Closing);
     setPhase(Phase::Closed);
     if (!m_closedEmitted) {
         m_closedEmitted = true;

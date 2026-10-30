@@ -27,6 +27,23 @@ Item {
         hideTimer.restart()
     }
 
+    function focusRemoteScreen() {
+        // The connected signal, StackLayout visibility and MouseArea.enabled
+        // bindings can settle in different orders. Wait for the QML update pass
+        // before trying to focus the screen, without stealing focus from chat.
+        Qt.callLater(function() {
+            if (page.visible && screenMouse.enabled && !page.chatVisible
+                    && !page.transfersVisible) {
+                if (!screenMouse.activeFocus)
+                    screenMouse.forceActiveFocus()
+                // The connect form can leave an input-method composition active.
+                // The screen forwards physical key events, not composed text.
+                if (screenMouse.activeFocus)
+                    Qt.inputMethod.reset()
+            }
+        })
+    }
+
     onFullScreenChanged: {
         // Entering or leaving full screen resets the overlay: it must not stay
         // stuck visible from a previous visit, and hiding later must not rely on
@@ -71,6 +88,10 @@ Item {
                 acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                 cursorShape: controller.settings.hideLocalPointer ? Qt.BlankCursor : Qt.ArrowCursor
                 enabled: controller.inputEnabled && controller.connected
+                onEnabledChanged: {
+                    if (enabled)
+                        page.focusRemoteScreen()
+                }
 
                 onPositionChanged: (mouse) => {
                     const point = remoteScreen.mapToSource(mouse.x + screenMouse.x,
@@ -305,15 +326,14 @@ Item {
             // the connect page. Give it to the remote screen immediately, so a
             // Super/Meta key released by the Wayland compositor is forwarded to
             // the partner rather than handled by this laptop.
-            if (controller.connected && page.visible && !screenMouse.activeFocus)
-                screenMouse.forceActiveFocus()
+            if (controller.connected)
+                page.focusRemoteScreen()
         }
         function onInputEnabledChanged() {
             // Re-enabling input after pressing the toolbar button must put the
             // keyboard back on the remote desktop, not leave it on that button.
-            if (controller.connected && controller.inputEnabled && page.visible
-                    && !screenMouse.activeFocus)
-                screenMouse.forceActiveFocus()
+            if (controller.connected && controller.inputEnabled)
+                page.focusRemoteScreen()
         }
         function onStatisticsChanged() {
             page.statisticsRows = controller.statisticsRows()
@@ -321,8 +341,8 @@ Item {
     }
 
     onVisibleChanged: {
-        if (visible && controller.connected && !screenMouse.activeFocus)
-            screenMouse.forceActiveFocus()
+        if (visible && controller.connected)
+            page.focusRemoteScreen()
     }
 
     Connections {

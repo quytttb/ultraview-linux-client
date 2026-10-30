@@ -66,6 +66,8 @@ void SettingsModel::load()
     m_registrationProfilePath = store.value(kRegistrationProfileKey).toString();
     m_partnerTemplatePath = store.value(kPartnerTemplateKey).toString();
     m_dictionaryPath = store.value(kDictionaryKey).toString();
+    if (m_dictionaryPath.isEmpty())
+        m_dictionaryPath = QStringLiteral(":/ultraview/8bit.dat");
     m_tlsMode = security::TlsPolicy::fromSettingsValue(store.value(kTlsModeKey).toString()).mode();
     m_rememberPassword = store.value(kRememberPasswordKey, false).toBool();
     m_timeoutMs = store.value(kTimeoutKey, 8000).toInt();
@@ -146,7 +148,7 @@ void SettingsModel::resetToDefaults()
 {
     m_registrationProfilePath.clear();
     m_partnerTemplatePath.clear();
-    m_dictionaryPath.clear();
+    m_dictionaryPath = QStringLiteral(":/ultraview/8bit.dat");
     m_tlsMode = security::TlsPolicy::Mode::VerifyPeer;
     m_rememberPassword = false;
     m_timeoutMs = 8000;

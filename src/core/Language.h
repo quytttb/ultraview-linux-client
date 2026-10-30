@@ -10,6 +10,7 @@
 //   "en"      force English by not installing any catalog
 //
 #include <QString>
+#include <QStringList>
 
 class QTranslator;
 
@@ -26,6 +27,9 @@ inline constexpr auto kDefaultLanguage = kSystemLanguage;
 /// Maps arbitrary stored/system values onto "system", "vi" or "en".  Unknown
 /// values fall back to "system".
 QString normalizeLanguageCode(const QString &code);
+
+/// Choose the first supported UI language, or English if none is available.
+QString preferredUiLanguage(const QStringList &languages);
 
 /// Language code persisted in `QSettings` (`ui/language`).
 QString storedLanguageCode();

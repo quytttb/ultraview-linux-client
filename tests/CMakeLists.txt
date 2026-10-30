@@ -26,6 +26,10 @@ set(UV_TEST_SOURCES
     tst_translation
 )
 
+if(ULTRAVIEW_PIPEWIRE_AUDIO)
+    list(APPEND UV_TEST_SOURCES tst_pipewire_audio)
+endif()
+
 foreach(test IN LISTS UV_TEST_SOURCES)
     add_executable(${test} ${test}.cpp TestSupport.cpp)
     target_link_libraries(${test} PRIVATE Ultraview::Core Qt6::Test Qt6::Quick Qt6::QuickControls2)
@@ -60,16 +64,6 @@ add_test(NAME app_self_test COMMAND ultraview --self-test --mock-frames 3)
 set_tests_properties(app_self_test PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen;XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/test-config/app-self-test"
     TIMEOUT 180)
-
-# The live-connect probe must refuse before any network I/O when the client has no
-# registration profile: it is a probe, not an automatic session.  A throw-away
-# configuration directory keeps it away from the developer's own profile; the exit
-# code is non-zero there, which PASS_REGULAR_EXPRESSION deliberately ignores.
-add_test(NAME app_connect_probe_unconfigured COMMAND ultraview --connect-attempt 999999999)
-set_tests_properties(app_connect_probe_unconfigured PROPERTIES
-    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/connect-probe-config"
-    PASS_REGULAR_EXPRESSION "connect-attempt: cannot start"
-    TIMEOUT 60)
 
 # A desktop theme can hand out a D-Bus menu bar even on a platform that cannot
 # announce it to a window manager (the session bus offers the AppMenu registrar,

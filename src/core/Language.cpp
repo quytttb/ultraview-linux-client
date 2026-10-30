@@ -42,6 +42,16 @@ QString storedLanguageCode()
                                      .toString());
 }
 
+QString preferredUiLanguage(const QStringList &languages)
+{
+    for (const QString &language : languages) {
+        const QString normalized = normalizeLanguageCode(language);
+        if (normalized != QLatin1String(kSystemLanguage))
+            return normalized;
+    }
+    return QString::fromLatin1(kEnglishLanguage);
+}
+
 bool installTranslator(QTranslator &translator, const QString &code)
 {
     const QString normalized = normalizeLanguageCode(code);
@@ -49,9 +59,10 @@ bool installTranslator(QTranslator &translator, const QString &code)
         return false; // English is the source language: nothing to install.
     if (normalized == QLatin1String(kVietnameseLanguage))
         return loadCatalog(translator, QLocale(QString::fromLatin1(kVietnameseLanguage)));
-    // "system": follow the desktop locale.  A locale without a shipped catalog
-    // (everything except Vietnamese today) stays English.
-    return loadCatalog(translator, QLocale());
+    // Use the desktop's UI language preferences, not its date/number locale.
+    if (preferredUiLanguage(QLocale::system().uiLanguages()) == QLatin1String(kVietnameseLanguage))
+        return loadCatalog(translator, QLocale(QString::fromLatin1(kVietnameseLanguage)));
+    return false;
 }
 
 } // namespace ultraview::localization

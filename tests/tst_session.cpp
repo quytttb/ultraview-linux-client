@@ -14,6 +14,7 @@
 #include "core/SessionManager.h"
 #include "core/SessionState.h"
 #include "decoder/FrameBuffer.h"
+#include "host/HostProfile.h"
 #include "protocol/AuthenticationCodec.h"
 #include "protocol/Digest.h"
 #include "protocol/InputCodec.h"
@@ -166,6 +167,7 @@ class TestSession : public QObject {
 
 private slots:
     void happyPathEndToEnd();
+    void automaticRegistrationValidation();
     void refusalStatusCodes_data();
     void refusalStatusCodes();
     void registrationTimeout();
@@ -176,6 +178,8 @@ private slots:
     void kind3SizeFollowUp();
     void coalescedFramesFlushWhenRendererCatchesUp();
     void reconnectStartsWithFreshState();
+    void disconnectNotifiesPartner();
+    void reconnectReceivesScreenUpdates();
     void registrationChannelLossDoesNotBreakTheSession();
     void inputCommandsReachThePartner();
     void invalidRequestIsRejectedLocally();
@@ -186,6 +190,25 @@ private slots:
     void relayCertificateNameOverrideIsRefusedWhenItDoesNotMatch();
     void acceptAnyCertificateIsExplicit();
 };
+
+void TestSession::automaticRegistrationValidation()
+{
+    uvtest::MockUltraviewServer server;
+    SessionRequest request = makeRequest(server);
+    host::HostIdentity identity;
+    identity.deviceIdentity = QString(32, QLatin1Char('A'));
+    identity.password = QStringLiteral("12345678");
+    identity.displayName = QStringLiteral("test");
+    identity.localAddress = QStringLiteral("127.0.0.1");
+    identity.macAddress = QStringLiteral("001122334455");
+    identity.operatingSystem = QStringLiteral("0|0|0|0|0|0");
+    identity.userName = QStringLiteral("test");
+    request.registrationTerms = identity.registrationTerms();
+    QString error;
+    QVERIFY2(request.validate(&error), qPrintable(error));
+    request.registrationTerms[4] = QStringLiteral("invalid:field");
+    QVERIFY(!request.validate(&error));
+}
 
 void TestSession::happyPathEndToEnd()
 {
@@ -580,6 +603,54 @@ void TestSession::reconnectStartsWithFreshState()
     QVERIFY(second.waitFor([&] { return session.isConnected() && recorder.frames.size() == 2; }));
     QTRY_VERIFY_WITH_TIMEOUT(!session.statistics().dictionaryInstalled, 3000);
     QVERIFY(recorder.frames.last()->fullFrame);
+    QVERIFY(recorder.failures.isEmpty());
+    session.stop();
+    QVERIFY(second.waitFor([&] { return recorder.stopped == 2; }));
+}
+
+void TestSession::disconnectNotifiesPartner()
+{
+    uvtest::MockUltraviewServer server;
+    server.setOptions(mockOptions());
+    QVERIFY(server.listen());
+    SessionManager session;
+    SessionRecorder recorder;
+    recorder.attach(&session);
+    session.start(makeRequest(server));
+    QVERIFY(server.waitFor([&] { return session.isConnected(); }));
+    session.stop();
+    QVERIFY(server.waitForRelayPayload(QByteArrayLiteral("19")));
+    QVERIFY(server.waitFor([&] { return recorder.stopped == 1; }));
+    QVERIFY(recorder.failures.isEmpty());
+}
+
+void TestSession::reconnectReceivesScreenUpdates()
+{
+    const QByteArray packet = uvtest::Fixtures::entryBytes(
+        rgb555Sequence().value(QStringLiteral("updates")).toArray().at(0).toObject(),
+        QStringLiteral("packet_hex"));
+    auto options = mockOptions();
+    options.relayPackets = {packet};
+    uvtest::MockUltraviewServer first;
+    first.setOptions(options);
+    QVERIFY(first.listen());
+    SessionManager session;
+    SessionRecorder recorder;
+    recorder.attach(&session);
+    connect(&session, &SessionManager::frameReady, &session,
+            [&session] { session.releaseFrames(1); });
+    session.start(makeRequest(first));
+    QVERIFY(first.waitFor([&] { return recorder.frames.size() >= 2; }));
+    session.stop();
+    QVERIFY(first.waitFor([&] { return recorder.stopped == 1; }));
+
+    uvtest::MockUltraviewServer second;
+    second.setOptions(options);
+    QVERIFY(second.listen());
+    const int before = recorder.frames.size();
+    session.start(makeRequest(second));
+    QVERIFY(second.waitFor([&] { return recorder.frames.size() >= before + 2; }));
+    QVERIFY(session.isConnected());
     QVERIFY(recorder.failures.isEmpty());
     session.stop();
     QVERIFY(second.waitFor([&] { return recorder.stopped == 2; }));

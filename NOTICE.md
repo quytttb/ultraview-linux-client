@@ -64,12 +64,13 @@ by that owner. Use it only with the remote owner's informed authorization.
 
 ## Assets and secrets
 
-No proprietary `8bit.dat`, real partner profile, captured session, or upstream
-password is shipped. Test identities, passwords and TLS keys are synthetic and
+The vendor-derived `8bit.dat` dictionary is included in the application. Check
+that you have the necessary rights to redistribute it. No real partner profile,
+captured session or upstream password is shipped. Test identities, passwords and TLS keys are synthetic and
 public test-only material; never use the test certificate as a production trust
 anchor. The zstd test dictionary is trained from synthetic pixels. Machine
-identity material (registration profiles, settings, dictionaries copied from a
-Windows installation) is listed in `.gitignore` and must stay local.
+identity material (registration profiles and settings) is listed in `.gitignore`
+and must stay local.
 
 Qt, OpenSSL, libzstd, PipeWire and optionally libsecret retain their respective
 licenses. AppImage distributors must supply required library notices and comply

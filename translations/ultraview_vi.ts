@@ -21,13 +21,13 @@
     </message>
     <message>
         <location filename="../qml/dialogs/AboutDialog.qml" line="99"/>
-        <source>An independent, native Linux controller that speaks the recovered UltraViewer wire protocol. It contains no code or data from the original Windows program.</source>
-        <translation>Ứng dụng điều khiển Linux độc lập sử dụng giao thức UltraViewer được tái dựng. Ứng dụng không chứa mã nguồn hay dữ liệu của chương trình Windows gốc.</translation>
+        <source>An independent, native Linux controller that speaks the recovered UltraViewer wire protocol.</source>
+        <translation>Ứng dụng điều khiển Linux độc lập sử dụng giao thức UltraViewer được tái dựng.</translation>
     </message>
     <message>
         <location filename="../qml/dialogs/AboutDialog.qml" line="109"/>
-        <source>Refused on purpose: BitBlt screen operations, audio playback and P2P transports are not implemented and are reported instead of being silently ignored. The 8bit.dat screen dictionary and the registration profile must be supplied by the user; they are not part of this project.</source>
-        <translation>Các thao tác màn hình BitBlt, phát âm thanh và kết nối P2P chưa được hỗ trợ và sẽ được báo cáo thay vì bỏ qua. Người dùng phải tự cung cấp từ điển màn hình 8bit.dat và hồ sơ đăng ký; chúng không thuộc dự án này.</translation>
+        <source>Refused on purpose: BitBlt screen operations, audio playback and P2P transports are not implemented and are reported instead of being silently ignored. A screen dictionary is included with the application.</source>
+        <translation>Các thao tác màn hình BitBlt, phát âm thanh và kết nối P2P chưa được hỗ trợ và sẽ được báo cáo thay vì bỏ qua. Từ điển màn hình được tích hợp trong ứng dụng.</translation>
     </message>
 </context>
 <context>
@@ -2425,8 +2425,8 @@
     </message>
     <message>
         <location filename="../qml/dialogs/SettingsDialog.qml" line="165"/>
-        <source>Required to decode the partner&apos;s screen. Choose 8bit.dat from your UltraViewer installation. Status: %1</source>
-        <translation>Cần thiết để giải mã màn hình đối tác. Chọn tệp 8bit.dat từ bản cài đặt UltraViewer của bạn. Trạng thái: %1</translation>
+        <source>The bundled screen dictionary is used automatically. You can choose a different file. Status: %1</source>
+        <translation>Từ điển màn hình đi kèm được sử dụng tự động. Bạn có thể chọn tệp khác. Trạng thái: %1</translation>
     </message>
     <message>
         <location filename="../qml/dialogs/SettingsDialog.qml" line="176"/>

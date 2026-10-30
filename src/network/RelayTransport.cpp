@@ -37,6 +37,11 @@ void RelayTransport::stop()
     m_channel.abort();
 }
 
+void RelayTransport::closeGracefully()
+{
+    m_channel.closeGracefully();
+}
+
 void RelayTransport::onReady()
 {
     // Relay tunnel: the reference only requires the "HTTP/1.1 200 " prefix.

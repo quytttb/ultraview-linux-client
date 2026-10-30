@@ -143,52 +143,13 @@ Dialog {
                     spacing: Theme.spacing + 2
 
                     FilePicker {
-                        label: qsTr("Account file")
-                        value: controller.settings.registrationProfilePath
-                        hint: qsTr("The private file that identifies your UltraViewer account on "
-                                   + "this computer. Use your own installation; the project never "
-                                   + "ships one.")
-                        onPicked: (path) => controller.settings.registrationProfilePath = path
-                    }
-
-                    FilePicker {
-                        label: qsTr("Connection template (optional)")
-                        value: controller.settings.partnerTemplatePath
-                        hint: qsTr("A prepared connection request. The partner ID and password are "
-                                   + "filled in for each session.")
-                        onPicked: (path) => controller.settings.partnerTemplatePath = path
-                    }
-
-                    FilePicker {
                         label: qsTr("Screen dictionary")
                         value: controller.settings.dictionaryPath
-                        hint: qsTr("Required to decode the partner's screen. Choose 8bit.dat from "
-                                   + "your UltraViewer installation. Status: %1")
+                        hint: qsTr("The bundled screen dictionary is used automatically. You can choose a different file. Status: %1")
                                  .arg(controller.settings.dictionaryStatus())
                         onPicked: (path) => controller.loadDictionary(path)
                     }
 
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: Theme.spacingSmall
-
-                        AppButton {
-                            text: qsTr("Create example files")
-                            iconSource: Icon.folder
-                            onClicked: controller.ensureProfileTemplates()
-                        }
-
-                        Item { Layout.fillWidth: true }
-                    }
-
-                    Label {
-                        Layout.fillWidth: true
-                        wrapMode: Text.WordWrap
-                        color: Theme.textFaint
-                        font.pixelSize: Theme.fontSmall
-                        text: qsTr("Without a valid account file the UltraViewer service refuses the "
-                                   + "connection. This project cannot create an account for you.")
-                    }
                     Item { Layout.fillHeight: true }
                 }
             }

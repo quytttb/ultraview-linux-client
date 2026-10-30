@@ -178,6 +178,11 @@ add_library(ultraview_core STATIC
 )
 add_library(Ultraview::Core ALIAS ultraview_core)
 
+qt_add_resources(ultraview_core builtin_dictionary
+    PREFIX /ultraview
+    BASE fromWindows
+    FILES fromWindows/8bit.dat)
+
 target_include_directories(ultraview_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 # zstd appears in the public header of ZstdDecoder, so consumers need it too;
 # QtQuick appears in the public header of RemoteScreenItem.

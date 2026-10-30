@@ -56,6 +56,7 @@ private slots:
     void reportsConsumptionToTheWorker();
     void buildsSceneGraphNode();
     void rendersAndHidesTheRemoteCursor();
+    void rendersTilesAcrossUpdatesAndResizes();
 };
 
 void TestRenderItem::itemIsPlainQuickItem()
@@ -274,6 +275,37 @@ void TestRenderItem::buildsSceneGraphNode()
     } else {
         QWARN("no window grab available on this platform");
     }
+    window.hide();
+}
+
+void TestRenderItem::rendersTilesAcrossUpdatesAndResizes()
+{
+    RemoteScreenItem item;
+    item.setSize(QSizeF(512, 512));
+    item.setSmooth(false);
+    QQuickWindow window;
+    window.resize(512, 512);
+    item.setParentItem(window.contentItem());
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    item.submitUpdate(makeUpdate(QSize(512, 512), QRect(0, 0, 512, 512), qRgb(0, 0, 255), 1, true));
+    QTest::qWait(100);
+    item.submitUpdate(makeUpdate(QSize(512, 512), QRect(250, 250, 20, 20), qRgb(255, 0, 0), 2, false));
+    QTest::qWait(100);
+    QImage image = window.grabWindow();
+    QVERIFY(!image.isNull());
+    QVERIFY(image.pixelColor(254, 254).red() > 200);
+    QVERIFY(image.pixelColor(257, 257).red() > 200);
+    QVERIFY(image.pixelColor(400, 400).blue() > 200);
+
+    item.submitUpdate(makeUpdate(QSize(128, 128), QRect(0, 0, 128, 128), qRgb(0, 255, 0), 3, true));
+    QTest::qWait(100);
+    image = window.grabWindow();
+    QVERIFY(image.pixelColor(400, 400).green() > 200);
+    item.submitUpdate(makeUpdate(QSize(512, 512), QRect(0, 0, 512, 512), qRgb(255, 0, 0), 4, true));
+    QTest::qWait(100);
+    image = window.grabWindow();
+    QVERIFY(image.pixelColor(400, 400).red() > 200);
     window.hide();
 }
 

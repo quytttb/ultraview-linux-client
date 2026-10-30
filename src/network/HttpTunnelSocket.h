@@ -58,6 +58,8 @@ public:
     void start(const TunnelRequest &request);
     /// Immediate teardown; safe to call from any state and idempotent.
     void abort();
+    /// Flush queued writes before closing; the owner must bound the wait.
+    void closeGracefully();
 
     bool isReady() const { return m_phase == Phase::Ready; }
     Phase phase() const { return m_phase; }

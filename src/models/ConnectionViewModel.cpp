@@ -2,6 +2,7 @@
 
 #include "core/ErrorTypes.h"
 #include "decoder/ZstdDecoder.h"
+#include "host/HostProfile.h"
 #include "models/ProfileLoader.h"
 #include "protocol/ControlCommands.h"
 #include "transfer/FileTransferService.h"
@@ -46,6 +47,7 @@ ConnectionViewModel::ConnectionViewModel(QObject *parent)
     : QObject(parent)
 {
     m_settings = new SettingsModel(this);
+    m_dictionaryLoaded = !m_settings->loadDictionary(nullptr).isEmpty();
     m_recent = new RecentConnectionsModel(this);
     m_input = new input::InputController(this);
     m_credentials = new security::CredentialStore(this);
@@ -150,7 +152,7 @@ ConnectionViewModel::ConnectionViewModel(QObject *parent)
     connect(m_settings, &SettingsModel::tlsModeChanged, this, [applyAndNotify] { applyAndNotify(); });
     connect(m_settings, &SettingsModel::endpointsChanged, this, [applyAndNotify] { applyAndNotify(); });
     connect(m_settings, &SettingsModel::dictionaryPathChanged, this, [this] {
-        m_dictionaryLoaded = !m_settings->dictionaryPath().isEmpty();
+        m_dictionaryLoaded = !m_settings->loadDictionary(nullptr).isEmpty();
         emit settingsChanged();
         emit statisticsChanged();
     });
@@ -234,8 +236,6 @@ bool ConnectionViewModel::canConnect() const
         return false;
     if (m_partnerId.isEmpty())
         return false;
-    if (m_settings->registrationProfilePath().isEmpty())
-        return false;
     return true;
 }
 
@@ -284,8 +284,6 @@ QString ConnectionViewModel::routeText() const
 
 QString ConnectionViewModel::configurationHint() const
 {
-    if (m_settings->registrationProfilePath().isEmpty())
-        return tr("Select a registration profile (26 terms) in the settings first.");
     if (m_partnerId.isEmpty())
         return tr("Enter the partner ID to control.");
     if (m_password.isEmpty())
@@ -480,14 +478,6 @@ QString ConnectionViewModel::diagnostics() const
     lines.append(QCoreApplication::translate("Connection", "UltraViewer native Linux client %1").arg(QStringLiteral(ULTRAVIEW_VERSION)));
     lines.append(QCoreApplication::translate("Connection", "Qt %1").arg(QString::fromLatin1(qVersion())));
     lines.append(QCoreApplication::translate("Connection", "Host %1").arg(QSysInfo::machineHostName()));
-    lines.append(QCoreApplication::translate("Connection", "Registration profile: %1")
-                     .arg(m_settings->registrationProfilePath().isEmpty()
-                              ? QCoreApplication::translate("Connection", "not set")
-                              : m_settings->registrationProfilePath()));
-    lines.append(QCoreApplication::translate("Connection", "Partner template: %1")
-                     .arg(m_settings->partnerTemplatePath().isEmpty()
-                              ? QCoreApplication::translate("Connection", "not set")
-                              : m_settings->partnerTemplatePath()));
     lines.append(QCoreApplication::translate("Connection", "Screen dictionary: %1").arg(m_settings->dictionaryStatus()));
     lines.append(QCoreApplication::translate("Connection", "TLS mode: %1").arg(m_settings->tlsModeName()));
     if (m_settings->endpointOverrideActive())
@@ -523,26 +513,16 @@ bool ConnectionViewModel::buildSessionRequest(network::SessionRequest *request, 
 
     network::SessionRequest result;
     try {
-        if (m_settings->registrationProfilePath().isEmpty())
-            return fail(tr("No registration profile selected."));
-        const RegistrationProfile registration =
-            ProfileLoader::loadRegistrationProfile(m_settings->registrationProfilePath());
-        result.registrationTerms = registration.terms;
-        result.codec = registration.codec;
-
-        if (!m_settings->partnerTemplatePath().isEmpty()) {
-            const PartnerProfile partner =
-                ProfileLoader::loadPartnerProfile(m_settings->partnerTemplatePath());
-            result.requestTerms = partner.requestTerms;
-            // The template's password is only a fallback: whatever the user typed
-            // in the connect page wins.
-            if (m_password.isEmpty() && !partner.password.isEmpty()) {
-                result.password = partner.password;
-            }
-            result.passwordType = partner.passwordType;
-        } else {
-            result.requestTerms = ProfileLoader::defaultRequestTerms(m_partnerId);
-        }
+        QString identityError;
+        const QString identityPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
+            + QStringLiteral("/viewer-profile.json");
+        host::HostIdentity identity = host::HostProfile::loadOrCreateAt(identityPath, &identityError);
+        if (!identity.isValid())
+            return fail(identityError);
+        // Persist a separate viewer identity and password from the sharing identity.
+        result.registrationTerms = identity.registrationTerms();
+        result.codec = *protocol::AnsiCodec::fromName(QStringLiteral("cp1252"));
+        result.requestTerms = ProfileLoader::defaultRequestTerms(m_partnerId);
     } catch (const UvException &exception) {
         return fail(QStringLiteral("%1: %2").arg(exception.message(), exception.detail()));
     } catch (const std::exception &exception) {

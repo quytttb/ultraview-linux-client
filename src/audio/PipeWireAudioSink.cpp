@@ -28,6 +28,7 @@ struct PipeWireAudioSink::Impl {
     pw_core *core = nullptr;
     pw_stream *stream = nullptr;
     spa_hook listener{};
+    pw_stream_events events{};
 
     std::mutex mutex;
     std::vector<qint16> ring;
@@ -158,11 +159,13 @@ bool PipeWireAudioSink::start(int sampleRate, int channels)
         stop();
         return false;
     }
-    pw_stream_events events{};
-    events.version = PW_VERSION_STREAM_EVENTS;
-    events.state_changed = &Impl::stateThunk;
-    events.process = &Impl::processThunk;
-    pw_stream_add_listener(impl->stream, &impl->listener, &events, impl);
+    // PipeWire's listener keeps a pointer to this table. It must outlive start()
+    // and remain valid until the stream has stopped and been destroyed.
+    impl->events = {};
+    impl->events.version = PW_VERSION_STREAM_EVENTS;
+    impl->events.state_changed = &Impl::stateThunk;
+    impl->events.process = &Impl::processThunk;
+    pw_stream_add_listener(impl->stream, &impl->listener, &impl->events, impl);
 
     uint8_t podBuffer[1024];
     spa_pod_builder builder = SPA_POD_BUILDER_INIT(podBuffer,
