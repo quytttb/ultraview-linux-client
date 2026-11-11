@@ -11,6 +11,7 @@
 #include <QList>
 #include <QString>
 #include <QStringList>
+#include <QUrl>
 
 #include "protocol/AnsiCodec.h"
 
@@ -23,6 +24,11 @@ struct Command3Identity {
     qint32 clientId = 0;
     quint16 publicSourcePort = 0;
     QString publicIp;
+};
+
+struct CaptchaChallenge {
+    QString esc;
+    QString extra;
 };
 
 /// The five characters hard-coded in the recovered startup call (5/10/15/20/25).
@@ -65,6 +71,11 @@ public:
     /// validation).  Returns an empty string when the terms are acceptable,
     /// otherwise a human-readable, credential-free reason.
     static QString validateRegistrationTerms(const QStringList &terms);
+
+    /// Command 60 fields and result are opaque; errors must never include them.
+    static CaptchaChallenge parseCaptchaChallenge(const QByteArray &payload);
+    static QUrl captchaUrl(const CaptchaChallenge &challenge, const QString &language);
+    static bool validCaptchaToken(const QString &token);
 
     /// Parse a command 3 reply.  Accepts only ASCII decimal numeric fields within
     /// the modelled ranges, exactly like `extract_command3_identity`.

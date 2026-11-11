@@ -306,7 +306,13 @@ int runConnectAttempt(ultraview::models::ConnectionViewModel *controller, const 
     QTimer poll;
     poll.setInterval(100);
     bool settled = false;
+    bool captchaRequired = false;
     QObject::connect(&poll, &QTimer::timeout, &loop, [&] {
+        if (controller->captchaPending()) {
+            captchaRequired = true;
+            loop.quit();
+            return;
+        }
         const int code = controller->stateCode();
         const bool active = code == int(SessionState::Connecting)
             || code == int(SessionState::Registering)
@@ -324,6 +330,12 @@ int runConnectAttempt(ultraview::models::ConnectionViewModel *controller, const 
     QTimer::singleShot(attemptTimeoutMs, &loop, &QEventLoop::quit);
     loop.exec();
     poll.stop();
+
+    if (captchaRequired) {
+        controller->disconnectNow();
+        std::fprintf(stderr, "connect-attempt: interactive CAPTCHA required; use the application window\n");
+        return 3;
+    }
 
     // Let the queued error and statistics signals arrive before reading them.
     {
@@ -351,6 +363,7 @@ int runConnectAttempt(ultraview::models::ConnectionViewModel *controller, const 
 
 int main(int argc, char *argv[])
 {
+    QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
     QGuiApplication application(argc, argv);
     // The language choice is read before any UI exists.  Vietnamese ships with the
     // application, English is the source language, and "system" follows the desktop
@@ -403,6 +416,62 @@ int main(int argc, char *argv[])
     // Registration waits for the platform window, so this is safe before the
     // window is on screen; the menu is announced again whenever it is shown.
     globalMenu.attach(window);
+
+    // Like --connect-attempt, but leaves the real window available for an
+    // interactive verification. Use only with isolated throw-away settings and a
+    // test ID; no CAPTCHA data is printed by this probe.
+    if (const int index = arguments.indexOf(QStringLiteral("--connect-ui-attempt"));
+        index >= 0 && index + 1 < arguments.size()) {
+        if (qEnvironmentVariableIsEmpty("XDG_CONFIG_HOME")) {
+            std::fprintf(stderr, "connect-ui-attempt: set XDG_CONFIG_HOME to a throw-away directory\n");
+            return 1;
+        }
+        controller.settingsObject()->setRememberPassword(false);
+        controller.setPartnerId(arguments.at(index + 1));
+        controller.setPassword(QStringLiteral("ultraview-probe-placeholder"));
+        QObject::connect(&controller, &ultraview::models::ConnectionViewModel::captchaChanged,
+                         &application, [&controller] {
+            if (controller.captchaPending()) {
+                std::puts("connect-ui-attempt: interactive CAPTCHA required");
+                std::fflush(stdout);
+            }
+        });
+        QObject::connect(controller.session(), &ultraview::SessionManager::stateChanged,
+                         &application, [](ultraview::SessionState state) {
+            std::printf("connect-ui-attempt: state=%s\n", qPrintable(ultraview::sessionStateName(state)));
+            std::fflush(stdout);
+        });
+        QObject::connect(controller.session(), &ultraview::SessionManager::failed,
+                         &application, [&application](const ultraview::ErrorInfo &error) {
+            std::printf("connect-ui-attempt: outcome=%s\n", qPrintable(error.message));
+            std::fflush(stdout);
+            application.quit();
+        });
+        QObject::connect(controller.session(), &ultraview::SessionManager::connected,
+                         &application, [&application](const QSize &) { application.quit(); });
+        QObject::connect(controller.session(), &ultraview::SessionManager::stopped,
+                         &application, [&application] { application.quit(); });
+        QTimer::singleShot(0, &controller, &ultraview::models::ConnectionViewModel::connectNow);
+        QTimer::singleShot(200000, &application, &QCoreApplication::quit);
+        return application.exec();
+    }
+
+    if (arguments.contains(QStringLiteral("--captcha-self-test"))) {
+        window->setProperty("devCaptchaTest", true);
+        QEventLoop loop;
+        QTimer poll;
+        poll.setInterval(50);
+        QObject::connect(&poll, &QTimer::timeout, &loop, [&] {
+            if (window->property("devCaptchaFinished").toBool())
+                loop.quit();
+        });
+        poll.start();
+        QTimer::singleShot(15000, &loop, &QEventLoop::quit);
+        loop.exec();
+        const bool ok = window->property("devCaptchaPassed").toBool();
+        std::printf("captcha-self-test: %s\n", ok ? "ok" : "failed");
+        return ok ? 0 : 1;
+    }
 
 #if defined(ULTRAVIEW_HAVE_WAYLAND_SHORTCUT_INHIBIT)
     // On Wayland/KWin, an active remote-control session asks the compositor to

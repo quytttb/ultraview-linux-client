@@ -22,6 +22,8 @@ SessionManager::SessionManager(QObject *parent)
     connect(m_worker, &network::ConnectionManager::failed, this, &SessionManager::failed);
     connect(m_worker, &network::ConnectionManager::notice, this, &SessionManager::notice);
     connect(m_worker, &network::ConnectionManager::diagnostic, this, &SessionManager::diagnostic);
+    connect(m_worker, &network::ConnectionManager::captchaRequired, this, &SessionManager::captchaRequired);
+    connect(m_worker, &network::ConnectionManager::captchaCleared, this, &SessionManager::captchaCleared);
     connect(m_worker, &network::ConnectionManager::connected, this, &SessionManager::onWorkerConnected);
     connect(m_worker, &network::ConnectionManager::routeResolved, this, &SessionManager::routeResolved);
     connect(m_worker, &network::ConnectionManager::frameReady, this, &SessionManager::frameReady);
@@ -99,6 +101,20 @@ void SessionManager::stop()
     if (!m_thread->isRunning())
         return;
     QMetaObject::invokeMethod(m_worker, &network::ConnectionManager::stop, Qt::QueuedConnection);
+}
+
+void SessionManager::submitCaptcha(quint64 challengeId, const QString &token)
+{
+    QMetaObject::invokeMethod(m_worker, [worker = m_worker, challengeId, token] {
+        worker->submitCaptcha(challengeId, token);
+    }, Qt::QueuedConnection);
+}
+
+void SessionManager::captchaUnavailable(quint64 challengeId)
+{
+    QMetaObject::invokeMethod(m_worker, [worker = m_worker, challengeId] {
+        worker->captchaUnavailable(challengeId);
+    }, Qt::QueuedConnection);
 }
 
 void SessionManager::sendInput(const QByteArray &payload)

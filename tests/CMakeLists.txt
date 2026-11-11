@@ -65,6 +65,12 @@ set_tests_properties(app_self_test PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen;XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/test-config/app-self-test"
     TIMEOUT 180)
 
+# The dialog uses synthetic HTML and a local callback, never a vendor endpoint.
+add_test(NAME app_captcha_self_test COMMAND ultraview --captcha-self-test)
+set_tests_properties(app_captcha_self_test PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/test-config/app-captcha-self-test"
+    TIMEOUT 30)
+
 # A desktop theme can hand out a D-Bus menu bar even on a platform that cannot
 # announce it to a window manager (the session bus offers the AppMenu registrar,
 # the offscreen plugin has no desktop services).  Starting under such a theme

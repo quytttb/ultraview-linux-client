@@ -12,7 +12,7 @@ set(CPACK_DEBIAN_PACKAGE_SECTION "net")
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 # QML plugins are loaded dynamically, hence not found by dpkg-shlibdeps.
 set(CPACK_DEBIAN_PACKAGE_DEPENDS
-    "ca-certificates, qt6-qpa-plugins, qt6-image-formats-plugins, qml6-module-qtquick, qml6-module-qtquick-window, qml6-module-qtquick-controls, qml6-module-qtquick-templates, qml6-module-qtquick-layouts, qml6-module-qtquick-dialogs, qml6-module-qt-labs-folderlistmodel, qml6-module-qtqml, qml6-module-qtqml-models, qml6-module-qtqml-workerscript")
+    "ca-certificates, qt6-qpa-plugins, qt6-image-formats-plugins, qml6-module-qtquick, qml6-module-qtquick-window, qml6-module-qtquick-controls, qml6-module-qtquick-templates, qml6-module-qtquick-layouts, qml6-module-qtquick-dialogs, qml6-module-qt-labs-folderlistmodel, qml6-module-qtqml, qml6-module-qtqml-models, qml6-module-qtqml-workerscript, qml6-module-qtwebengine, qml6-module-qtwebchannel")
 set(CPACK_DEBIAN_PACKAGE_RECOMMENDS
     "qt6-wayland, xdg-desktop-portal, xdg-desktop-portal-kde | xdg-desktop-portal-gnome | xdg-desktop-portal-wlr, pipewire")
 include(CPack)

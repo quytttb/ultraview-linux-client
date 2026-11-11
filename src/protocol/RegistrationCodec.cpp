@@ -104,6 +104,16 @@ bool isAsciiDigits(const QString &value)
     return true;
 }
 
+bool isCaptchaField(const QByteArray &value)
+{
+    for (const char ch : value) {
+        const auto c = static_cast<unsigned char>(ch);
+        if (c < 0x20 || c > 0x7e || c == ':')
+            return false;
+    }
+    return true;
+}
+
 } // namespace
 
 QByteArray registrationPassword()
@@ -190,6 +200,38 @@ QByteArray RegistrationCodec::buildRegistrationCommand(const QStringList &terms,
         throwError(ErrorCode::Configuration, QCoreApplication::translate("RegistrationCodec", "invalid registration terms"), reason);
     // Strict encoding: never silently replace host metadata characters.
     return codec.encode(terms.join(QLatin1Char(':')));
+}
+
+CaptchaChallenge RegistrationCodec::parseCaptchaChallenge(const QByteArray &payload)
+{
+    const QList<QByteArray> fields = payload.split(':');
+    if (payload.size() > 4096 || fields.size() < 2 || fields.size() > 3
+        || fields.at(0) != "60" || fields.at(1).isEmpty() || fields.at(1).size() > 1023
+        || !isCaptchaField(fields.at(1))
+        || (fields.size() == 3 && (fields.at(2).size() > 1023 || !isCaptchaField(fields.at(2))))) {
+        throwProtocol(QCoreApplication::translate("RegistrationCodec", "invalid CAPTCHA challenge"));
+    }
+    return {QString::fromLatin1(fields.at(1)),
+            fields.size() == 3 ? QString::fromLatin1(fields.at(2)) : QString()};
+}
+
+QUrl RegistrationCodec::captchaUrl(const CaptchaChallenge &challenge, const QString &language)
+{
+    // Encode every opaque field, including '+' and '&', rather than interpreting
+    // them as query syntax. The origin is a constant, never supplied by the server.
+    const QByteArray lang = language == QLatin1String("vi") ? QByteArrayLiteral("vi") : QByteArrayLiteral("en");
+    const QByteArray url = QByteArrayLiteral("https://www.ultraviewer.net/api/enter_captcha.aspx?lang=")
+        + lang + QByteArrayLiteral("&version=6.6.133&extra=") + QUrl::toPercentEncoding(challenge.extra)
+        + QByteArrayLiteral("&esc=") + QUrl::toPercentEncoding(challenge.esc);
+    return QUrl::fromEncoded(url, QUrl::StrictMode);
+}
+
+bool RegistrationCodec::validCaptchaToken(const QString &token)
+{
+    if (token.isEmpty() || token.size() > 4096)
+        return false;
+    const QByteArray bytes = token.toLatin1();
+    return QString::fromLatin1(bytes) == token && isCaptchaField(bytes);
 }
 
 Command3Identity RegistrationCodec::parseCommand3Identity(const QByteArray &payload, const AnsiCodec &codec)

@@ -12,6 +12,7 @@
 //
 #include <QByteArray>
 #include <QHash>
+#include <QHostAddress>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QList>
@@ -84,6 +85,10 @@ public:
         QString privateKeyFile;
         /// Reply to command 3 (`extract_command3_identity` input).
         QByteArray identityPayload = QByteArrayLiteral("3:45678:123456789:203.0.113.7:extra");
+        /// Send these synthetic challenges in order before the identity reply.
+        QList<QByteArray> captchaChallenges;
+        /// Unrelated messages delivered before the registration reply.
+        QList<QByteArray> preIdentityPayloads;
         /// Reply to command 8; when `routeStatus` is not "1" a refusal is sent.
         QByteArray routeStatus = QByteArrayLiteral("1");
         QString routeTcpServerIp = QStringLiteral("127.0.0.1");
@@ -111,7 +116,7 @@ public:
     /// lives in TestSupport.cpp so that a QSslSocket can adopt the connection).
     void adoptSocket(qintptr socketDescriptor);
 
-    bool listen();
+    bool listen(const QHostAddress &address = QHostAddress::LocalHost, quint16 port = 0);
     quint16 port() const { return m_port; }
     void setOptions(const Options &options) { m_options = options; }
     const Options &options() const { return m_options; }
@@ -121,6 +126,8 @@ public:
     // --- observations -------------------------------------------------------
     /// Decrypted command 3 payload.
     QByteArray registrationCommand() const { return m_registrationCommand; }
+    const QList<QByteArray> &registrationRetries() const { return m_registrationRetries; }
+    int registrationKeepAlives() const { return m_registrationKeepAlives; }
     /// Decrypted command 8 payload.
     QByteArray connectionRequest() const { return m_connectionRequest; }
     /// UTF-16LE `login:` payload of the relay channel.
@@ -180,12 +187,15 @@ private:
     int m_relayConnections = 0;
     bool m_routeSent = false;
     bool m_command3Seen = false;
+    int m_captchaChallengesSent = 0;
+    int m_registrationKeepAlives = 0;
     bool m_connectionRequestSeen = false;
     bool m_loginSeen = false;
     bool m_registrationOpen = false;
     bool m_relayOpen = false;
 
     QByteArray m_registrationCommand;
+    QList<QByteArray> m_registrationRetries;
     QByteArray m_connectionRequest;
     QByteArray m_loginPayload;
     QList<QByteArray> m_relayPayloads;

@@ -312,12 +312,12 @@ bool MockUltraviewServer::loadCertificate()
     return true;
 }
 
-bool MockUltraviewServer::listen()
+bool MockUltraviewServer::listen(const QHostAddress &address, quint16 port)
 {
     if (!loadCertificate())
         return false;
-    if (!m_server->listen(QHostAddress::LocalHost, 0)) {
-        fail(QStringLiteral("cannot listen on 127.0.0.1: %1").arg(m_server->errorString()));
+    if (!m_server->listen(address, port)) {
+        fail(QStringLiteral("cannot listen on %1: %2").arg(address.toString(), m_server->errorString()));
         return false;
     }
     m_port = m_server->serverPort();
@@ -457,7 +457,32 @@ void MockUltraviewServer::handleRegistrationBody(QSslSocket *socket, const QByte
         m_command3Seen = true;
         m_registrationCommand = plaintext;
         emit progressed(QStringLiteral("command3"));
-        sendFrame(socket, QByteArrayLiteral("\x01") + m_options.identityPayload);
+        for (const QByteArray &payload : std::as_const(m_options.preIdentityPayloads))
+            sendFrame(socket, QByteArrayLiteral("\x01") + payload);
+        if (!m_options.captchaChallenges.isEmpty()) {
+            sendFrame(socket, QByteArrayLiteral("\x01") + m_options.captchaChallenges.first());
+            m_captchaChallengesSent = 1;
+        } else {
+            sendFrame(socket, QByteArrayLiteral("\x01") + m_options.identityPayload);
+        }
+        return;
+    }
+
+    if (plaintext == QByteArrayLiteral("2")) {
+        ++m_registrationKeepAlives;
+        emit progressed(QStringLiteral("registration-keepalive"));
+        return;
+    }
+
+    if (!m_options.captchaChallenges.isEmpty() && plaintext.startsWith("3:")) {
+        m_registrationRetries.append(plaintext);
+        emit progressed(QStringLiteral("registration-retry"));
+        if (m_captchaChallengesSent < m_options.captchaChallenges.size()) {
+            sendFrame(socket, QByteArrayLiteral("\x01")
+                                  + m_options.captchaChallenges.at(m_captchaChallengesSent++));
+        } else {
+            sendFrame(socket, QByteArrayLiteral("\x01") + m_options.identityPayload);
+        }
         return;
     }
 

@@ -82,6 +82,9 @@ struct SessionRequest {
     // --- policy and limits --------------------------------------------------
     security::TlsPolicy tlsPolicy;
     int timeoutMs = 8000;
+    /// The human verification deadline is independent of network timeouts.
+    int captchaTimeoutMs = 180000;
+    int captchaKeepAliveMs = 30000;
     quint32 maxFrameBytes = protocol::kDefaultMaxFrameBytes;
     /// Screen dictionary (the `8bit.dat` artifact).  Required for the RGB555
     /// path; without it the session still works for the JPEG/cache paths.
@@ -186,6 +189,8 @@ public slots:
     void start(const ultraview::network::SessionRequest &request);
     /// Tear down.  Idempotent, safe from any state.
     void stop();
+    void submitCaptcha(quint64 challengeId, const QString &token);
+    void captchaUnavailable(quint64 challengeId);
     /// Send a pre-built ASCII input command (see protocol/InputCodec).
     void sendInput(const QByteArray &payload);
     /// The renderer consumed `count` patches; the worker may publish again.
@@ -228,6 +233,8 @@ signals:
     /// Log-only diagnostic (e.g. the drained registration channel closing after
     /// the route); it does not replace the visible session status.
     void diagnostic(const QString &message);
+    void captchaRequired(quint64 challengeId, const QString &esc, const QString &extra);
+    void captchaCleared();
     /// The partner desktop size is known and the canvas is allocated.
     void connected(const QSize &desktopSize);
     /// The command 8 reply carried a status 1 route; emitted before the relay
@@ -265,6 +272,8 @@ private:
     void disarmPhaseTimeout();
 
     void onRegistrationReady();
+    void sendRegistration(const QString &captchaToken = {});
+    void clearCaptcha();
     void onRegistrationPayload(const QByteArray &payload);
     void onRegistrationFailed(const ErrorInfo &error);
     void onRegistrationClosed();
@@ -297,6 +306,7 @@ private:
     RegistrationTransport *m_registration = nullptr;
     RelayTransport *m_relay = nullptr;
     QTimer *m_phaseTimer = nullptr;
+    QTimer *m_captchaKeepAlive = nullptr;
     QTimer *m_statisticsTimer = nullptr;
     QTimer *m_stopTimer = nullptr;
 
@@ -305,6 +315,9 @@ private:
     quint16 m_publicSourcePort = 0;
     QString m_publicIp;
     int m_registrationReplies = 0;
+    quint64 m_captchaId = 0;
+    int m_captchaAttempts = 0;
+    bool m_captchaPending = false;
     bool m_loginAcknowledged = false;
     bool m_drainingRegistration = false;
     bool m_terminating = false;

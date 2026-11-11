@@ -23,6 +23,10 @@ ApplicationWindow {
     // screenshots cover it; empty during a normal session.
     property string devPanel: ""
     property int devDialogTab: 0
+    // Offline test: load synthetic HTML at the trusted base URL, never a network page.
+    property bool devCaptchaTest: false
+    property bool devCaptchaFinished: false
+    property bool devCaptchaPassed: false
     // The header switch selects the controller form or the host page.  A live
     // controller session always takes over the window; hosting keeps the host
     // page selected so its approval prompt and stop control stay reachable.
@@ -249,6 +253,29 @@ ApplicationWindow {
 
     LogDialog {
         id: logDialog
+    }
+
+    // Import the relatively large optional browser plugin only when requested.
+    Loader {
+        id: captchaLoader
+        active: controller.captchaPending || app.devCaptchaTest
+        source: "dialogs/CaptchaDialog.qml"
+        onLoaded: {
+            if (app.devCaptchaTest) {
+                item.testMode = true
+                item.testFinished.connect(function(ok) {
+                    app.devCaptchaPassed = ok
+                    app.devCaptchaFinished = true
+                })
+                item.runTest()
+            }
+        }
+        onStatusChanged: {
+            if (status === Loader.Error && controller.captchaPending)
+                controller.captchaUnavailable()
+            if (status === Loader.Error && app.devCaptchaTest)
+                app.devCaptchaFinished = true
+        }
     }
 
     HostApprovalDialog {

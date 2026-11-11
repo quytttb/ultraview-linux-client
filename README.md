@@ -91,6 +91,11 @@ dependencies still works, but cannot suppress compositor shortcuts.
 
 1. The client uses its bundled screen dictionary and creates a private registration
    identity automatically. You can select a different dictionary in **Settings → Account**.
+   Alternatively, opt in there to a previously working 26-term registration profile;
+   a saved path alone does not enable it, and an empty template is not a working identity.
+   Keep any such profile private. If the controller registration is challenged,
+   an embedded UltraViewer verification page opens; complete the CAPTCHA there to
+   continue. Host-mode registration does not yet support interactive verification.
 2. Leave **Security → Verify the server (recommended)** selected. Registration and
    relay both authenticate UltraViewer's service certificate name (or an explicit
    controlled override); the route hostname is an HTTP tunnel field, not a
@@ -149,11 +154,12 @@ QMAKE=/usr/bin/qmake6 bash packaging/build-appimage.sh build
 ```
 
 See [packaging](docs/packaging.md) for prerequisites, limits and smoke checks.
-The latest published `.deb` is v0.2.3; local builds 0.2.4–0.3.1 were generated,
+The latest published `.deb` is v0.2.3; local builds 0.2.4–0.3.3 were generated,
 extracted and self-tested on this host, and each extracted/installed binary passed
 the QML self-test. The current local artifact is
-`build/packages/ultraview_0.3.1_amd64.deb`, which depends on the distribution's
-PipeWire client library for partner computer sound.
+`build/packages/ultraview_0.3.3_amd64.deb`, which depends on the distribution's
+PipeWire client library for partner computer sound and Qt WebEngine/WebChannel
+for controller CAPTCHA verification.
 The local `.deb` can target this distribution only; building here does not make
 it compatible with older Ubuntu glibc/Qt. The AppImage recipe is supplied, but an
 AppImage has not been built/validated on this machine (deployment tools absent).

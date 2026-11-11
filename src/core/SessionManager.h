@@ -49,6 +49,8 @@ public slots:
     /// `failed` or `stopped` signal.
     void start(const ultraview::network::SessionRequest &request);
     void stop();
+    void submitCaptcha(quint64 challengeId, const QString &token);
+    void captchaUnavailable(quint64 challengeId);
     /// Posts an input command (see protocol/InputCodec).
     void sendInput(const QByteArray &payload);
     /// Posts a clipboard update (commands 5/33).
@@ -82,6 +84,8 @@ signals:
     void notice(const ultraview::ErrorInfo &notice);
     /// Log-only message; it never replaces the visible status line.
     void diagnostic(const QString &message);
+    void captchaRequired(quint64 challengeId, const QString &esc, const QString &extra);
+    void captchaCleared();
     void connected(const QSize &desktopSize);
     void routeResolved(const ultraview::protocol::TargetRoute &route);
     void frameReady(const ultraview::decoder::FrameUpdatePtr &update);

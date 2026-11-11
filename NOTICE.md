@@ -50,6 +50,11 @@ which is GPL-2.0-or-later, Copyright (C) 2026 hmtheboy154
   commands (22/23/31/32/40/49/53) follow the command semantics documented by that
   project. The native implementation, state machines and tests here are written
   for this client; no plugin source files are vendored.
+- Registration CAPTCHA support follows the plugin's `src/uv_captcha.c`,
+  `src/uv_command.c` and `src/uv_session.c` at commit
+  `ca2bb7974a6351a1d2bc336edcdb31907f37d48c` (Copyright 2026 hmtheboy154,
+  GPL-2.0-or-later): command 60, browser callback, IE compatibility, keepalive
+  and retry. This client implements its own Qt WebEngine integration.
 - **No endorsement:** the plugin authors do not endorse or maintain this client.
 
 The ITU-T G.722 recommendation itself is an ITU publication; the algorithm

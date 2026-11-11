@@ -150,6 +150,22 @@ Dialog {
                         onPicked: (path) => controller.loadDictionary(path)
                     }
 
+                    AppCheckBox {
+                        text: qsTr("Use an existing registration profile")
+                        checked: controller.settings.registrationProfileEnabled
+                        onToggled: controller.settings.registrationProfileEnabled = checked
+                    }
+
+                    FilePicker {
+                        enabled: controller.settings.registrationProfileEnabled
+                        label: qsTr("Registration profile")
+                        value: controller.settings.registrationProfilePath
+                        hint: qsTr("Select a previously working 26-term profile. Keep it private; "
+                                   + "the empty registration template is not a working profile. "
+                                   + "Leave this option off to use the automatic identity.")
+                        onPicked: (path) => controller.settings.registrationProfilePath = path
+                    }
+
                     Item { Layout.fillHeight: true }
                 }
             }

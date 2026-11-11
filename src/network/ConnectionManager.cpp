@@ -77,6 +77,8 @@ bool SessionRequest::validate(QString *error) const
     }
     if (timeoutMs <= 0)
         return reject(QCoreApplication::translate("ConnectionManager", "the transport timeout must be positive"));
+    if (captchaTimeoutMs <= 0 || captchaKeepAliveMs <= 0)
+        return reject(QCoreApplication::translate("ConnectionManager", "the CAPTCHA timers must be positive"));
     if (maxFrameBytes == 0 || maxFrameBytes > protocol::kAbsoluteMaxFrameBytes)
         return reject(QCoreApplication::translate("ConnectionManager", "the frame limit must be between 1 and %1 bytes")
                           .arg(protocol::kAbsoluteMaxFrameBytes));
@@ -108,9 +110,18 @@ ConnectionManager::ConnectionManager(QObject *parent)
     m_phaseTimer = new QTimer(this);
     m_phaseTimer->setSingleShot(true);
     connect(m_phaseTimer, &QTimer::timeout, this, [this] {
+        if (m_captchaPending) {
+            fail(ErrorInfo{ErrorCode::Timeout, tr("CAPTCHA verification timed out")});
+            return;
+        }
         fail(ErrorInfo{ErrorCode::Timeout,
                        tr("the connection timed out while %1").arg(sessionStateName(m_state)),
                        tr("phase timeout after %1 ms").arg(m_request.timeoutMs)});
+    });
+    m_captchaKeepAlive = new QTimer(this);
+    connect(m_captchaKeepAlive, &QTimer::timeout, this, [this] {
+        if (m_captchaPending && !m_terminating && m_registration != nullptr)
+            m_registration->sendCommand(QByteArrayLiteral("2"));
     });
     // Coalesces the rate-limited statistics updates: without it a counter that
     // changed during the throttle window would stay invisible until the next
@@ -183,6 +194,7 @@ void ConnectionManager::disarmPhaseTimeout()
 void ConnectionManager::teardown()
 {
     disarmPhaseTimeout();
+    clearCaptcha();
     m_stopTimer->stop();
     if (m_statisticsTimer != nullptr)
         m_statisticsTimer->stop();
@@ -231,6 +243,7 @@ void ConnectionManager::start(const ultraview::network::SessionRequest &request)
     m_loginAcknowledged = false;
     m_drainingRegistration = false;
     m_registrationReplies = 0;
+    m_captchaAttempts = 0;
     m_clipboardUpdates = 0;
     m_chatMessages = 0;
     m_audioPackets = 0;
@@ -283,6 +296,13 @@ void ConnectionManager::start(const ultraview::network::SessionRequest &request)
     connect(m_registration, &RegistrationTransport::payload, this, &ConnectionManager::onRegistrationPayload);
     connect(m_registration, &RegistrationTransport::failed, this, &ConnectionManager::onRegistrationFailed);
     connect(m_registration, &RegistrationTransport::closed, this, &ConnectionManager::onRegistrationClosed);
+    connect(m_registration, &RegistrationTransport::retryingVerifiedAddress, this, [this] {
+        // Every candidate still authenticates the original service name and CA.
+        emit diagnostic(tr("A registration server certificate or connection failed; "
+                           "trying another resolved address with TLS verification enabled"));
+        const qint64 extended = std::min<qint64>(qint64(m_request.timeoutMs) * 2, 60000);
+        armPhaseTimeout(static_cast<int>(extended));
+    });
 
     RegistrationTransport::Options options;
     options.host = request.registrationHost.isEmpty() ? defaultRegistrationHost() : request.registrationHost;
@@ -354,19 +374,61 @@ void ConnectionManager::onRegistrationReady()
 {
     if (m_terminating || m_registration == nullptr)
         return;
+    setState(SessionState::Registering);
+    sendRegistration();
+}
+
+void ConnectionManager::clearCaptcha()
+{
+    m_captchaKeepAlive->stop();
+    if (m_captchaPending) {
+        m_captchaPending = false;
+        emit captchaCleared();
+    }
+}
+
+void ConnectionManager::submitCaptcha(quint64 challengeId, const QString &token)
+{
+    if (m_terminating || !m_captchaPending || challengeId != m_captchaId)
+        return;
+    QString result = token.trimmed();
+    if (!protocol::RegistrationCodec::validCaptchaToken(result)) {
+        fail(ErrorInfo{ErrorCode::Protocol, tr("The CAPTCHA result was invalid. Please try again.")});
+        return;
+    }
+    clearCaptcha();
+    sendRegistration(result);
+    result.fill(QChar(0));
+}
+
+void ConnectionManager::captchaUnavailable(quint64 challengeId)
+{
+    if (!m_terminating && m_captchaPending && challengeId == m_captchaId)
+        fail(ErrorInfo{ErrorCode::Configuration,
+                       tr("The CAPTCHA window could not be opened"),
+                       tr("Check that Qt WebEngine and Qt WebChannel are installed.")});
+}
+
+void ConnectionManager::sendRegistration(const QString &captchaToken)
+{
     QByteArray command;
     try {
-        command = m_request.registrationTerms.size() == 28
-            ? m_request.registrationTerms.join(QLatin1Char(':')).toLatin1()
-            : protocol::RegistrationCodec::buildRegistrationCommand(m_request.registrationTerms, m_codec);
+        QStringList terms = m_request.registrationTerms;
+        if (!captchaToken.isEmpty())
+            terms.last() = captchaToken;
+        command = terms.size() == 28 ? terms.join(QLatin1Char(':')).toLatin1()
+                                     : protocol::RegistrationCodec::buildRegistrationCommand(terms, m_codec);
+        if (!captchaToken.isEmpty())
+            terms.last().fill(QChar(0));
     } catch (const UvException &exception) {
         fail(exception);
         return;
     }
-    setState(SessionState::Registering);
     armPhaseTimeout(m_request.timeoutMs);
     publishStatistics(true);
     m_registration->sendCommand(command);
+    if (!captchaToken.isEmpty())
+        command.fill('\0');
 }
 
 void ConnectionManager::onRegistrationPayload(const QByteArray &payload)
@@ -375,6 +437,26 @@ void ConnectionManager::onRegistrationPayload(const QByteArray &payload)
         return;
 
     if (m_state == SessionState::Registering) {
+        if (m_captchaPending)
+            return; // A reply cannot complete a registration while the user is verifying.
+        // Never log the opaque fields, which may be session secrets.
+        if (payload.startsWith("60:")) {
+            if (++m_captchaAttempts > 3) {
+                fail(ErrorInfo{ErrorCode::Protocol, tr("Too many CAPTCHA verification attempts")});
+                return;
+            }
+            try {
+                const auto challenge = protocol::RegistrationCodec::parseCaptchaChallenge(payload);
+                m_captchaPending = true;
+                ++m_captchaId;
+                armPhaseTimeout(m_request.captchaTimeoutMs);
+                m_captchaKeepAlive->start(m_request.captchaKeepAliveMs);
+                emit captchaRequired(m_captchaId, challenge.esc, challenge.extra);
+            } catch (const UvException &exception) {
+                fail(exception);
+            }
+            return;
+        }
         // The service can send unrelated messages before the command 3 reply,
         // particularly for a newly created identity. Keep the original timeout.
         if (!payload.startsWith("3:"))

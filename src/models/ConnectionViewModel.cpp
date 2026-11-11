@@ -1,5 +1,9 @@
 #include "models/ConnectionViewModel.h"
 
+#include "core/Language.h"
+#include "protocol/RegistrationCodec.h"
+#include <QLocale>
+
 #include "core/ErrorTypes.h"
 #include "decoder/ZstdDecoder.h"
 #include "host/HostProfile.h"
@@ -61,6 +65,24 @@ ConnectionViewModel::ConnectionViewModel(QObject *parent)
     connect(m_session, &SessionManager::notice, this, &ConnectionViewModel::onNotice);
     connect(m_session, &SessionManager::diagnostic, this, [this](const QString &message) {
         appendLog(QStringLiteral("info"), message);
+    });
+    connect(m_session, &SessionManager::captchaRequired, this,
+            [this](quint64 id, const QString &esc, const QString &extra) {
+                QString language = localization::storedLanguageCode();
+                if (language == QLatin1String("system"))
+                    language = localization::preferredUiLanguage(QLocale::system().uiLanguages());
+                m_captchaId = id;
+                m_captchaUrl = protocol::RegistrationCodec::captchaUrl({esc, extra}, language);
+                m_captchaPending = true;
+                appendLog(QStringLiteral("info"), tr("CAPTCHA verification required"));
+                emit captchaChanged();
+                emit statusTextChanged();
+            });
+    connect(m_session, &SessionManager::captchaCleared, this, [this] {
+        m_captchaPending = false;
+        m_captchaUrl.clear();
+        emit captchaChanged();
+        emit statusTextChanged();
     });
     connect(m_session, &SessionManager::statisticsChanged, this, &ConnectionViewModel::onStatistics);
     connect(m_input, &input::InputController::commandReady, this, &ConnectionViewModel::onInputCommand);
@@ -158,6 +180,8 @@ ConnectionViewModel::ConnectionViewModel(QObject *parent)
     });
     connect(m_settings, &SettingsModel::registrationProfilePathChanged, this,
             [applyAndNotify] { applyAndNotify(); });
+    connect(m_settings, &SettingsModel::registrationProfileEnabledChanged, this,
+            [applyAndNotify] { applyAndNotify(); });
     connect(m_settings, &SettingsModel::partnerTemplatePathChanged, this,
             [applyAndNotify] { applyAndNotify(); });
 }
@@ -243,6 +267,8 @@ QString ConnectionViewModel::statusText() const
 {
     if (!m_errorText.isEmpty())
         return m_errorText;
+    if (m_captchaPending)
+        return tr("Complete the CAPTCHA verification to continue…");
     switch (m_session->state()) {
     case SessionState::Disconnected:
         return tr("Ready");
@@ -513,15 +539,24 @@ bool ConnectionViewModel::buildSessionRequest(network::SessionRequest *request, 
 
     network::SessionRequest result;
     try {
-        QString identityError;
-        const QString identityPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
-            + QStringLiteral("/viewer-profile.json");
-        host::HostIdentity identity = host::HostProfile::loadOrCreateAt(identityPath, &identityError);
-        if (!identity.isValid())
-            return fail(identityError);
-        // Persist a separate viewer identity and password from the sharing identity.
-        result.registrationTerms = identity.registrationTerms();
-        result.codec = *protocol::AnsiCodec::fromName(QStringLiteral("cp1252"));
+        if (m_settings->registrationProfileEnabled()) {
+            if (m_settings->registrationProfilePath().isEmpty())
+                return fail(tr("Select an existing registration profile or disable the profile option."));
+            const RegistrationProfile registration =
+                ProfileLoader::loadRegistrationProfile(m_settings->registrationProfilePath());
+            result.registrationTerms = registration.terms;
+            result.codec = registration.codec;
+        } else {
+            QString identityError;
+            const QString identityPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
+                + QStringLiteral("/viewer-profile.json");
+            host::HostIdentity identity = host::HostProfile::loadOrCreateAt(identityPath, &identityError);
+            if (!identity.isValid())
+                return fail(identityError);
+            // Persist a separate viewer identity and password from the sharing identity.
+            result.registrationTerms = identity.registrationTerms();
+            result.codec = *protocol::AnsiCodec::fromName(QStringLiteral("cp1252"));
+        }
         result.requestTerms = ProfileLoader::defaultRequestTerms(m_partnerId);
     } catch (const UvException &exception) {
         return fail(QStringLiteral("%1: %2").arg(exception.message(), exception.detail()));
@@ -628,6 +663,27 @@ void ConnectionViewModel::disconnectNow()
 {
     m_input->releaseAll();
     m_session->stop();
+}
+
+void ConnectionViewModel::submitCaptcha(const QString &token)
+{
+    if (m_captchaPending)
+        m_session->submitCaptcha(m_captchaId, token);
+}
+
+void ConnectionViewModel::captchaUnavailable()
+{
+    if (m_captchaPending)
+        m_session->captchaUnavailable(m_captchaId);
+}
+
+bool ConnectionViewModel::isCaptchaPage(const QUrl &url) const
+{
+    return url.isValid() && url.scheme() == QLatin1String("https")
+        && url.host() == QLatin1String("www.ultraviewer.net")
+        && (url.port() == -1 || url.port() == 443)
+        && url.userInfo().isEmpty()
+        && url.path() == QLatin1String("/api/enter_captcha.aspx");
 }
 
 void ConnectionViewModel::attachScreenItem(ultraview::render::RemoteScreenItem *item)

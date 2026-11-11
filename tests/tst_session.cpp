@@ -15,6 +15,7 @@
 #include "core/SessionState.h"
 #include "decoder/FrameBuffer.h"
 #include "host/HostProfile.h"
+#include "models/ConnectionViewModel.h"
 #include "protocol/AuthenticationCodec.h"
 #include "protocol/Digest.h"
 #include "protocol/InputCodec.h"
@@ -23,7 +24,14 @@
 #include "security/TlsPolicy.h"
 
 #include <QImage>
+#include <QFile>
+#include <QHostInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QSettings>
 #include <QSignalSpy>
+#include <QTemporaryDir>
 #include <QtTest>
 
 using namespace ultraview;
@@ -171,6 +179,12 @@ private slots:
     void refusalStatusCodes_data();
     void refusalStatusCodes();
     void registrationTimeout();
+    void registrationCaptchaRetry_data();
+    void registrationCaptchaRetry();
+    void registrationCaptchaTimeoutAndCancel();
+    void registrationCaptchaInvalidAndRetryLimit();
+    void unrelatedRegistrationPayloadIsIgnored();
+    void selectedRegistrationProfileIsUsed();
     void relayLoginTimeout();
     void relayClosedByPartner();
     void audioAndUnknownKindsAreRefusedButKeepTheSession();
@@ -184,6 +198,11 @@ private slots:
     void inputCommandsReachThePartner();
     void invalidRequestIsRejectedLocally();
     void certificateNameMismatchIsRefused();
+    void registrationTlsAddressFallback();
+    void registrationTlsAddressFallbackFailsClosed();
+    void registrationTlsAddressFallbackCanBeCancelled();
+    void registrationDnsAddressFallback();
+    void optionalLiveTlsFallback();
     void defaultTlsNamesUseTheEndpoint();
     void tlsPolicyAddsServiceChainCertificates();
     void relayAuthenticatesTheRegistrationCertificateName();
@@ -412,6 +431,206 @@ void TestSession::registrationTimeout()
     QCOMPARE(recorder.failures.first().code, ErrorCode::Timeout);
     QCOMPARE(server.relayConnectionCount(), 0);
     QCOMPARE(session.state(), SessionState::Failed);
+}
+
+void TestSession::registrationCaptchaRetry_data()
+{
+    QTest::addColumn<bool>("expanded");
+    QTest::newRow("26-terms") << false;
+    QTest::newRow("28-fields") << true;
+}
+
+void TestSession::registrationCaptchaRetry()
+{
+    QFETCH(bool, expanded);
+    uvtest::MockUltraviewServer server;
+    auto options = mockOptions();
+    options.captchaChallenges = {QByteArrayLiteral("60:private-challenge:private-extra")};
+    options.routeStatus = QByteArrayLiteral("11");
+    server.setOptions(options);
+    QVERIFY(server.listen());
+
+    SessionManager session;
+    SessionRecorder recorder;
+    recorder.attach(&session);
+    QSignalSpy captcha(&session, &SessionManager::captchaRequired);
+    QSignalSpy cleared(&session, &SessionManager::captchaCleared);
+    SessionRequest request = makeRequest(server);
+    request.timeoutMs = 700;
+    request.captchaTimeoutMs = 3000;
+    request.captchaKeepAliveMs = 200;
+    if (expanded) {
+        const auto ticks = request.registrationTerms.takeAt(22).split(QLatin1Char(':'));
+        for (int i = 0; i < ticks.size(); ++i)
+            request.registrationTerms.insert(22 + i, ticks.at(i));
+        QCOMPARE(request.registrationTerms.size(), 28);
+    }
+    session.start(request);
+    QVERIFY(server.waitFor([&] { return captcha.size() == 1; }));
+    const quint64 challengeId = captcha.first().at(0).toULongLong();
+    QVERIFY(server.waitFor([&] { return server.registrationKeepAlives() >= 4; }, 3000));
+    QVERIFY(recorder.failures.isEmpty()); // Longer than the ordinary network deadline.
+    QVERIFY(server.registrationOpen());
+    session.submitCaptcha(challengeId + 1, QStringLiteral("stale-token"));
+    QTest::qWait(50);
+    QVERIFY(server.registrationRetries().isEmpty());
+    session.submitCaptcha(challengeId, QStringLiteral("private-token+"));
+    QVERIFY(server.waitFor([&] { return !recorder.failures.isEmpty(); }));
+    QCOMPARE(cleared.size(), 1);
+    QCOMPARE(server.registrationRetries().size(), 1);
+    const QList<QByteArray> fields = server.registrationRetries().first().split(':');
+    QCOMPARE(fields.size(), 28);
+    QCOMPARE(fields.last(), QByteArrayLiteral("private-token+"));
+    QList<QByteArray> originalFields = server.registrationCommand().split(':');
+    originalFields.last() = QByteArrayLiteral("private-token+");
+    QCOMPARE(fields, originalFields);
+    QVERIFY(server.registrationHandshakeDone());
+    QCOMPARE(recorder.failures.first().code, ErrorCode::Authentication); // status 11, after command 8
+    QVERIFY(!recorder.failures.first().summary().contains(QStringLiteral("private-")));
+    for (const auto &entry : std::as_const(recorder.diagnostics))
+        QVERIFY(!entry.contains(QStringLiteral("private-")));
+    QCOMPARE(session.state(), SessionState::Failed);
+    QCOMPARE(server.relayConnectionCount(), 0);
+}
+
+void TestSession::registrationCaptchaTimeoutAndCancel()
+{
+    for (const bool cancel : {false, true}) {
+        uvtest::MockUltraviewServer server;
+        auto options = mockOptions();
+        options.captchaChallenges = {QByteArrayLiteral("60:private-challenge:")};
+        server.setOptions(options);
+        QVERIFY(server.listen());
+        SessionManager session;
+        SessionRecorder recorder;
+        recorder.attach(&session);
+        QSignalSpy captcha(&session, &SessionManager::captchaRequired);
+        QSignalSpy cleared(&session, &SessionManager::captchaCleared);
+        SessionRequest request = makeRequest(server);
+        request.captchaTimeoutMs = 250;
+        request.captchaKeepAliveMs = 50;
+        session.start(request);
+        QVERIFY(server.waitFor([&] { return captcha.size() == 1; }));
+        if (cancel) {
+            session.stop();
+            QVERIFY(server.waitFor([&] { return recorder.stopped == 1; }));
+            QVERIFY(recorder.failures.isEmpty());
+            QCOMPARE(session.state(), SessionState::Disconnected);
+        } else {
+            QVERIFY(server.waitFor([&] { return !recorder.failures.isEmpty(); }));
+            QCOMPARE(recorder.failures.first().code, ErrorCode::Timeout);
+            QVERIFY(!recorder.failures.first().summary().contains(QStringLiteral("private")));
+        }
+        QCOMPARE(cleared.size(), 1);
+        QVERIFY(server.waitFor([&] { return !server.registrationOpen(); }));
+        QVERIFY(server.registrationRetries().isEmpty());
+    }
+}
+
+void TestSession::registrationCaptchaInvalidAndRetryLimit()
+{
+    for (const bool invalid : {true, false}) {
+        uvtest::MockUltraviewServer server;
+        auto options = mockOptions();
+        options.captchaChallenges = {"60:a:", "60:b:", "60:c:", "60:d:"};
+        server.setOptions(options);
+        QVERIFY(server.listen());
+        SessionManager session;
+        SessionRecorder recorder;
+        recorder.attach(&session);
+        QSignalSpy captcha(&session, &SessionManager::captchaRequired);
+        session.start(makeRequest(server));
+        const int count = invalid ? 1 : 3;
+        for (int i = 0; i < count; ++i) {
+            QVERIFY(server.waitFor([&] { return captcha.size() == i + 1; }));
+            session.submitCaptcha(captcha.at(i).at(0).toULongLong(),
+                                  invalid ? QStringLiteral("bad:token") : QStringLiteral("token"));
+        }
+        QVERIFY(server.waitFor([&] { return !recorder.failures.isEmpty(); }));
+        QCOMPARE(recorder.failures.first().code, ErrorCode::Protocol);
+        QCOMPARE(server.registrationRetries().size(), invalid ? 0 : 3);
+    }
+}
+
+void TestSession::unrelatedRegistrationPayloadIsIgnored()
+{
+    uvtest::MockUltraviewServer server;
+    auto options = mockOptions();
+    options.preIdentityPayloads = {QByteArrayLiteral("99:synthetic-notice")};
+    options.routeStatus = QByteArrayLiteral("11");
+    server.setOptions(options);
+    QVERIFY(server.listen());
+
+    SessionManager session;
+    SessionRecorder recorder;
+    recorder.attach(&session);
+    session.start(makeRequest(server));
+    QVERIFY(server.waitFor([&] { return !recorder.failures.isEmpty(); }));
+    QVERIFY(server.registrationHandshakeDone());
+    QCOMPARE(recorder.failures.first().code, ErrorCode::Authentication);
+}
+
+void TestSession::selectedRegistrationProfileIsUsed()
+{
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, directory.path());
+    const QString path = directory.filePath(QStringLiteral("registration.json"));
+    QStringList profileTerms = uvtest::testRegistrationTerms();
+    profileTerms[4] = QString::fromUtf8("máy-thử");
+    QJsonArray terms;
+    for (const QString &term : profileTerms)
+        terms.append(term);
+    const QJsonObject object{{QStringLiteral("terms"), terms},
+                             {QStringLiteral("ansi_codec"), QStringLiteral("utf-8")}};
+    QFile profile(path);
+    QVERIFY(profile.open(QIODevice::WriteOnly));
+    QVERIFY(profile.write(QJsonDocument(object).toJson()) > 0);
+    profile.close();
+
+    // A previously stored path alone must not reactivate a potentially empty
+    // scaffold after an upgrade; the user must opt in.
+    {
+        QSettings oldSettings(QSettings::IniFormat, QSettings::UserScope,
+                              QStringLiteral("ultraview"), QStringLiteral("client"));
+        oldSettings.setValue(QStringLiteral("profiles/registration"), path);
+        oldSettings.sync();
+    }
+
+    uvtest::MockUltraviewServer server;
+    auto options = mockOptions();
+    options.routeStatus = QByteArrayLiteral("11");
+    server.setOptions(options);
+    QVERIFY(server.listen());
+
+    models::ConnectionViewModel controller;
+    models::SettingsModel *settings = controller.settingsObject();
+    QVERIFY(!settings->registrationProfileEnabled());
+    QCOMPARE(settings->registrationProfilePath(), path);
+    settings->setRegistrationProfileEnabled(true);
+    settings->setRegistrationHostOverride(QStringLiteral("127.0.0.1"));
+    settings->setRegistrationPortOverride(server.port());
+    settings->setRegistrationHttpHostOverride(QStringLiteral("functions3.ultraviewer.test"));
+    settings->setTlsMode(int(security::TlsPolicy::Mode::AcceptAnyCertificate)); // loopback test only
+    settings->setRememberPassword(false);
+    controller.setPartnerId(QStringLiteral("123456789"));
+    controller.setPassword(QStringLiteral("test-password"));
+    controller.connectNow();
+
+    QVERIFY(server.waitFor([&] { return controller.stateCode() == int(SessionState::Failed); }));
+    QVERIFY(server.registrationHandshakeDone());
+    QCOMPARE(server.registrationCommand(), RegistrationCodec::buildRegistrationCommand(
+                                             profileTerms, AnsiCodec::utf8()));
+    models::SettingsModel reloaded;
+    QVERIFY(reloaded.registrationProfileEnabled());
+    QCOMPARE(reloaded.registrationProfilePath(), path);
+
+    // Selecting a missing file must fail locally, not silently use another identity.
+    settings->setRegistrationProfilePath(directory.filePath(QStringLiteral("missing.json")));
+    QSignalSpy errorSpy(&controller, &models::ConnectionViewModel::errorRaised);
+    controller.connectNow();
+    QCOMPARE(errorSpy.size(), 1);
+    QVERIFY(!controller.errorText().isEmpty());
 }
 
 void TestSession::relayLoginTimeout()
@@ -758,6 +977,180 @@ void TestSession::certificateNameMismatchIsRefused()
     QVERIFY(recorder.hasFailure(ErrorCode::Tls) || recorder.hasFailure(ErrorCode::Network));
     QCOMPARE(server.relayConnectionCount(), 0);
     QCOMPARE(session.state(), SessionState::Failed);
+}
+
+void TestSession::registrationTlsAddressFallback()
+{
+    uvtest::MockUltraviewServer bad;
+    auto badOptions = mockOptions();
+    const QString dir = uvtest::Fixtures::instance().dataDirectory();
+    badOptions.certificateFile = dir + QStringLiteral("/tls/endpoint.crt");
+    badOptions.privateKeyFile = dir + QStringLiteral("/tls/endpoint.key");
+    bad.setOptions(badOptions);
+    QVERIFY(bad.listen());
+    uvtest::MockUltraviewServer good;
+    QVERIFY(good.listen(QHostAddress(QStringLiteral("127.0.0.2")), bad.port()));
+
+    RegistrationTransport transport;
+    RegistrationTransport::Options options;
+    options.host = QStringLiteral("127.0.0.1");
+    options.port = bad.port();
+    options.httpHostHeader = QStringLiteral("registration.test");
+    options.peerNameOverride = QStringLiteral("ultraviewer");
+    options.tlsPolicy = testPolicy();
+    options.timeoutMs = 2000;
+    options.fallbackAddressesForTesting = {QHostAddress(QStringLiteral("127.0.0.1")),
+                                           QHostAddress(QStringLiteral("127.0.0.2")),
+                                           QHostAddress(QStringLiteral("127.0.0.2"))};
+    transport.setOptions(options);
+    QSignalSpy ready(&transport, &RegistrationTransport::ready);
+    QSignalSpy failed(&transport, &RegistrationTransport::failed);
+    QSignalSpy retry(&transport, &RegistrationTransport::retryingVerifiedAddress);
+    transport.start();
+    QVERIFY(good.waitFor([&] { return !ready.isEmpty() || !failed.isEmpty(); }));
+    QCOMPARE(ready.size(), 1);
+    QCOMPARE(failed.size(), 0);
+    QCOMPARE(retry.size(), 1); // failed and duplicate addresses were excluded
+    QVERIFY(transport.peerDescription().startsWith(QStringLiteral("127.0.0.2:")));
+    QVERIFY(!bad.registrationOpen()); // no command or HTTP preface sent to the rejected certificate
+    QVERIFY(good.registrationOpen());
+    transport.stop();
+}
+
+void TestSession::registrationTlsAddressFallbackFailsClosed()
+{
+    uvtest::MockUltraviewServer first;
+    QVERIFY(first.listen());
+    uvtest::MockUltraviewServer second;
+    QVERIFY(second.listen(QHostAddress(QStringLiteral("127.0.0.2")), first.port()));
+
+    RegistrationTransport transport;
+    RegistrationTransport::Options options;
+    options.host = QStringLiteral("127.0.0.1");
+    options.port = first.port();
+    options.peerNameOverride = QStringLiteral("wrong-name.invalid");
+    options.tlsPolicy = testPolicy(); // trusted CA, but neither certificate matches this name
+    options.timeoutMs = 2000;
+    options.fallbackAddressesForTesting = {QHostAddress(QStringLiteral("127.0.0.2"))};
+    transport.setOptions(options);
+    QSignalSpy ready(&transport, &RegistrationTransport::ready);
+    QSignalSpy failed(&transport, &RegistrationTransport::failed);
+    QSignalSpy retry(&transport, &RegistrationTransport::retryingVerifiedAddress);
+    transport.start();
+    QVERIFY(second.waitFor([&] { return !failed.isEmpty(); }));
+    QCOMPARE(retry.size(), 1);
+    QCOMPARE(ready.size(), 0);
+    QCOMPARE(failed.size(), 1);
+    const auto error = qvariant_cast<ErrorInfo>(failed.first().first());
+    QCOMPARE(error.code, ErrorCode::Tls);
+    QVERIFY(error.summary().contains(QStringLiteral("wrong-name.invalid")));
+    QVERIFY(!first.registrationOpen());
+    QVERIFY(!second.registrationOpen());
+}
+
+void TestSession::registrationTlsAddressFallbackCanBeCancelled()
+{
+    uvtest::MockUltraviewServer first;
+    QVERIFY(first.listen());
+    uvtest::MockUltraviewServer second;
+    QVERIFY(second.listen(QHostAddress(QStringLiteral("127.0.0.2")), first.port()));
+    RegistrationTransport transport;
+    RegistrationTransport::Options options;
+    options.host = QStringLiteral("127.0.0.1");
+    options.port = first.port();
+    options.peerNameOverride = QStringLiteral("wrong-name.invalid");
+    options.tlsPolicy = testPolicy();
+    options.fallbackAddressesForTesting = {QHostAddress(QStringLiteral("127.0.0.2"))};
+    transport.setOptions(options);
+    QSignalSpy retry(&transport, &RegistrationTransport::retryingVerifiedAddress);
+    QSignalSpy ready(&transport, &RegistrationTransport::ready);
+    QSignalSpy failed(&transport, &RegistrationTransport::failed);
+    QObject::connect(&transport, &RegistrationTransport::retryingVerifiedAddress,
+                     &transport, &RegistrationTransport::stop);
+    transport.start();
+    QVERIFY(first.waitFor([&] { return !retry.isEmpty(); }));
+    QTest::qWait(100);
+    QVERIFY(ready.isEmpty());
+    QVERIFY(failed.isEmpty());
+    QVERIFY(!second.registrationOpen());
+}
+
+void TestSession::optionalLiveTlsFallback()
+{
+    // Opt-in manual probe only: CTest never sets these variables or uses the
+    // network. No registration command or partner credential is sent.
+    const QString bad = qEnvironmentVariable("ULTRAVIEW_TEST_TLS_BAD_IP");
+    const QString good = qEnvironmentVariable("ULTRAVIEW_TEST_TLS_GOOD_IP");
+    const QString host = qEnvironmentVariable("ULTRAVIEW_TEST_TLS_HOST");
+    if (bad.isEmpty() || good.isEmpty() || host.isEmpty())
+        QSKIP("Live TLS fallback probe is opt-in");
+    RegistrationTransport transport;
+    RegistrationTransport::Options options;
+    options.host = bad;
+    options.port = 443;
+    options.httpHostHeader = host;
+    options.peerNameOverride = host;
+    options.timeoutMs = 7000;
+    options.fallbackAddressesForTesting = {QHostAddress(good)};
+    transport.setOptions(options);
+    QSignalSpy ready(&transport, &RegistrationTransport::ready);
+    QSignalSpy failed(&transport, &RegistrationTransport::failed);
+    QSignalSpy retry(&transport, &RegistrationTransport::retryingVerifiedAddress);
+    transport.start();
+    QTRY_VERIFY_WITH_TIMEOUT(!ready.isEmpty() || !failed.isEmpty(), 20000);
+    if (!failed.isEmpty())
+        qWarning() << qvariant_cast<ErrorInfo>(failed.first().first()).summary();
+    QCOMPARE(retry.size(), 1);
+    QCOMPARE(failed.size(), 0);
+    QCOMPARE(ready.size(), 1);
+    QVERIFY(transport.peerDescription().startsWith(good + QLatin1Char(':')));
+    transport.stop();
+}
+
+void TestSession::registrationDnsAddressFallback()
+{
+    // Exercise the real async DNS path when localhost has two usable families.
+    const auto resolved = QHostInfo::fromName(QStringLiteral("localhost")).addresses();
+    QList<QHostAddress> loopbacks;
+    for (const auto &address : resolved) {
+        if (address.isLoopback() && !loopbacks.contains(address))
+            loopbacks.append(address);
+    }
+    if (loopbacks.size() < 2)
+        QSKIP("localhost does not resolve to two loopback addresses");
+
+    uvtest::MockUltraviewServer bad;
+    if (!bad.listen(loopbacks.first()))
+        QSKIP("first loopback family is unavailable");
+    uvtest::MockUltraviewServer good;
+    auto goodOptions = mockOptions();
+    const QString dir = uvtest::Fixtures::instance().dataDirectory();
+    goodOptions.certificateFile = dir + QStringLiteral("/tls/endpoint.crt");
+    goodOptions.privateKeyFile = dir + QStringLiteral("/tls/endpoint.key");
+    good.setOptions(goodOptions);
+    if (!good.listen(loopbacks.at(1), bad.port()))
+        QSKIP("second loopback family is unavailable");
+
+    RegistrationTransport transport;
+    RegistrationTransport::Options options;
+    options.host = QStringLiteral("localhost");
+    options.port = bad.port();
+    options.timeoutMs = 2000;
+    options.tlsPolicy.setAdditionalCaCertificateFile(good.certificatePath());
+    transport.setOptions(options);
+    QSignalSpy retry(&transport, &RegistrationTransport::retryingVerifiedAddress);
+    QSignalSpy ready(&transport, &RegistrationTransport::ready);
+    QSignalSpy failed(&transport, &RegistrationTransport::failed);
+    transport.start();
+    QVERIFY(good.waitFor([&] { return !ready.isEmpty() || !failed.isEmpty(); }));
+    if (retry.isEmpty() && !ready.isEmpty())
+        QSKIP("socket selected the good loopback address first");
+    QCOMPARE(retry.size(), 1);
+    QCOMPARE(failed.size(), 0);
+    QCOMPARE(ready.size(), 1);
+    QVERIFY(good.registrationOpen());
+    QVERIFY(!bad.registrationOpen());
+    transport.stop();
 }
 
 void TestSession::defaultTlsNamesUseTheEndpoint()

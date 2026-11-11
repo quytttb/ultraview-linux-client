@@ -1,5 +1,79 @@
 # Local verification record — 2026-10-18
 
+## Registration challenge — 2026-11-10
+
+### Registration TLS endpoint fallback, version 0.3.4
+
+- After the 0.3.3 report of an expired registration certificate, a TLS-only
+  probe with the service name verified identified one expired endpoint and five
+  valid endpoints. The valid certificates observed expire on 2026-11-16 at
+  23:59:59 UTC; renewal remains the service operator's responsibility.
+- On a certificate verification failure, the registration transport now
+  resolves the same hostname and tries other returned addresses, still checking
+  the same hostname and CA chain. Offline tests cover asynchronous DNS resolution,
+  a rejected certificate followed by a trusted certificate, rejection when no
+  candidate matches the name, and cancellation.
+- A separate opt-in live test deliberately connected to the expired endpoint and
+  then an alternate current endpoint, retaining the original TLS name and HTTP
+  header; the verified TLS handshake and HTTP tunnel succeeded. No registration
+  command, CAPTCHA material or partner credential was sent during this test.
+- All 21 CTest targets passed. The 0.3.4 package
+  (`ultraview_0.3.4_amd64.deb`, 17,345,264 bytes,
+  `23cf6a04a9e3e4dde14a2d60fcfba01c399a466e7630b15d1fb5540ddca095db`) was
+  generated, extracted and installed (`dpkg-query`: `0.3.4`); the installed
+  binary matches the packaged binary and passes offscreen `--self-test` and
+  `--captcha-self-test`.
+
+### Interactive controller verification, version 0.3.3
+
+- Implemented the official verification-page flow using the cited Remmina plugin
+  as a protocol reference. The HTTPS browser profile is ephemeral; challenge
+  parameters and result are not logged. A 30-second command-2 keepalive keeps
+  the registration connection open while the user verifies.
+- All 21 CTest targets passed, including synthetic WebEngine/WebChannel callback
+  and loopback tests for both registration formats, cancellation, timeout,
+  stale tokens and retry limits.
+- A live GUI probe using isolated temporary settings, verified TLS, a generated
+  identity, a placeholder password and the unknown test ID `999999999` received
+  command 60, completed verification automatically on the official page, then
+  reached `RequestingPartner` and the expected offline/nonexistent-ID refusal.
+  The test did not connect to a real partner or require entering a CAPTCHA.
+- The `.deb` was extracted and both app and CAPTCHA self-tests passed before it
+  was installed. The installed 0.3.3 binary matches the package and passed the
+  same self-tests. Package SHA-256:
+  `bcaf44428518558a2f10f2bb7ac29d5c24aad63094d4d40fdcf039fe0d6a0824`.
+
+### Original 0.3.2 investigation
+
+- The installed 0.3.1 controller was reproduced timing out in `Registering` with
+  its automatically generated identity. A credential-free probe, using verified
+  TLS and without printing the response contents, observed command `60` instead
+  of command `3`. The service is asking for CAPTCHA verification, which this
+  client cannot complete yet; the old code silently ignored that reply.
+- A separately configured, previously used controller profile reached the
+  partner-request stage and received the expected refusal for an unknown test ID.
+  Opting in to such a profile is again supported, but is not a guarantee that the
+  service will not request CAPTCHA for it too. Existing saved profile paths remain
+  inactive until explicitly enabled, because they may refer to empty scaffolds.
+- The rebuilt client was then checked with both identities in throw-away settings:
+  the automatic identity reported the CAPTCHA immediately, and the selected old
+  profile again reached the expected status-11 refusal. The probe used a currently
+  valid service IP with the normal registration hostname for both TLS verification
+  and the HTTP header. No actual partner password was used. The full offline
+  suite passed **20/20**, including challenge handling, profile selection and QML
+  smoke tests.
+- The registration hostname resolved to multiple servers. During a TLS-only
+  probe, one presented an expired certificate while five verified successfully.
+  This is a separate service-side issue; certificate validation remains enabled.
+  A real Windows partner session and interactive CAPTCHA verification were not
+  tested in this check.
+- The fix was built as local version 0.3.2 with keyring, Wayland shortcut
+  inhibition, host capture and PipeWire audio required at configuration time.
+  All 20 CTest targets passed; the generated `.deb` was extracted and self-tested,
+  then installed (`0.3.2: install ok installed`). The installed binary matches the
+  packaged binary and passes the offscreen self-test. Package SHA-256:
+  `0a09d242fc93884fb8b4bbdd26228cf4a3e3d605d46c3a101acbae75661943e0`.
+
 ## Completed checks
 
 - CMake/Ninja native build: succeeded with GCC 15, C++20 and system Qt 6.10.2.

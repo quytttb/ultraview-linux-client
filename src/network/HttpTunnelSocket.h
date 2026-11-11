@@ -18,6 +18,7 @@
 // reference and are preserved).
 //
 #include <QByteArray>
+#include <QHostAddress>
 #include <QObject>
 #include <QString>
 
@@ -84,6 +85,9 @@ public:
     QList<QSslCertificate> peerCertificateChain() const;
 
     bool isSecure() const;
+    /// The last connected address is retained after a failed handshake.
+    QHostAddress lastPeerAddress() const { return m_lastPeerAddress; }
+    bool certificateVerificationFailed() const { return m_certificateVerificationFailed; }
 
 signals:
     /// TLS is up and (when a preface was requested) the HTTP header was received.
@@ -112,12 +116,14 @@ private:
     TunnelRequest m_request;
     /// Name set on the socket for certificate verification (diagnostics).
     QString m_peerName;
+    QHostAddress m_lastPeerAddress;
     Phase m_phase = Phase::Idle;
     QByteArray m_headerBuffer;
     QByteArray m_buffer;
     QByteArray m_responseHeader;
     bool m_closedEmitted = true;
     bool m_failed = false;
+    bool m_certificateVerificationFailed = false;
 };
 
 } // namespace ultraview::network

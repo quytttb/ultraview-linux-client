@@ -16,6 +16,7 @@ namespace ultraview::models {
 namespace {
 
 constexpr auto kRegistrationProfileKey = "profiles/registration";
+constexpr auto kRegistrationProfileEnabledKey = "profiles/registrationEnabled";
 constexpr auto kPartnerTemplateKey = "profiles/partnerTemplate";
 constexpr auto kDictionaryKey = "profiles/dictionary";
 constexpr auto kTlsModeKey = "security/tlsMode";
@@ -64,6 +65,7 @@ void SettingsModel::load()
 {
     QSettings store = settings();
     m_registrationProfilePath = store.value(kRegistrationProfileKey).toString();
+    m_registrationProfileEnabled = store.value(kRegistrationProfileEnabledKey, false).toBool();
     m_partnerTemplatePath = store.value(kPartnerTemplateKey).toString();
     m_dictionaryPath = store.value(kDictionaryKey).toString();
     if (m_dictionaryPath.isEmpty())
@@ -99,6 +101,7 @@ void SettingsModel::save()
 {
     QSettings store = settings();
     store.setValue(kRegistrationProfileKey, m_registrationProfilePath);
+    store.setValue(kRegistrationProfileEnabledKey, m_registrationProfileEnabled);
     store.setValue(kPartnerTemplateKey, m_partnerTemplatePath);
     store.setValue(kDictionaryKey, m_dictionaryPath);
     store.setValue(kTlsModeKey, tlsPolicy().settingsValue());
@@ -139,6 +142,7 @@ void SettingsModel::reload()
     emit featuresChanged();
     emit endpointsChanged();
     emit registrationProfilePathChanged();
+    emit registrationProfileEnabledChanged();
     emit partnerTemplatePathChanged();
     emit dictionaryPathChanged();
     emit languageChanged();
@@ -147,6 +151,7 @@ void SettingsModel::reload()
 void SettingsModel::resetToDefaults()
 {
     m_registrationProfilePath.clear();
+    m_registrationProfileEnabled = false;
     m_partnerTemplatePath.clear();
     m_dictionaryPath = QStringLiteral(":/ultraview/8bit.dat");
     m_tlsMode = security::TlsPolicy::Mode::VerifyPeer;
@@ -227,6 +232,14 @@ void SettingsModel::setRegistrationProfilePath(const QString &path)
         return;
     m_registrationProfilePath = path;
     emit registrationProfilePathChanged();
+}
+
+void SettingsModel::setRegistrationProfileEnabled(bool enabled)
+{
+    if (m_registrationProfileEnabled == enabled)
+        return;
+    m_registrationProfileEnabled = enabled;
+    emit registrationProfileEnabledChanged();
 }
 
 void SettingsModel::setPartnerTemplatePath(const QString &path)

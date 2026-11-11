@@ -55,11 +55,26 @@ credentials. Responses are direct `01 || plaintext` bodies, not assumed to be
 encrypted. Identity response subset: `3:<source port>:<controller ID>:<IP>`;
 extra fields are tolerated, numeric ranges checked.
 
+If a registration address presents an invalid TLS certificate, the client may
+resolve the registration hostname and try up to eight other addresses before any
+registration command is sent. Each attempt retains the original certificate
+verification name, SNI, CA policy and HTTP Host header; no failed certificate is
+accepted. If all candidates fail, the original TLS verification error is reported.
+
 The sender (host) role has its own registration: a 28-field command `3` carrying
 a separate stable identity, 8-digit login password, display name and MAC. It uses
 the same encryption and framing, and its `3:` reply has 11 or more fields. The
 sender role, its relay/login flow and its screen/input messages are documented in
 [host (sender) mode](host-mode.md); the controller flow above is unchanged.
+
+The service can reply with `60:<esc>:<extra>` instead of an identity. For the
+controller the application opens the official HTTPS verification page in a
+temporary Qt WebEngine profile, keeps the registration channel alive with command
+2, and resends command 3 with the page's result in its last field. The user can
+cancel, the wait is bounded, and retries are limited. Challenge fields and results
+are never logged. Host-mode interactive CAPTCHA is not implemented. A user may
+explicitly select a previously working 26-term controller profile in Settings; an
+old saved profile path alone does not override the automatic viewer identity.
 
 Fingerprint digest is uppercase MD5 of the provided preimage. The fallback
 helper concatenates MAC plus supplied Windows creation-tick values with no

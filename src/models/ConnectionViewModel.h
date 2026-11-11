@@ -20,6 +20,7 @@
 #include <QSize>
 #include <QString>
 #include <QVariantList>
+#include <QUrl>
 
 #include "core/SessionManager.h"
 #include "input/InputController.h"
@@ -70,6 +71,8 @@ class ConnectionViewModel : public QObject {
     Q_PROPERTY(bool viewOnly READ viewOnly NOTIFY viewOnlyChanged)
     Q_PROPERTY(bool wallpaperShown READ wallpaperShown NOTIFY wallpaperShownChanged)
     Q_PROPERTY(int quality READ quality NOTIFY qualityChanged)
+    Q_PROPERTY(bool captchaPending READ captchaPending NOTIFY captchaChanged)
+    Q_PROPERTY(QUrl captchaUrl READ captchaUrl NOTIFY captchaChanged)
 
 public:
     explicit ConnectionViewModel(QObject *parent = nullptr);
@@ -122,6 +125,8 @@ public:
     bool viewOnly() const { return m_viewOnly; }
     bool wallpaperShown() const { return m_wallpaperShown; }
     int quality() const { return m_quality; }
+    bool captchaPending() const { return m_captchaPending; }
+    QUrl captchaUrl() const { return m_captchaUrl; }
 
     SettingsModel *settings() { return m_settings; }
     RecentConnectionsModel *recent() { return m_recent; }
@@ -131,6 +136,9 @@ public slots:
     /// Validate the current inputs and start the session.
     void connectNow();
     void disconnectNow();
+    void submitCaptcha(const QString &token);
+    void captchaUnavailable();
+    bool isCaptchaPage(const QUrl &url) const;
     /// Receive decoded patches; connects the render item to the session.
     void attachScreenItem(ultraview::render::RemoteScreenItem *item);
     /// Write scaffold profile files into the application config directory when
@@ -196,6 +204,7 @@ signals:
     void viewOnlyChanged();
     void wallpaperShownChanged();
     void qualityChanged();
+    void captchaChanged();
     /// Raised when a request cannot even be assembled (missing profile, ...).
     void errorRaised(const QString &message);
 
@@ -234,6 +243,9 @@ private:
     QString m_noticeText;
     QList<LogEntry> m_log;
     QString m_statusText;
+    bool m_captchaPending = false;
+    quint64 m_captchaId = 0;
+    QUrl m_captchaUrl;
     network::SessionStatistics m_statistics;
     bool m_dictionaryLoaded = false;
     bool m_inputEnabled = true;

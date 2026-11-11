@@ -34,6 +34,7 @@ private slots:
     void vfunctionKeyDerivation();
     void registrationCommand();
     void registrationCommandValidation();
+    void captchaChallengeAndToken();
     void command3Identity();
     void invalidCommand3Payloads();
     void registrationCipher();
@@ -45,6 +46,31 @@ private slots:
     void osVersionCombine();
     void aesRoundTripOfDigestHelpers();
 };
+
+void TestRegistration::captchaChallengeAndToken()
+{
+    const auto challenge = RegistrationCodec::parseCaptchaChallenge("60:a+b&c%:x=y?#");
+    QCOMPARE(challenge.esc, QStringLiteral("a+b&c%"));
+    QCOMPARE(challenge.extra, QStringLiteral("x=y?#"));
+    const QByteArray url = RegistrationCodec::captchaUrl(challenge, QStringLiteral("vi")).toEncoded();
+    QCOMPARE(url, QByteArrayLiteral("https://www.ultraviewer.net/api/enter_captcha.aspx?lang=vi&version=6.6.133&extra=x%3Dy%3F%23&esc=a%2Bb%26c%25"));
+    QVERIFY(RegistrationCodec::parseCaptchaChallenge("60:abc").extra.isEmpty());
+    for (const QByteArray &bad : {QByteArray("60:"), QByteArray("60:a:b:c"),
+                                  QByteArray("60:a\nsecret"), QByteArray("60:") + QByteArray(1024, 'a')}) {
+        try {
+            RegistrationCodec::parseCaptchaChallenge(bad);
+            QFAIL("invalid challenge accepted");
+        } catch (const UvException &error) {
+            QCOMPARE(error.code(), ErrorCode::Protocol);
+            QVERIFY(!error.info().summary().contains(QStringLiteral("secret")));
+        }
+    }
+    QVERIFY(RegistrationCodec::validCaptchaToken(QStringLiteral("valid +/%")));
+    QVERIFY(!RegistrationCodec::validCaptchaToken(QString()));
+    QVERIFY(!RegistrationCodec::validCaptchaToken(QStringLiteral("invalid:field")));
+    QVERIFY(!RegistrationCodec::validCaptchaToken(QString::fromUtf8("đ")));
+    QVERIFY(!RegistrationCodec::validCaptchaToken(QString(4097, QLatin1Char('x'))));
+}
 
 void TestRegistration::registrationPassword()
 {

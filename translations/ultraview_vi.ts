@@ -2,6 +2,14 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="vi_VN">
 <context>
+    <name>CaptchaDialog</name>
+    <message><source>UltraViewer verification</source><translation>Xác minh UltraViewer</translation></message>
+    <message><source>Complete the verification on the official UltraViewer page to continue.</source><translation>Hoàn tất xác minh trên trang chính thức của UltraViewer để tiếp tục.</translation></message>
+    <message><source>The verification page could not be loaded. Check your connection and try again.</source><translation>Không tải được trang xác minh. Hãy kiểm tra kết nối và thử lại.</translation></message>
+    <message><source>Try again</source><translation>Thử lại</translation></message>
+    <message><source>Cancel</source><translation>Hủy</translation></message>
+</context>
+<context>
     <name>AboutDialog</name>
     <message>
         <location filename="../qml/dialogs/AboutDialog.qml" line="8"/>
@@ -25,7 +33,7 @@
         <translation>Ứng dụng điều khiển Linux độc lập sử dụng giao thức UltraViewer được tái dựng.</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/AboutDialog.qml" line="109"/>
+        <location filename="../qml/dialogs/AboutDialog.qml" line="108"/>
         <source>Refused on purpose: BitBlt screen operations, audio playback and P2P transports are not implemented and are reported instead of being silently ignored. A screen dictionary is included with the application.</source>
         <translation>Các thao tác màn hình BitBlt, phát âm thanh và kết nối P2P chưa được hỗ trợ và sẽ được báo cáo thay vì bỏ qua. Từ điển màn hình được tích hợp trong ứng dụng.</translation>
     </message>
@@ -192,7 +200,7 @@
         <translation>không có đầu ra âm thanh (bản dựng không có PipeWire)</translation>
     </message>
     <message>
-        <location filename="../src/audio/PipeWireAudioSink.cpp" line="260"/>
+        <location filename="../src/audio/PipeWireAudioSink.cpp" line="263"/>
         <source>PipeWire (not running)</source>
         <translation>PipeWire (không chạy)</translation>
     </message>
@@ -398,21 +406,11 @@
         <source>Create the profile templates first, then enter the partner ID.</source>
         <translation>Hãy tạo các tệp hồ sơ mẫu trước, sau đó nhập ID đối tác.</translation>
     </message>
-    <message>
-        <location filename="../qml/pages/ConnectPage.qml" line="227"/>
-        <source>Create profile templates</source>
-        <translation>Tạo hồ sơ mẫu</translation>
-    </message>
-    <message>
-        <location filename="../qml/pages/ConnectPage.qml" line="238"/>
-        <source>Templates are written to the application configuration directory; fill in the registration values in the settings.</source>
-        <translation>Các tệp mẫu được lưu trong thư mục cấu hình ứng dụng; hãy điền thông tin đăng ký trong phần cài đặt.</translation>
-    </message>
 </context>
 <context>
     <name>Connection</name>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="132"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="134"/>
         <source>Ultraview %1 started (Qt %2, %3)</source>
         <translation>Ultraview %1 đã khởi động (Qt %2, %3)</translation>
     </message>
@@ -433,52 +431,36 @@
     </message>
     <message>
         <location filename="../src/models/ConnectionViewModel.cpp" line="483"/>
-        <source>Registration profile: %1</source>
-        <translation>Hồ sơ đăng ký: %1</translation>
-    </message>
-    <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="485"/>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="489"/>
-        <source>not set</source>
-        <translation>chưa đặt</translation>
-    </message>
-    <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="487"/>
-        <source>Partner template: %1</source>
-        <translation>Mẫu yêu cầu đối tác: %1</translation>
-    </message>
-    <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="491"/>
         <source>Screen dictionary: %1</source>
         <translation>Từ điển màn hình: %1</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="492"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="484"/>
         <source>TLS mode: %1</source>
         <translation>Chế độ TLS: %1</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="494"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="486"/>
         <source>Endpoint overrides are active</source>
         <translation>Đang dùng điểm cuối ghi đè</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="502"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="494"/>
         <source>Passwords are never included in this report.</source>
         <translation>Báo cáo này không bao giờ chứa mật khẩu.</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="632"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="623"/>
         <source>TLS: chain and host name verification enabled</source>
         <translation>TLS: đã bật xác minh chuỗi chứng chỉ và tên máy chủ</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="687"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="678"/>
         <source>State: %1</source>
         <translation>Trạng thái: %1</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="695"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="686"/>
         <source>Connected: partner desktop %1x%2</source>
         <translation>Đã kết nối: màn hình đối tác %1x%2</translation>
     </message>
@@ -487,36 +469,36 @@
     <name>ConnectionManager</name>
     <message>
         <location filename="../src/network/ConnectionManager.cpp" line="49"/>
-        <source>the registration profile needs exactly 26 terms (got %1)</source>
-        <translation>hồ sơ đăng ký cần đúng 26 mục (nhận được %1)</translation>
+        <source>registration needs 26 or 28 terms (got %1)</source>
+        <translation>đăng ký cần 26 hoặc 28 mục (nhận được %1)</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="56"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="67"/>
         <source>the partner request template needs exactly 17 terms (got %1)</source>
         <translation>mẫu yêu cầu đối tác cần đúng 17 mục (nhận được %1)</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="59"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="70"/>
         <source>P2P negotiation is not supported; request term 16 must be empty</source>
         <translation>không hỗ trợ thương lượng P2P; mục 16 của yêu cầu phải để trống</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="64"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="75"/>
         <source>request term %1 contains a reserved delimiter</source>
         <translation>mục %1 của yêu cầu chứa dấu phân cách dành riêng</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="68"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="79"/>
         <source>the transport timeout must be positive</source>
         <translation>thời gian chờ truyền phải lớn hơn không</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="70"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="81"/>
         <source>the frame limit must be between 1 and %1 bytes</source>
         <translation>giới hạn khung phải từ 1 đến %1 byte</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="73"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="84"/>
         <source>the password cannot be encoded with the %1 code page</source>
         <translation>không thể mã hóa mật khẩu bằng bảng mã %1</translation>
     </message>
@@ -2082,6 +2064,7 @@
 </context>
 <context>
     <name>RegistrationCodec</name>
+    <message><source>invalid CAPTCHA challenge</source><translation>Yêu cầu CAPTCHA không hợp lệ</translation></message>
     <message>
         <location filename="../src/protocol/RegistrationCodec.cpp" line="40"/>
         <source>OpenSSL has no DES-EDE3-CBC implementation available</source>
@@ -2264,28 +2247,28 @@
 <context>
     <name>RelayTransport</name>
     <message>
-        <location filename="../src/network/RelayTransport.cpp" line="47"/>
+        <location filename="../src/network/RelayTransport.cpp" line="52"/>
         <source>session tunnel did not return HTTP 200</source>
         <translation>đường hầm phiên không trả về HTTP 200</translation>
     </message>
     <message>
-        <location filename="../src/network/RelayTransport.cpp" line="89"/>
-        <location filename="../src/network/RelayTransport.cpp" line="101"/>
+        <location filename="../src/network/RelayTransport.cpp" line="94"/>
+        <location filename="../src/network/RelayTransport.cpp" line="106"/>
         <source>unexpected session transport packet</source>
         <translation>gói truyền phiên không như mong đợi</translation>
     </message>
     <message>
-        <location filename="../src/network/RelayTransport.cpp" line="90"/>
+        <location filename="../src/network/RelayTransport.cpp" line="95"/>
         <source>direct/P2P body on a relay channel</source>
         <translation>phần thân trực tiếp/P2P trên kênh chuyển tiếp</translation>
     </message>
     <message>
-        <location filename="../src/network/RelayTransport.cpp" line="102"/>
+        <location filename="../src/network/RelayTransport.cpp" line="107"/>
         <source>unknown transport kind</source>
         <translation>loại truyền không xác định</translation>
     </message>
     <message>
-        <location filename="../src/network/RelayTransport.cpp" line="174"/>
+        <location filename="../src/network/RelayTransport.cpp" line="179"/>
         <source>outbound frame exceeds limit</source>
         <translation>khung gửi đi vượt quá giới hạn</translation>
     </message>
@@ -2400,247 +2383,232 @@
     </message>
     <message>
         <location filename="../qml/dialogs/SettingsDialog.qml" line="146"/>
-        <source>Account file</source>
-        <translation>Tệp tài khoản</translation>
-    </message>
-    <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="148"/>
-        <source>The private file that identifies your UltraViewer account on this computer. Use your own installation; the project never ships one.</source>
-        <translation>Tệp riêng tư xác định tài khoản UltraViewer của bạn trên máy này. Hãy dùng tệp từ bản cài đặt của bạn; dự án không cung cấp tệp này.</translation>
-    </message>
-    <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="155"/>
-        <source>Connection template (optional)</source>
-        <translation>Mẫu kết nối (tùy chọn)</translation>
-    </message>
-    <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="157"/>
-        <source>A prepared connection request. The partner ID and password are filled in for each session.</source>
-        <translation>Yêu cầu kết nối được chuẩn bị sẵn. ID và mật khẩu đối tác được điền cho mỗi phiên.</translation>
-    </message>
-    <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="163"/>
         <source>Screen dictionary</source>
         <translation>Từ điển màn hình</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="165"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="148"/>
         <source>The bundled screen dictionary is used automatically. You can choose a different file. Status: %1</source>
         <translation>Từ điển màn hình đi kèm được sử dụng tự động. Bạn có thể chọn tệp khác. Trạng thái: %1</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="176"/>
-        <source>Create example files</source>
-        <translation>Tạo tệp mẫu</translation>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="154"/>
+        <source>Use an existing registration profile</source>
+        <translation>Sử dụng hồ sơ đăng ký có sẵn</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="189"/>
-        <source>Without a valid account file the UltraViewer service refuses the connection. This project cannot create an account for you.</source>
-        <translation>Nếu không có tệp tài khoản hợp lệ, dịch vụ UltraViewer sẽ từ chối kết nối. Dự án này không thể tạo tài khoản cho bạn.</translation>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="161"/>
+        <source>Registration profile</source>
+        <translation>Hồ sơ đăng ký</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="205"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="163"/>
+        <source>Select a previously working 26-term profile. Keep it private; the empty registration template is not a working profile. Leave this option off to use the automatic identity.</source>
+        <translation>Chọn hồ sơ gồm 26 mục đã từng hoạt động. Hãy giữ kín hồ sơ; mẫu đăng ký trống không thể sử dụng để kết nối. Tắt tùy chọn này để dùng danh tính tự động.</translation>
+    </message>
+    <message>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="182"/>
         <source>Server certificate</source>
         <translation>Chứng chỉ máy chủ</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="214"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="191"/>
         <source>Verify the server (recommended)</source>
         <translation>Xác minh máy chủ (khuyến nghị)</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="215"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="192"/>
         <source>Check the certificate but not the server name (unsafe)</source>
         <translation>Kiểm tra chứng chỉ nhưng không kiểm tra tên máy chủ (không an toàn)</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="216"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="193"/>
         <source>Accept any server (unsafe)</source>
         <translation>Chấp nhận mọi máy chủ (không an toàn)</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="236"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="213"/>
         <source>UltraViewer&apos;s servers present certificates. The recommended setting checks that the app is really talking to UltraViewer. The unsafe modes are only for troubleshooting: they make it easier for someone to intercept your connection, screen and password.</source>
         <translation>Máy chủ UltraViewer cung cấp chứng chỉ. Cài đặt khuyến nghị xác minh ứng dụng thực sự kết nối với UltraViewer. Các chế độ không an toàn chỉ dùng để khắc phục sự cố vì chúng làm tăng nguy cơ bị chặn kết nối, màn hình và mật khẩu.</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="244"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="221"/>
         <source>Saved passwords</source>
         <translation>Mật khẩu đã lưu</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="252"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="229"/>
         <source>Remember partner passwords</source>
         <translation>Ghi nhớ mật khẩu đối tác</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="264"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="241"/>
         <source>Passwords are stored in your system keyring.</source>
         <translation>Mật khẩu được lưu trong kho khóa hệ thống.</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="265"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="242"/>
         <source>This build has no system keyring: passwords are kept only until the app closes and are never written to disk.</source>
         <translation>Bản dựng này không có kho khóa hệ thống: mật khẩu chỉ được giữ đến khi đóng ứng dụng và không được ghi vào đĩa.</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="288"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="265"/>
         <source>Connection timeout: %1 ms</source>
         <translation>Thời gian chờ kết nối: %1 ms</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="299"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="276"/>
         <source>Largest screen update: %1 bytes</source>
         <translation>Kích thước cập nhật màn hình tối đa: %1 byte</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="309"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="286"/>
         <source>Image block size: %1 px</source>
         <translation>Kích thước khối ảnh: %1 px</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="320"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="297"/>
         <source>Cached screen tiles: %1</source>
         <translation>Số ô màn hình lưu đệm: %1</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="328"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="305"/>
         <source>These defaults match the original UltraViewer client. Change them only if a connection is unstable.</source>
         <translation>Các giá trị mặc định giống ứng dụng UltraViewer gốc. Chỉ thay đổi khi kết nối không ổn định.</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="344"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="321"/>
         <source>Interface language</source>
         <translation>Ngôn ngữ giao diện</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="353"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="330"/>
         <source>System language</source>
         <translation>Theo hệ thống</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="371"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="348"/>
         <source>Restart the application to apply the new language.</source>
         <translation>Khởi động lại ứng dụng để áp dụng ngôn ngữ mới.</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="375"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="352"/>
         <source>Restart now</source>
         <translation>Khởi động lại ngay</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="383"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="360"/>
         <source>Fit the screen (black bars)</source>
         <translation>Vừa màn hình (có viền đen)</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="384"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="361"/>
         <source>Fill the window (crop the edges)</source>
         <translation>Lấp đầy cửa sổ (cắt mép)</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="385"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="362"/>
         <source>Stretch to the window</source>
         <translation>Kéo giãn theo cửa sổ</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="392"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="369"/>
         <source>Smooth scaling</source>
         <translation>Làm mịn khi thay đổi kích thước</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="398"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="375"/>
         <source>Hide my pointer while controlling the partner</source>
         <translation>Ẩn con trỏ của tôi khi điều khiển đối tác</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="414"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="391"/>
         <source>Login screen width: %1</source>
         <translation>Chiều rộng màn hình khi đăng nhập: %1</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="424"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="401"/>
         <source>Login screen height: %1</source>
         <translation>Chiều cao màn hình khi đăng nhập: %1</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="433"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="410"/>
         <source>The original client sends 1280×720 at login; the partner&apos;s real screen size is read from its answer.</source>
         <translation>Ứng dụng gốc gửi kích thước 1280×720 khi đăng nhập; kích thước thực tế của đối tác được lấy từ phản hồi.</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="454"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="431"/>
         <source>These overrides are active: the app is not using UltraViewer&apos;s normal servers.</source>
         <translation>Các thiết lập thay thế đang có hiệu lực: ứng dụng không dùng máy chủ thông thường của UltraViewer.</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="456"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="433"/>
         <source>Leave all fields empty to use UltraViewer&apos;s normal servers.</source>
         <translation>Để trống tất cả các trường để sử dụng máy chủ thông thường của UltraViewer.</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="465"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="442"/>
         <source>Login server</source>
         <translation>Máy chủ đăng nhập</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="469"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="446"/>
         <source>functions3.ultraviewer.net</source>
         <translation>functions3.ultraviewer.net</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="473"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="450"/>
         <source>Login port</source>
         <translation>Cổng đăng nhập</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="483"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="460"/>
         <source>Login host header</source>
         <translation>Host header đăng nhập</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="490"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="467"/>
         <source>Login certificate name</source>
         <translation>Tên chứng chỉ đăng nhập</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="494"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="471"/>
         <source>registration host (default)</source>
         <translation>máy chủ đăng ký (mặc định)</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="498"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="475"/>
         <source>Screen server</source>
         <translation>Máy chủ màn hình</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="502"/>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="520"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="479"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="497"/>
         <source>route value</source>
         <translation>giá trị định tuyến</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="506"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="483"/>
         <source>Screen server port</source>
         <translation>Cổng máy chủ màn hình</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="516"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="493"/>
         <source>Screen host header</source>
         <translation>Host header màn hình</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="524"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="501"/>
         <source>Screen certificate name</source>
         <translation>Tên chứng chỉ màn hình</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="528"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="505"/>
         <source>registration certificate name (default)</source>
         <translation>tên chứng chỉ đăng ký (mặc định)</translation>
     </message>
     <message>
-        <location filename="../qml/dialogs/SettingsDialog.qml" line="538"/>
+        <location filename="../qml/dialogs/SettingsDialog.qml" line="515"/>
         <source>Only for private test servers or offline testing. Leave empty for normal use.</source>
         <translation>Chỉ dùng cho máy chủ thử nghiệm riêng hoặc kiểm thử ngoại tuyến. Để trống khi sử dụng bình thường.</translation>
     </message>
@@ -2955,12 +2923,12 @@
 <context>
     <name>ViewerPage</name>
     <message>
-        <location filename="../qml/pages/ViewerPage.qml" line="120"/>
+        <location filename="../qml/pages/ViewerPage.qml" line="141"/>
         <source>Waiting for the first screen update…</source>
         <translation>Đang chờ cập nhật màn hình đầu tiên…</translation>
     </message>
     <message>
-        <location filename="../qml/pages/ViewerPage.qml" line="156"/>
+        <location filename="../qml/pages/ViewerPage.qml" line="177"/>
         <source>Session statistics</source>
         <translation>Thống kê phiên</translation>
     </message>
@@ -3275,7 +3243,7 @@
         <location filename="../src/host/HostManager.cpp" line="109"/>
         <location filename="../src/host/HostManager.cpp" line="145"/>
         <location filename="../src/host/HostManager.cpp" line="226"/>
-        <location filename="../src/host/HostManager.cpp" line="605"/>
+        <location filename="../src/host/HostManager.cpp" line="611"/>
         <source>The host stopped sharing.</source>
         <translation>Máy chia sẻ đã dừng chia sẻ.</translation>
     </message>
@@ -3368,72 +3336,82 @@
         <translation>Đang chờ UltraViewer cấp ID cho máy tính này…</translation>
     </message>
     <message>
-        <location filename="../src/host/HostManager.cpp" line="391"/>
+        <location filename="../src/host/HostManager.cpp" line="389"/>
+        <source>UltraViewer requires CAPTCHA verification for this registration.</source>
+        <translation>UltraViewer yêu cầu xác minh CAPTCHA cho lần đăng ký này.</translation>
+    </message>
+    <message>
+        <location filename="../src/host/HostManager.cpp" line="390"/>
+        <source>This client cannot complete the verification yet.</source>
+        <translation>Ứng dụng này chưa thể hoàn tất bước xác minh.</translation>
+    </message>
+    <message>
+        <location filename="../src/host/HostManager.cpp" line="397"/>
         <source>UltraViewer sent an invalid registration reply.</source>
         <translation>UltraViewer gửi phản hồi đăng ký không hợp lệ.</translation>
     </message>
     <message>
-        <location filename="../src/host/HostManager.cpp" line="399"/>
+        <location filename="../src/host/HostManager.cpp" line="405"/>
         <source>Waiting for a Windows viewer. This computer is registered.</source>
         <translation>Máy tính đã được đăng ký. Đang chờ người xem Windows.</translation>
     </message>
     <message>
-        <location filename="../src/host/HostManager.cpp" line="411"/>
+        <location filename="../src/host/HostManager.cpp" line="417"/>
         <source>Ignored a malformed incoming connection request.</source>
         <translation>Đã bỏ qua yêu cầu kết nối đến sai định dạng.</translation>
     </message>
     <message>
-        <location filename="../src/host/HostManager.cpp" line="422"/>
+        <location filename="../src/host/HostManager.cpp" line="428"/>
         <source>Another connection request arrived while a viewer is connected; it was ignored.</source>
         <translation>Đã bỏ qua yêu cầu kết nối mới vì có người xem đang kết nối.</translation>
     </message>
     <message>
-        <location filename="../src/host/HostManager.cpp" line="441"/>
+        <location filename="../src/host/HostManager.cpp" line="447"/>
         <source>The UltraViewer command channel closed. Host mode stopped.</source>
         <translation>Kênh lệnh UltraViewer đã đóng. Chế độ chia sẻ đã dừng.</translation>
     </message>
     <message>
-        <location filename="../src/host/HostManager.cpp" line="509"/>
+        <location filename="../src/host/HostManager.cpp" line="515"/>
         <source>Opening the incoming UltraViewer relay…</source>
         <translation>Đang mở kết nối chuyển tiếp UltraViewer đến…</translation>
     </message>
     <message>
-        <location filename="../src/host/HostManager.cpp" line="519"/>
+        <location filename="../src/host/HostManager.cpp" line="525"/>
         <source>Waiting for the relay to provide the incoming route…</source>
         <translation>Đang chờ máy chủ chuyển tiếp cung cấp tuyến kết nối đến…</translation>
     </message>
     <message>
-        <location filename="../src/host/HostManager.cpp" line="529"/>
+        <location filename="../src/host/HostManager.cpp" line="535"/>
         <source>Ignored an invalid viewer packet.</source>
         <translation>Đã bỏ qua gói tin người xem không hợp lệ.</translation>
     </message>
     <message>
-        <location filename="../src/host/HostManager.cpp" line="533"/>
+        <location filename="../src/host/HostManager.cpp" line="539"/>
         <source>Ignored a viewer packet with an invalid route.</source>
         <translation>Đã bỏ qua gói tin người xem có tuyến kết nối không hợp lệ.</translation>
     </message>
     <message>
-        <location filename="../src/host/HostManager.cpp" line="547"/>
+        <location filename="../src/host/HostManager.cpp" line="553"/>
         <source>The relay sent an invalid incoming address.</source>
         <translation>Máy chủ chuyển tiếp gửi địa chỉ kết nối đến không hợp lệ.</translation>
     </message>
     <message>
-        <location filename="../src/host/HostManager.cpp" line="557"/>
+        <location filename="../src/host/HostManager.cpp" line="563"/>
         <source>Waiting for the Windows computer to sign in…</source>
         <translation>Đang chờ máy Windows đăng nhập…</translation>
     </message>
     <message>
-        <location filename="../src/host/HostManager.cpp" line="564"/>
+        <location filename="../src/host/HostManager.cpp" line="570"/>
         <source>The incoming relay failed: %1</source>
         <translation>Kết nối chuyển tiếp đến thất bại: %1</translation>
     </message>
     <message>
-        <location filename="../src/host/HostManager.cpp" line="571"/>
+        <location filename="../src/host/HostManager.cpp" line="577"/>
         <source>The incoming relay disconnected.</source>
         <translation>Kết nối chuyển tiếp đến đã bị ngắt.</translation>
     </message>
     <message>
-        <location filename="../src/host/HostManager.cpp" line="593"/>
+        <location filename="../src/host/HostManager.cpp" line="599"/>
         <source>%1 Waiting for another connection.</source>
         <translation>%1 Đang chờ kết nối khác.</translation>
     </message>
@@ -3459,110 +3437,107 @@
 </context>
 <context>
     <name>ultraview::models::ConnectionViewModel</name>
+    <message><source>CAPTCHA verification required</source><translation>Cần xác minh CAPTCHA</translation></message>
+    <message><source>Complete the CAPTCHA verification to continue…</source><translation>Hoàn tất xác minh CAPTCHA để tiếp tục…</translation></message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="200"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="204"/>
         <source>Disconnected</source>
         <translation>Đã ngắt kết nối</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="202"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="206"/>
         <source>Connecting</source>
         <translation>Đang kết nối</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="204"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="208"/>
         <source>Registering</source>
         <translation>Đang đăng ký</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="206"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="210"/>
         <source>Requesting partner</source>
         <translation>Đang yêu cầu kết nối đối tác</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="208"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="212"/>
         <source>Connecting to relay</source>
         <translation>Đang kết nối máy chủ chuyển tiếp</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="210"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="214"/>
         <source>Authenticating</source>
         <translation>Đang xác thực</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="212"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="216"/>
         <source>Connected</source>
         <translation>Đã kết nối</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="214"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="218"/>
         <source>Disconnecting</source>
         <translation>Đang ngắt kết nối</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="216"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="220"/>
         <source>Failed</source>
         <translation>Thất bại</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="248"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="250"/>
         <source>Ready</source>
         <translation>Sẵn sàng</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="250"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="252"/>
         <source>Connecting to the registration service…</source>
         <translation>Đang kết nối tới dịch vụ đăng ký…</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="252"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="254"/>
         <source>Registering this controller…</source>
         <translation>Đang đăng ký máy điều khiển này…</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="254"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="256"/>
         <source>Requesting partner %1…</source>
         <translation>Đang yêu cầu kết nối đối tác %1…</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="256"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="258"/>
         <source>Connecting to the partner relay…</source>
         <translation>Đang kết nối tới máy chủ chuyển tiếp của đối tác…</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="258"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="260"/>
         <source>Signing in at the partner…</source>
         <translation>Đang đăng nhập vào máy đối tác…</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="260"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="262"/>
         <source>Connected to %1 (%2)</source>
         <translation>Đã kết nối với %1 (%2)</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="262"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="264"/>
         <source>Disconnecting…</source>
         <translation>Đang ngắt kết nối…</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="264"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="266"/>
         <source>The session failed</source>
         <translation>Phiên kết nối thất bại</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="273"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="275"/>
         <source>unknown size</source>
         <translation>không rõ kích thước</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="281"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="283"/>
         <source>no route yet</source>
         <translation>chưa có tuyến kết nối</translation>
-    </message>
-    <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="288"/>
-        <source>Select a registration profile (26 terms) in the settings first.</source>
-        <translation>Trước tiên hãy chọn hồ sơ đăng ký (26 trường) trong phần cài đặt.</translation>
     </message>
     <message>
         <location filename="../src/models/ConnectionViewModel.cpp" line="290"/>
@@ -3571,7 +3546,7 @@
     </message>
     <message>
         <location filename="../src/models/ConnectionViewModel.cpp" line="292"/>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="556"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="547"/>
         <source>Enter the partner password.</source>
         <translation>Nhập mật khẩu của đối tác.</translation>
     </message>
@@ -3746,47 +3721,47 @@
         <translation>Cảnh báo TLS</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="527"/>
-        <source>No registration profile selected.</source>
-        <translation>Chưa chọn hồ sơ đăng ký.</translation>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="520"/>
+        <source>Select an existing registration profile or disable the profile option.</source>
+        <translation>Hãy chọn hồ sơ đăng ký có sẵn hoặc tắt tùy chọn dùng hồ sơ.</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="558"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="549"/>
         <source>Enter the partner ID.</source>
         <translation>Nhập ID của đối tác.</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="637"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="628"/>
         <source>No screen dictionary configured: compressed screen updates will be refused. Set 8bit.dat in the settings.</source>
         <translation>Chưa cấu hình từ điển màn hình: các cập nhật màn hình nén sẽ bị từ chối. Hãy chọn 8bit.dat trong phần cài đặt.</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="801"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="792"/>
         <source>The chat is only available while connected.</source>
         <translation>Chỉ có thể trò chuyện khi đã kết nối.</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="807"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="798"/>
         <source>The message cannot be sent: it is too long or contains the protocol delimiter.</source>
         <translation>Không thể gửi tin nhắn: nội dung quá dài hoặc chứa dấu phân cách của giao thức.</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="863"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="854"/>
         <source>The file does not exist.</source>
         <translation>Tệp không tồn tại.</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="864"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="855"/>
         <source>The selected file does not exist.</source>
         <translation>Tệp đã chọn không tồn tại.</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="870"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="861"/>
         <source>The session is not connected.</source>
         <translation>Phiên chưa được kết nối.</translation>
     </message>
     <message>
-        <location filename="../src/models/ConnectionViewModel.cpp" line="871"/>
+        <location filename="../src/models/ConnectionViewModel.cpp" line="862"/>
         <source>A file can only be sent while connected.</source>
         <translation>Chỉ có thể gửi tệp khi đã kết nối.</translation>
     </message>
@@ -3843,284 +3818,301 @@
 <context>
     <name>ultraview::models::SettingsModel</name>
     <message>
-        <location filename="../src/models/SettingsModel.cpp" line="270"/>
+        <location filename="../src/models/SettingsModel.cpp" line="285"/>
         <source>Verified (chain and host name)</source>
         <translation>Đã xác minh (chuỗi chứng chỉ và tên máy chủ)</translation>
     </message>
     <message>
-        <location filename="../src/models/SettingsModel.cpp" line="272"/>
+        <location filename="../src/models/SettingsModel.cpp" line="287"/>
         <source>Verified chain, host name not checked</source>
         <translation>Đã xác minh chuỗi chứng chỉ, chưa kiểm tra tên máy chủ</translation>
     </message>
     <message>
-        <location filename="../src/models/SettingsModel.cpp" line="274"/>
+        <location filename="../src/models/SettingsModel.cpp" line="289"/>
         <source>Any certificate accepted (insecure)</source>
         <translation>Chấp nhận mọi chứng chỉ (không an toàn)</translation>
     </message>
     <message>
-        <location filename="../src/models/SettingsModel.cpp" line="276"/>
+        <location filename="../src/models/SettingsModel.cpp" line="291"/>
         <source>unknown</source>
         <translation>không rõ</translation>
     </message>
     <message>
-        <location filename="../src/models/SettingsModel.cpp" line="481"/>
+        <location filename="../src/models/SettingsModel.cpp" line="496"/>
         <source>no screen dictionary is configured</source>
         <translation>chưa cấu hình từ điển màn hình</translation>
     </message>
     <message>
-        <location filename="../src/models/SettingsModel.cpp" line="484"/>
+        <location filename="../src/models/SettingsModel.cpp" line="499"/>
         <source>cannot read the screen dictionary: %1</source>
         <translation>không thể đọc từ điển màn hình: %1</translation>
     </message>
     <message>
-        <location filename="../src/models/SettingsModel.cpp" line="487"/>
+        <location filename="../src/models/SettingsModel.cpp" line="502"/>
         <source>the screen dictionary file is empty</source>
         <translation>tệp từ điển màn hình trống</translation>
     </message>
     <message>
-        <location filename="../src/models/SettingsModel.cpp" line="496"/>
+        <location filename="../src/models/SettingsModel.cpp" line="511"/>
         <source>no dictionary configured</source>
         <translation>chưa cấu hình từ điển</translation>
     </message>
     <message>
-        <location filename="../src/models/SettingsModel.cpp" line="499"/>
+        <location filename="../src/models/SettingsModel.cpp" line="514"/>
         <source>the configured dictionary file is not readable</source>
         <translation>không thể đọc tệp từ điển đã cấu hình</translation>
     </message>
 </context>
 <context>
     <name>ultraview::network::ConnectionManager</name>
+    <message><source>A registration server certificate or connection failed; trying another resolved address with TLS verification enabled</source><translation>Chứng chỉ hoặc kết nối tới một máy chủ đăng ký không hợp lệ; đang thử địa chỉ khác và vẫn xác minh TLS</translation></message>
+    <message><source>the CAPTCHA timers must be positive</source><translation>Thời gian CAPTCHA phải lớn hơn không</translation></message>
+    <message><source>CAPTCHA verification timed out</source><translation>Đã hết thời gian xác minh CAPTCHA</translation></message>
+    <message><source>The CAPTCHA result was invalid. Please try again.</source><translation>Kết quả CAPTCHA không hợp lệ. Vui lòng thử lại.</translation></message>
+    <message><source>The CAPTCHA window could not be opened</source><translation>Không thể mở cửa sổ CAPTCHA</translation></message>
+    <message><source>Check that Qt WebEngine and Qt WebChannel are installed.</source><translation>Hãy kiểm tra Qt WebEngine và Qt WebChannel đã được cài đặt.</translation></message>
+    <message><source>Too many CAPTCHA verification attempts</source><translation>Đã thử xác minh CAPTCHA quá nhiều lần</translation></message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="101"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="112"/>
         <source>the connection timed out while %1</source>
         <translation>kết nối hết thời gian chờ trong khi %1</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="102"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="113"/>
         <source>phase timeout after %1 ms</source>
         <translation>giai đoạn hết thời gian chờ sau %1 ms</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="245"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="261"/>
         <source>the session request is invalid</source>
         <translation>yêu cầu phiên không hợp lệ</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="261"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="277"/>
         <source>no screen dictionary installed: compressed RGB555 updates cannot be decoded</source>
         <translation>chưa cài đặt từ điển màn hình: không thể giải mã dữ liệu RGB555 nén</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="262"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="278"/>
         <source>supply the 8bit.dat artifact in the settings to receive the full screen</source>
         <translation>chọn tệp 8bit.dat trong cài đặt để nhận toàn bộ màn hình</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="375"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="382"/>
+        <source>UltraViewer requires CAPTCHA verification for this registration</source>
+        <translation>UltraViewer yêu cầu xác minh CAPTCHA cho lần đăng ký này</translation>
+    </message>
+    <message>
+        <location filename="../src/network/ConnectionManager.cpp" line="383"/>
+        <source>This client cannot complete the verification yet</source>
+        <translation>Ứng dụng này chưa thể hoàn tất bước xác minh</translation>
+    </message>
+    <message>
+        <location filename="../src/network/ConnectionManager.cpp" line="428"/>
         <source>the server answered the connection request more than four times</source>
         <translation>máy chủ đã trả lời yêu cầu kết nối quá bốn lần</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="395"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="448"/>
         <source>the server did not send route information</source>
         <translation>máy chủ không gửi thông tin tuyến kết nối</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="396"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="449"/>
         <source>%1 replies without a command 8 route</source>
         <translation>%1 phản hồi không có tuyến lệnh 8</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="409"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="462"/>
         <source>unexpected payload on the registration channel</source>
         <translation>dữ liệu không mong đợi trên kênh đăng ký</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="410"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="463"/>
         <source>%1 bytes after the handshake were ignored</source>
         <translation>đã bỏ qua %1 byte sau quá trình bắt tay</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="421"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="474"/>
         <source>registration channel lost after the route; the relay session is unaffected (%1)</source>
         <translation>kênh đăng ký bị mất sau khi nhận tuyến; phiên chuyển tiếp không bị ảnh hưởng (%1)</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="434"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="487"/>
         <source>registration channel closed by the service after the route; the relay session is unaffected</source>
         <translation>dịch vụ đóng kênh đăng ký sau khi nhận tuyến; phiên chuyển tiếp không bị ảnh hưởng</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="438"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="491"/>
         <source>the registration channel was closed by the server</source>
         <translation>máy chủ đã đóng kênh đăng ký</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="484"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="537"/>
         <source>the route does not contain a relay host</source>
         <translation>tuyến kết nối không chứa máy chủ chuyển tiếp</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="490"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="543"/>
         <source>the route does not contain a usable partner address</source>
         <translation>tuyến kết nối không chứa địa chỉ đối tác hợp lệ</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="491"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="544"/>
         <source>public endpoint field is not a dotted quad</source>
         <translation>trường địa chỉ công cộng không phải địa chỉ IPv4 dạng chấm</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="550"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="603"/>
         <source>a UTF-16 session payload has an odd number of bytes</source>
         <translation>dữ liệu phiên UTF-16 có số byte lẻ</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="551"/>
-        <location filename="../src/network/ConnectionManager.cpp" line="668"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="604"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="721"/>
         <source>%1 bytes</source>
         <translation>%1 byte</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="572"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="625"/>
         <source>session packet has no discriminator byte</source>
         <translation>gói tin phiên không có byte phân loại</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="602"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="655"/>
         <source>the partner sent an unrecognized text message (%1 characters)</source>
         <translation>đối tác gửi thông điệp văn bản không nhận diện được (%1 ký tự)</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="653"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="706"/>
         <source>a cursor shape packet is incomplete</source>
         <translation>gói tin hình dạng con trỏ không đầy đủ</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="654"/>
-        <location filename="../src/network/ConnectionManager.cpp" line="693"/>
-        <location filename="../src/network/ConnectionManager.cpp" line="773"/>
-        <location filename="../src/network/ConnectionManager.cpp" line="924"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="707"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="746"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="826"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="977"/>
         <source>%1 fields</source>
         <translation>%1 trường</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="667"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="720"/>
         <source>a cursor shape packet declares an unusable length</source>
         <translation>gói tin hình dạng con trỏ khai báo độ dài không hợp lệ</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="692"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="745"/>
         <source>a pointer position packet is incomplete</source>
         <translation>gói tin vị trí con trỏ không đầy đủ</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="754"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="807"/>
         <source>a screen update arrived before the login acknowledgement</source>
         <translation>cập nhật màn hình đến trước xác nhận đăng nhập</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="772"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="825"/>
         <source>a cursor selection without a 4-byte hash was not answered</source>
         <translation>không phản hồi yêu cầu chọn con trỏ thiếu mã băm 4 byte</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="786"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="839"/>
         <source>a legacy clipboard message carries no text</source>
         <translation>thông điệp clipboard cũ không chứa văn bản</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="792"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="845"/>
         <source>a legacy clipboard message is not UTF-16LE</source>
         <translation>thông điệp clipboard cũ không có định dạng UTF-16LE</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="804"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="857"/>
         <source>a chat message could not be decoded</source>
         <translation>không thể giải mã tin nhắn trò chuyện</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="821"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="874"/>
         <source>the partner closed the session</source>
         <translation>đối tác đã đóng phiên</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="822"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="875"/>
         <source>the partner terminated the session</source>
         <translation>đối tác đã kết thúc phiên</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="841"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="894"/>
         <source>a clipboard message could not be decoded</source>
         <translation>không thể giải mã thông điệp clipboard</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="854"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="907"/>
         <source>an audio silence packet carries no byte count</source>
         <translation>gói tin âm thanh im lặng không chứa số byte</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="869"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="922"/>
         <source>an audio packet carries no payload</source>
         <translation>gói tin âm thanh không chứa dữ liệu</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="882"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="935"/>
         <source>a tile size packet carries no value</source>
         <translation>gói tin kích thước ô không chứa giá trị</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="887"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="940"/>
         <source>the partner announced an unsupported tile size (%1); the current size is kept</source>
         <translation>đối tác thông báo kích thước ô không được hỗ trợ (%1); giữ nguyên kích thước hiện tại</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="895"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="948"/>
         <source>the partner changed the tile size to %1</source>
         <translation>đối tác đã đổi kích thước ô thành %1</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="903"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="956"/>
         <source>the partner put this session into view-only mode</source>
         <translation>đối tác đã chuyển phiên sang chế độ chỉ xem</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="907"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="960"/>
         <source>a view-only packet carries no state</source>
         <translation>gói tin chế độ chỉ xem không chứa trạng thái</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="915"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="968"/>
         <source>the partner sent microphone audio (%1), which this client does not record</source>
         <translation>đối tác gửi âm thanh micrô (%1), ứng dụng này không ghi lại</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="918"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="971"/>
         <source>kind %1: the packet was refused, the session continues</source>
         <translation>loại %1: gói tin bị từ chối, phiên vẫn tiếp tục</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="923"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="976"/>
         <source>unknown session packet kind %1 was refused</source>
         <translation>đã từ chối gói tin phiên có loại %1 không xác định</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="968"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="1021"/>
         <source>cannot send on the relay channel: it is not connected</source>
         <translation>không thể gửi qua kênh chuyển tiếp vì chưa kết nối</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="977"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="1030"/>
         <source>input ignored: the session is not connected</source>
         <translation>đã bỏ qua thao tác vì phiên chưa kết nối</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="986"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="1039"/>
         <source>the command was ignored: the session is not connected</source>
         <translation>đã bỏ qua lệnh vì phiên chưa kết nối</translation>
     </message>
     <message>
-        <location filename="../src/network/ConnectionManager.cpp" line="1123"/>
+        <location filename="../src/network/ConnectionManager.cpp" line="1176"/>
         <source>the partner closed the relay channel</source>
         <translation>đối tác đã đóng kênh chuyển tiếp</translation>
     </message>
@@ -4138,83 +4130,83 @@
         <translation>tên máy chủ đường hầm trống</translation>
     </message>
     <message>
-        <location filename="../src/network/HttpTunnelSocket.cpp" line="161"/>
-        <location filename="../src/network/HttpTunnelSocket.cpp" line="168"/>
+        <location filename="../src/network/HttpTunnelSocket.cpp" line="175"/>
+        <location filename="../src/network/HttpTunnelSocket.cpp" line="182"/>
         <source>HTTP header exceeds limit</source>
         <translation>phần đầu HTTP vượt quá giới hạn</translation>
     </message>
     <message>
-        <location filename="../src/network/HttpTunnelSocket.cpp" line="196"/>
+        <location filename="../src/network/HttpTunnelSocket.cpp" line="210"/>
         <source>the peer sent more buffered data than the limit allows</source>
         <translation>máy bên kia gửi dữ liệu vượt quá giới hạn bộ đệm</translation>
     </message>
     <message>
-        <location filename="../src/network/HttpTunnelSocket.cpp" line="210"/>
+        <location filename="../src/network/HttpTunnelSocket.cpp" line="224"/>
         <source>socket error</source>
         <translation>lỗi kết nối mạng</translation>
     </message>
     <message>
-        <location filename="../src/network/HttpTunnelSocket.cpp" line="229"/>
+        <location filename="../src/network/HttpTunnelSocket.cpp" line="243"/>
         <source>; verified name: %1</source>
         <translation>; tên được xác minh: %1</translation>
     </message>
     <message>
-        <location filename="../src/network/HttpTunnelSocket.cpp" line="238"/>
+        <location filename="../src/network/HttpTunnelSocket.cpp" line="252"/>
         <source>other</source>
         <translation>khác</translation>
     </message>
     <message>
-        <location filename="../src/network/HttpTunnelSocket.cpp" line="241"/>
+        <location filename="../src/network/HttpTunnelSocket.cpp" line="255"/>
         <source>; peer certificate: %1; subject alternative names: %2</source>
         <translation>; chứng chỉ máy bên kia: %1; tên thay thế: %2</translation>
     </message>
     <message>
-        <location filename="../src/network/HttpTunnelSocket.cpp" line="243"/>
+        <location filename="../src/network/HttpTunnelSocket.cpp" line="257"/>
         <source>none</source>
         <translation>không có</translation>
     </message>
     <message>
-        <location filename="../src/network/HttpTunnelSocket.cpp" line="247"/>
+        <location filename="../src/network/HttpTunnelSocket.cpp" line="261"/>
         <source>TLS certificate verification failed</source>
         <translation>xác minh chứng chỉ TLS thất bại</translation>
     </message>
     <message>
-        <location filename="../src/network/HttpTunnelSocket.cpp" line="264"/>
+        <location filename="../src/network/HttpTunnelSocket.cpp" line="278"/>
         <source>the peer closed the connection</source>
         <translation>máy bên kia đã đóng kết nối</translation>
     </message>
     <message>
-        <location filename="../src/network/HttpTunnelSocket.cpp" line="271"/>
+        <location filename="../src/network/HttpTunnelSocket.cpp" line="285"/>
         <source>connect</source>
         <translation>kết nối</translation>
     </message>
     <message>
-        <location filename="../src/network/HttpTunnelSocket.cpp" line="272"/>
+        <location filename="../src/network/HttpTunnelSocket.cpp" line="286"/>
         <source>TLS handshake</source>
         <translation>bắt tay TLS</translation>
     </message>
     <message>
-        <location filename="../src/network/HttpTunnelSocket.cpp" line="273"/>
+        <location filename="../src/network/HttpTunnelSocket.cpp" line="287"/>
         <source>HTTP tunnel header</source>
         <translation>phần đầu đường hầm HTTP</translation>
     </message>
     <message>
-        <location filename="../src/network/HttpTunnelSocket.cpp" line="274"/>
+        <location filename="../src/network/HttpTunnelSocket.cpp" line="288"/>
         <source>channel</source>
         <translation>kênh</translation>
     </message>
     <message>
-        <location filename="../src/network/HttpTunnelSocket.cpp" line="276"/>
+        <location filename="../src/network/HttpTunnelSocket.cpp" line="290"/>
         <source>the channel timed out</source>
         <translation>kênh hết thời gian chờ</translation>
     </message>
     <message>
-        <location filename="../src/network/HttpTunnelSocket.cpp" line="314"/>
+        <location filename="../src/network/HttpTunnelSocket.cpp" line="328"/>
         <source>outbound channel buffer exceeds limit</source>
         <translation>bộ đệm kênh gửi vượt quá giới hạn</translation>
     </message>
     <message>
-        <location filename="../src/network/HttpTunnelSocket.cpp" line="323"/>
+        <location filename="../src/network/HttpTunnelSocket.cpp" line="337"/>
         <source>closed</source>
         <translation>đã đóng</translation>
     </message>

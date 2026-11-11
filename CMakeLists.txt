@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 project(Ultraview
-    VERSION 0.3.1
+    VERSION 0.3.4
     DESCRIPTION "Native Linux remote desktop client for UltraViewer partners (independent re-implementation)"
     LANGUAGES CXX)
 
@@ -304,6 +304,7 @@ qt_add_qml_module(ultraview
         qml/themes/Icon.qml
         qml/themes/Theme.qml
     RESOURCES
+        qml/dialogs/CaptchaDialog.qml
         qml/assets/icons/chart.svg
         qml/assets/icons/chat.svg
         qml/assets/icons/check.svg

@@ -15,6 +15,7 @@
 // buffer cannot fill up.
 //
 #include <QByteArray>
+#include <QHostAddress>
 #include <QObject>
 #include <QString>
 
@@ -39,6 +40,8 @@ public:
         /// Name verified on the certificate; the reference uses "ultraviewer".
         /// Empty means "verify the connect host", which is standard TLS.
         QString peerNameOverride;
+        /// Deterministic DNS answers for offline tests only; production leaves empty.
+        QList<QHostAddress> fallbackAddressesForTesting;
     };
 
     explicit RegistrationTransport(QObject *parent = nullptr);
@@ -80,16 +83,28 @@ signals:
     void payload(const QByteArray &payload);
     void failed(const ultraview::ErrorInfo &error);
     void closed();
+    void retryingVerifiedAddress();
 
 private:
     void onReady();
     void onData();
     void onClosed();
+    void onChannelFailed(const ultraview::ErrorInfo &error);
+    void startAddress(const QString &connectHost);
+    void useFallbackAddresses(const QList<QHostAddress> &addresses);
+    void tryNextAddress();
 
     Options m_options;
     HttpTunnelSocket m_channel;
     protocol::FrameStream m_frames;
     bool m_ready = false;
+    bool m_stopped = true;
+    bool m_fallbackActive = false;
+    int m_lookupId = -1;
+    quint64 m_generation = 0;
+    QList<QHostAddress> m_fallbackAddresses;
+    QHostAddress m_initialAddress;
+    ErrorInfo m_originalTlsError;
     bool m_drainPayloads = false;
     qint64 m_bytesSent = 0;
     qint64 m_bytesReceived = 0;

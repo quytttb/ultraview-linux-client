@@ -58,13 +58,16 @@ the peer features against a live partner still need manual validation. See
   Audio capture, mixing, volume control and device selection are not implemented.
 - Clipboard synchronization is text only: no images, rich text, file lists or X11
   primary selection, and no clipboard history.
-- Automatic Linux registration fingerprint/installation provisioning inside the
-  product. Scaffolds deliberately leave unresolved values blank and cannot connect
-  by themselves; the dev-only `tools/make_experimental_profile.py` can draft an
-  experimental profile outside the application. Its registration identity is
-  accepted by the live service up to the partner-request phase (status-11 dry run,
-  0.2.2); a relay/login exchange with a real partner is still unproven. The profile
-  is not installed by the package.
+- Controller registration supports interactive command-60 CAPTCHA verification
+  via the official page in Qt WebEngine; host mode still reports it as unsupported.
+  Challenge fields and tokens are not logged. The automatic viewer
+  identity is not a reproduction of a Windows installation fingerprint and may
+  be challenged by the service. A previously working 26-term profile can be
+  selected explicitly; an empty scaffold is not a working profile. The dev-only
+  `tools/make_experimental_profile.py` can draft an experimental profile outside
+  the application, but it is not installed by the package. A prior experimental
+  profile reached a real relay session in the local lab; that does not establish
+  acceptance for any other profile or future connection.
 - Importing vendor tile-cache pixel encoding. The recovered **container** layout
   is implemented; this client's optional local helper serializes RGB888 payloads.
   No cache import/export UI or network cache-container negotiation is enabled.

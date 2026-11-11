@@ -23,10 +23,24 @@ private slots:
     void languageSelection();
     void connectDoesNotRequireProfile();
     void bundledDictionary();
+    void captchaNavigationRestricted();
 
 private:
     QTemporaryDir m_configDir;
 };
+
+void TranslationTest::captchaNavigationRestricted()
+{
+    ultraview::models::ConnectionViewModel controller;
+    QVERIFY(controller.isCaptchaPage(QUrl(QStringLiteral("https://www.ultraviewer.net/api/enter_captcha.aspx?lang=vi"))));
+    for (const QString &url : {QStringLiteral("http://www.ultraviewer.net/api/enter_captcha.aspx"),
+                               QStringLiteral("https://www.ultraviewer.net.evil.test/api/enter_captcha.aspx"),
+                               QStringLiteral("https://user@www.ultraviewer.net/api/enter_captcha.aspx"),
+                               QStringLiteral("https://www.ultraviewer.net:444/api/enter_captcha.aspx"),
+                               QStringLiteral("https://www.ultraviewer.net/another-page")}) {
+        QVERIFY(!controller.isCaptchaPage(QUrl(url)));
+    }
+}
 
 void TranslationTest::initTestCase()
 {
@@ -42,6 +56,14 @@ void TranslationTest::vietnamese()
     QVERIFY(translator.load(QStringLiteral(UV_TRANSLATION_FILE)));
     QVERIFY(QCoreApplication::installTranslator(&translator));
     QCOMPARE(QCoreApplication::translate("ConnectPage", "Connect"), QString::fromUtf8("Kết nối"));
+    QCOMPARE(QCoreApplication::translate("ultraview::network::ConnectionManager",
+                                        "UltraViewer requires CAPTCHA verification for this registration"),
+             QString::fromUtf8("UltraViewer yêu cầu xác minh CAPTCHA cho lần đăng ký này"));
+    QCOMPARE(QCoreApplication::translate("ultraview::network::ConnectionManager",
+                                        "A registration server certificate or connection failed; "
+                                        "trying another resolved address with TLS verification enabled"),
+             QString::fromUtf8("Chứng chỉ hoặc kết nối tới một máy chủ đăng ký không hợp lệ; "
+                               "đang thử địa chỉ khác và vẫn xác minh TLS"));
     ultraview::models::ConnectionViewModel controller;
     QCOMPARE(controller.statusText(), QString::fromUtf8("Sẵn sàng"));
     ultraview::models::HostViewModel host(controller.settingsObject());

@@ -20,6 +20,11 @@ uses dpkg-shlibdeps for ELF library dependencies and explicit QML/QPA dependenci
 for dynamically loaded modules. `dpkg-dev` must be installed. Private Qt SDKs
 cannot reliably map to distribution package dependencies; use AppImage instead.
 
+Interactive controller CAPTCHA requires the dynamically loaded distribution
+modules `qml6-module-qtwebengine` and `qml6-module-qtwebchannel`; the Debian
+package declares both. An AppImage must also bundle Qt WebEngine's helper process
+and resources; the AppImage recipe has not been validated for CAPTCHA support.
+
 The optional desktop application menu (see [interface](ui.md)) additionally needs
 the distribution's private QtGui headers at configure time, which pull in the
 build-only package `qt6-base-private-dev` (Qt ≥ 6.9). Where it is available, the
@@ -57,15 +62,15 @@ session and a working portal backend.
 ```sh
 ctest --test-dir build --output-on-failure
 cpack --config build/CPackConfig.cmake -G DEB -B build/packages
-dpkg-deb --info build/packages/ultraview_0.3.1_amd64.deb
-dpkg-deb --contents build/packages/ultraview_0.3.1_amd64.deb
+dpkg-deb --info build/packages/ultraview_0.3.4_amd64.deb
+dpkg-deb --contents build/packages/ultraview_0.3.4_amd64.deb
 # No root needed to inspect and smoke-test an extracted package:
-dpkg-deb --extract build/packages/ultraview_0.3.1_amd64.deb build/package-check
+dpkg-deb --extract build/packages/ultraview_0.3.4_amd64.deb build/package-check
 QT_QPA_PLATFORM=offscreen build/package-check/usr/bin/ultraview --self-test
 ```
 
 To install after review on a compatible Ubuntu machine:
-`pkexec apt install ./build/packages/ultraview_0.3.1_amd64.deb`.
+`pkexec apt install ./build/packages/ultraview_0.3.4_amd64.deb`.
 This documentation is not authorization for the agent to install it system-wide.
 Architecture/file names vary. A binary built against glibc/Qt from Ubuntu 26.04
 must not be advertised as an Ubuntu 22.04/24.04 package.

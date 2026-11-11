@@ -384,6 +384,12 @@ void HostManager::onRegistrationPayload(const QByteArray &payload)
 {
     if (m_terminating)
         return;
+    if (!m_registered && payload.startsWith("60:")) {
+        // The challenge contains opaque session values; do not include it in logs.
+        fail(tr("UltraViewer requires CAPTCHA verification for this registration."),
+             tr("This client cannot complete the verification yet."));
+        return;
+    }
     if (!m_registered && payload.startsWith("3:")) {
         try {
             m_registrationReply = parseRegistrationReply(payload);

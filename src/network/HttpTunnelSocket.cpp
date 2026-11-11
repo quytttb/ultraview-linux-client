@@ -79,6 +79,8 @@ void HttpTunnelSocket::start(const TunnelRequest &request)
     m_socket = new QSslSocket(this);
     m_closedEmitted = false;
     m_failed = false;
+    m_certificateVerificationFailed = false;
+    m_lastPeerAddress = QHostAddress();
     m_headerBuffer.clear();
     m_buffer.clear();
     m_responseHeader.clear();
@@ -142,6 +144,7 @@ void HttpTunnelSocket::closeGracefully()
 
 void HttpTunnelSocket::onConnected()
 {
+    m_lastPeerAddress = m_socket->peerAddress();
     // Input events and screen acknowledgements are small, latency-sensitive
     // writes. Avoid holding them behind TCP's Nagle/delayed-ACK interaction.
     m_socket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
@@ -258,6 +261,7 @@ void HttpTunnelSocket::onSslErrors(const QList<QSslError> &errors)
                                                : names.join(QStringLiteral(", ")));
         }
     }
+    m_certificateVerificationFailed = true;
     fail(ErrorCode::Tls, tr("TLS certificate verification failed"), detail);
 }
 

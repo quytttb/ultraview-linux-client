@@ -59,6 +59,13 @@ public synthetic test credentials, never installed or trusted in production.
 - `tst_session`: two-channel loopback TLS end-to-end registration/request/login,
   decode/acks/input, refusal statuses, timeouts, channel loss, unsupported packets,
   certificate mismatch, explicit insecure policy and backpressure final flush.
+  Registration coverage also checks CAPTCHA challenge validation, keepalives,
+  bounded wait/cancel/retries and the final token field of both profile formats,
+  without leaking contents. `app_captcha_self_test` exercises the real embedded
+  browser and callback using synthetic offline HTML. Unrelated messages are
+  ignored and selected legacy profiles use their own codec without falling back.
+  Registration TLS tests cover DNS fallback after certificate rejection, deduping,
+  cancellation, and failure when no candidate authenticates the original name.
   Reconnect also checks cleared route/desktop state and no retained dictionary.
   TLS regressions additionally use `endpoint.crt` (localhost/127.0.0.1, without
   `ultraviewer`) to prove default endpoint-name authentication, and reject a
@@ -134,10 +141,10 @@ files themselves remain unchanged. No real `8bit.dat` is needed for these tests.
 `tools/make_experimental_profile.py` drafts a 26-term registration profile for
 this machine, using a published reference profile as the schema donor and
 replacing every identity-bearing term (fingerprint, client password value,
-machine name, MAC, user name, cached id). It is not installed by the package and
-the application never generates these values on its own. The live service accepts
-this profile's registration identity up to the partner-request phase (status-11
-dry run below); a relay/login exchange with a real partner is still unproven.
+machine name, MAC, user name, cached id). It is not installed by the package; the
+application generates a separate automatic viewer identity instead. An existing
+26-term profile can be selected explicitly. One such profile reached a real
+partner session in the local lab, but acceptance of other profiles is unproven.
 
 ## Sanitizers
 
@@ -188,6 +195,10 @@ It takes **no credential from the caller**: it uses a placeholder password, so i
 can only reach the registration and partner-request phases, which is what a first
 live check needs — the service answers an unknown partner with the reference's
 status 11. A real session belongs in the interface, where the password is typed.
+If a CAPTCHA is requested, the headless probe exits instead of waiting for input;
+`--connect-ui-attempt <partner-id>` is the equivalent interactive, throw-away
+probe and opens the regular verification window. Neither probe prints CAPTCHA
+challenge fields or tokens.
 
 The probe refuses to run unless `XDG_CONFIG_HOME` is redirected, because an
 attempt writes a recent-connection entry and the credential-store preference; the

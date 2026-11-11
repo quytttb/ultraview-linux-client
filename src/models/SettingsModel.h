@@ -28,6 +28,7 @@ namespace ultraview::models {
 class SettingsModel : public QObject {
     Q_OBJECT
     Q_PROPERTY(QString registrationProfilePath READ registrationProfilePath WRITE setRegistrationProfilePath NOTIFY registrationProfilePathChanged)
+    Q_PROPERTY(bool registrationProfileEnabled READ registrationProfileEnabled WRITE setRegistrationProfileEnabled NOTIFY registrationProfileEnabledChanged)
     Q_PROPERTY(QString partnerTemplatePath READ partnerTemplatePath WRITE setPartnerTemplatePath NOTIFY partnerTemplatePathChanged)
     Q_PROPERTY(QString dictionaryPath READ dictionaryPath WRITE setDictionaryPath NOTIFY dictionaryPathChanged)
     Q_PROPERTY(int tlsMode READ tlsMode WRITE setTlsMode NOTIFY tlsModeChanged)
@@ -68,6 +69,10 @@ public:
     // --- files --------------------------------------------------------------
     QString registrationProfilePath() const { return m_registrationProfilePath; }
     void setRegistrationProfilePath(const QString &path);
+    /// Legacy profiles are only used after an explicit opt-in. Older settings may
+    /// still point to a scaffold that was ignored by the automatic identity path.
+    bool registrationProfileEnabled() const { return m_registrationProfileEnabled; }
+    void setRegistrationProfileEnabled(bool enabled);
     QString partnerTemplatePath() const { return m_partnerTemplatePath; }
     void setPartnerTemplatePath(const QString &path);
     QString dictionaryPath() const { return m_dictionaryPath; }
@@ -174,6 +179,7 @@ public:
 
 signals:
     void registrationProfilePathChanged();
+    void registrationProfileEnabledChanged();
     void partnerTemplatePathChanged();
     void dictionaryPathChanged();
     void tlsModeChanged();
@@ -189,6 +195,7 @@ private:
     void load();
 
     QString m_registrationProfilePath;
+    bool m_registrationProfileEnabled = false;
     QString m_partnerTemplatePath;
     QString m_dictionaryPath;
     security::TlsPolicy::Mode m_tlsMode = security::TlsPolicy::Mode::VerifyPeer;
